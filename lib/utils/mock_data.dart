@@ -1,14 +1,60 @@
 import '../models/models.dart';
 
 class MockData {
-  static final AppUser currentUser = AppUser(
+  static AppUser currentUser = employeeUser;
+
+  static final AppUser adminUser = AppUser(
+    id: 'ADM001',
+    name: 'Dr. Sarah Wilson',
+    email: 'admin@hospital.com',
+    role: 'Medical Director',
+    department: 'Administration',
+    profileImage: 'https://i.pravatar.cc/150?u=sarah',
+  );
+
+  static final AppUser employeeUser = AppUser(
     id: 'EMP123',
     name: 'Alex Johnson',
-    email: 'alex@company.com',
-    role: 'Software Engineer',
-    department: 'Engineering',
+    email: 'employee@hospital.com',
+    role: 'Nurse',
+    department: 'Emergency',
     profileImage: 'https://i.pravatar.cc/150?u=alex',
   );
+
+  static final List<String> roles = [
+    'HR Admin',
+    'Medical Director',
+    'Department Supervisor',
+    'Doctor',
+    'Nurse',
+    'Clinical Officer',
+    'Support Staff',
+    'Accountant',
+    'Principal Hospital Administrator',
+    'System Admin',
+  ];
+
+  static final List<String> departments = [
+    'Administration',
+    'Emergency',
+    'Cardiology',
+    'Pediatrics',
+    'Surgery',
+    'Radiology',
+    'Pharmacy',
+    'Nursing',
+  ];
+
+  static bool login(String email, String password) {
+    if (email == 'admin@hospital.com' && password == 'admin123') {
+      currentUser = adminUser;
+      return true;
+    } else if (email == 'employee@hospital.com' && password == 'emp123') {
+      currentUser = employeeUser;
+      return true;
+    }
+    return false;
+  }
 
   static final List<UserRequest> requests = [
     UserRequest(

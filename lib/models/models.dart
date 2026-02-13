@@ -46,4 +46,17 @@ class AppUser {
     required this.department,
     required this.profileImage,
   });
+
+  bool get isApprover {
+    final approverRoles = [
+      'HR Admin',
+      'Medical Director',
+      'Department Supervisor',
+      'Doctor',
+      'Accountant',
+      'Principal Hospital Administrator',
+      'System Admin',
+    ];
+    return approverRoles.contains(role);
+  }
 }

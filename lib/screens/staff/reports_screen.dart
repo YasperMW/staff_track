@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
@@ -34,7 +34,7 @@ class ReportsScreen extends StatelessWidget {
                       'Your work analytics',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -60,7 +60,7 @@ class ReportsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
         ),
       ),
       child: Row(
@@ -78,7 +78,7 @@ class ReportsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MedCare Hospital',
+                "ST JOHN'S HOSPITAL",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -89,7 +89,7 @@ class ReportsScreen extends StatelessWidget {
                 'HR Portal',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                 ),
               ),
             ],
@@ -186,7 +186,7 @@ class ReportsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +206,7 @@ class ReportsScreen extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
           ),
           Text(
@@ -228,18 +228,31 @@ class ReportsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Weekly Hours',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Weekly Hours',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                'Avg: 8.9h',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textLightBlue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 40),
           // Custom Bar Chart Simulation
@@ -249,7 +262,7 @@ class ReportsScreen extends StatelessWidget {
             children: [
               _buildBar(context, 9.2, 'Mon'),
               _buildBar(context, 9.1, 'Tue'),
-              _buildBar(context, 9.3, 'Wed'),
+              _buildBar(context, 9.3, 'Wed', isToday: true),
               _buildBar(context, 8.5, 'Thu'),
               _buildBar(context, 9.0, 'Fri'),
             ],
@@ -259,20 +272,44 @@ class ReportsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBar(BuildContext context, double heightFactor, String day) {
+  Widget _buildBar(BuildContext context, double heightFactor, String day, {bool isToday = false}) {
     return Column(
       children: [
         Text(
           '${heightFactor}h',
-          style: const TextStyle(fontSize: 12, color: AppTheme.textLightBlue),
+          style: TextStyle(
+            fontSize: 12, 
+            color: isToday ? AppTheme.primaryBlue : AppTheme.textLightBlue,
+            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           width: 32,
           height: heightFactor * 15, // Scaling factor
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            gradient: isToday 
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+                )
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryBlue.withValues(alpha:0.2),
+                    AppTheme.primaryBlue.withValues(alpha:0.1),
+                  ],
+                ),
             borderRadius: BorderRadius.circular(8),
+            boxShadow: isToday ? [
+              BoxShadow(
+                color: AppTheme.primaryBlue.withValues(alpha:0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              )
+            ] : null,
           ),
         ),
         const SizedBox(height: 12),
@@ -280,8 +317,8 @@ class ReportsScreen extends StatelessWidget {
           day,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
+            color: isToday ? AppTheme.primaryBlue : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -295,7 +332,7 @@ class ReportsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +366,7 @@ class ReportsScreen extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
               ),
             ),
             Text(
@@ -345,7 +382,7 @@ class ReportsScreen extends StatelessWidget {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+          backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.05),
           valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
           borderRadius: BorderRadius.circular(4),
           minHeight: 8,

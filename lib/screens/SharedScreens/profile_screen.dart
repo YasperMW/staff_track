@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
-import '../utils/mock_data.dart';
-import 'login_screen.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
+import '../../utils/mock_data.dart';
+import '../login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -59,7 +59,7 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
         ),
       ),
       child: Row(
@@ -77,7 +77,7 @@ class ProfileScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MedCare Hospital',
+                "ST JOHN'S HOSPITAL",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -88,7 +88,7 @@ class ProfileScreen extends StatelessWidget {
                 'HR Portal',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                 ),
               ),
             ],
@@ -121,7 +121,7 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         children: [
@@ -197,7 +197,7 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         children: [
@@ -214,7 +214,7 @@ class ProfileScreen extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
           ),
         ],
@@ -227,10 +227,26 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         children: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return _buildOptionTile(
+                context: context,
+                icon: themeProvider.isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                title: 'Dark Mode',
+                trailingWidget: Switch(
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) => themeProvider.toggleTheme(),
+                  activeThumbColor: AppTheme.primaryBlue,
+                ),
+                showChevron: false,
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 60),
           _buildOptionTile(
             context: context,
             icon: Icons.notifications_none,
@@ -267,6 +283,8 @@ class ProfileScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     String? trailing,
+    Widget? trailingWidget,
+    bool showChevron = true,
   }) {
     return ListTile(
       leading: Icon(icon, color: AppTheme.textLightBlue),
@@ -280,6 +298,7 @@ class ProfileScreen extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          ?trailingWidget,
           if (trailing != null)
             Text(
               trailing,
@@ -288,8 +307,10 @@ class ProfileScreen extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-          const SizedBox(width: 8),
-          Icon(Icons.chevron_right, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+          if (showChevron) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.3)),
+          ],
         ],
       ),
       onTap: () {},

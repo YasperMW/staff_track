@@ -1,54 +1,156 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
-import '../utils/mock_data.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
+import '../../utils/mock_data.dart';
 
 class AttendanceScreen extends StatelessWidget {
   const AttendanceScreen({super.key});
+
+  Future<void> _onRefresh() async {
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      'Attendance',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppTheme.primaryBlue,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Attendance',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                'Your attendance history',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          _buildCheckInButton(context),
+                        ],
                       ),
-                    ),
-                    Text(
-                      'Your attendance history',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSummaryCard(),
-                    const SizedBox(height: 24),
-                    _buildFilterButton(context),
-                    const SizedBox(height: 24),
-                    _buildHistoryList(context),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                      _buildSummaryCard(),
+                      const SizedBox(height: 24),
+                      _buildFilterButton(context),
+                      const SizedBox(height: 24),
+                      _buildHistoryList(context),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryList(BuildContext context) {
+    if (MockData.attendanceHistory.isEmpty) {
+      return _buildEmptyState(context, 'No attendance records found');
+    }
+    return Column(
+      children: MockData.attendanceHistory.map((data) => _buildHistoryItem(context, data)).toList(),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40.0),
+        child: Column(
+          children: [
+            Icon(
+              Icons.history_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.2),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.5),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckInButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Checking in...'),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Icon(Icons.login, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Check In',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -61,7 +163,7 @@ class AttendanceScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
         ),
       ),
       child: Row(
@@ -79,7 +181,7 @@ class AttendanceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MedCare Hospital',
+                "ST JOHN'S HOSPITAL",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -90,7 +192,7 @@ class AttendanceScreen extends StatelessWidget {
                 'HR Portal',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                 ),
               ),
             ],
@@ -139,7 +241,7 @@ class AttendanceScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -161,12 +263,6 @@ class AttendanceScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryList(BuildContext context) {
-    return Column(
-      children: MockData.attendanceHistory.map((data) => _buildHistoryItem(context, data)).toList(),
-    );
-  }
-
   Widget _buildHistoryItem(BuildContext context, Map<String, dynamic> data) {
     bool isOnTime = data['status'] == 'On Time';
     return Container(
@@ -177,7 +273,7 @@ class AttendanceScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha:0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -221,14 +317,14 @@ class AttendanceScreen extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 data['time'],
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
               const SizedBox(width: 16),
               const Icon(Icons.location_on_outlined, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 4),
               Text(
                 data['location'],
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
             ],
           ),
@@ -268,7 +364,7 @@ class _SummaryItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha:0.8),
             fontSize: 14,
           ),
         ),

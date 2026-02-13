@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
-import '../utils/mock_data.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
+import '../../utils/mock_data.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -12,57 +12,67 @@ class RequestsScreen extends StatefulWidget {
 }
 
 class _RequestsScreenState extends State<RequestsScreen> {
+  Future<void> _onRefresh() async {
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Requests',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppTheme.primaryBlue,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Requests',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Leave & WFH requests',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              Text(
+                                'Leave & WFH requests',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        _buildAddButton(),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    _buildSummaryGrid(context),
-                    const SizedBox(height: 24),
-                    _buildRequestsList(context),
-                    const SizedBox(height: 24),
-                  ],
+                            ],
+                          ),
+                          _buildAddButton(),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSummaryGrid(context),
+                      const SizedBox(height: 24),
+                      _buildRequestsList(context),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -75,7 +85,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
         ),
       ),
       child: Row(
@@ -93,7 +103,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MedCare Hospital',
+                "ST JOHN'S HOSPITAL",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -104,7 +114,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 'HR Portal',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                 ),
               ),
             ],
@@ -137,7 +147,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withOpacity(0.3),
+            color: AppTheme.primaryBlue.withValues(alpha:0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -168,7 +178,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         children: [
@@ -185,7 +195,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
           ),
         ],
@@ -194,8 +204,36 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Widget _buildRequestsList(BuildContext context) {
+    if (MockData.requestsHistory.isEmpty) {
+      return _buildEmptyState(context, 'No requests found');
+    }
     return Column(
       children: MockData.requestsHistory.map((request) => _buildRequestCard(context, request)).toList(),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40.0),
+        child: Column(
+          children: [
+            Icon(
+              Icons.assignment_outlined,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.2),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -231,7 +269,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,14 +317,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
               const SizedBox(width: 8),
               Text(
                 request['dateRange'],
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
               const SizedBox(width: 12),
               const Icon(Icons.access_time, size: 16, color: AppTheme.textLightBlue),
               const SizedBox(width: 4),
               Text(
                 request['duration'],
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
             ],
           ),

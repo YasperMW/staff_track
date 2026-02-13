@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../theme/theme_provider.dart';
-import '../utils/mock_data.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
+import '../../utils/mock_data.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,6 +14,37 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  late Timer _timer;
+  String _timeString = '';
+  bool _isClockedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timeString = _formatDateTime(DateTime.now());
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
+  }
+
+  void _getTime() {
+    final DateTime now = DateTime.now();
+    final String formattedTime = _formatDateTime(now);
+    if (mounted) {
+      setState(() {
+        _timeString = formattedTime;
+      });
+    }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return DateFormat('hh:mm:ss a').format(dateTime);
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
         ),
       ),
       child: Row(
@@ -73,7 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'MedCare Hospital',
+                "ST JOHN'S HOSPITAL",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -84,7 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'HR Portal',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                 ),
               ),
             ],
@@ -156,7 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withOpacity(0.3),
+            color: AppTheme.primaryBlue.withValues(alpha:0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -171,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               height: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha:0.1),
               ),
             ),
           ),
@@ -181,12 +213,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, color: Colors.white.withOpacity(0.9), size: 18),
+                    Icon(Icons.location_on_outlined, color: Colors.white.withValues(alpha:0.9), size: 18),
                     const SizedBox(width: 8),
                     Text(
                       'Office - Main Building',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha:0.9),
                         fontSize: 14,
                       ),
                     ),
@@ -194,16 +226,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Ready to clock in',
+                  _isClockedIn ? 'Currently working' : 'Ready to clock in',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha:0.8),
                     fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '05:20 PM',
-                  style: TextStyle(
+                Text(
+                  _timeString,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
@@ -213,7 +245,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      setState(() {
+                        _isClockedIn = !_isClockedIn;
+                      });
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppTheme.primaryBlue,
@@ -223,9 +259,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Clock In',
-                      style: TextStyle(
+                    child: Text(
+                      _isClockedIn ? 'Clock Out' : 'Clock In',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -260,7 +296,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha:0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -330,7 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.05)),
+        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
