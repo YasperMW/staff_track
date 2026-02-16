@@ -1,0 +1,51 @@
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class RegisterRequest(BaseModel):
+    employee_number: str
+    national_id: str
+    suffix: Optional[str] = ""
+    first_name: str
+    surname: str
+    other_names: Optional[str] = ""
+    date_of_birth: str
+    gender: str
+    email: EmailStr
+    phone: str
+    home_of_origin: str
+    traditional_authority: str
+    district: str
+    current_address: str
+    marital_status: str
+    spouse_name: Optional[str] = ""
+    spouse_contact: Optional[str] = ""
+    date_of_employment: str
+    years_in_service: str
+    designation: str
+    role: str
+    department: str
+    is_head_of_department: bool = False
+    password: str
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    token: Optional[str] = None
+    user: Optional[dict] = None
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    first_name: str
+    surname: str
+    role: str
+    employee_number: str
+    department: str
+    designation: str

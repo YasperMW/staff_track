@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
+import 'controllers/auth_provider.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()..loadFromStorage()),
+      ],
       child: const StaffTrackApp(),
     ),
   );
@@ -18,15 +23,21 @@ class StaffTrackApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+    return Consumer2<ThemeProvider, AuthProvider>(
+      builder: (context, themeProvider, authProvider, child) {
         return MaterialApp(
           title: 'Staff Track',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          home: const LoginScreen(),
+          home: authProvider.isLoading
+              ? const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                )
+              : authProvider.isLoggedIn
+                  ? const HomeScreen()
+                  : const LoginScreen(),
         );
       },
     );
