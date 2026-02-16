@@ -20,30 +20,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Controllers for form fields
   final _employeeNumberController = TextEditingController();
   final _nationalIdController = TextEditingController();
-  final _fullNameController = TextEditingController();
+  final _suffixController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _surNameController = TextEditingController();
+  final _otherNamesController = TextEditingController();
+  final _dateOfBirthController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _homeOfOriginController = TextEditingController();
+  final _traditionalAuthorityController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _currentAddressController = TextEditingController();
+  final _spouseNameController = TextEditingController();
+  final _spouseContactController = TextEditingController();
+  final _dateOfEmploymentController = TextEditingController();
+  final _yearsInServiceController = TextEditingController();
+  final _designationController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   String? _selectedRole;
   String? _selectedDepartment;
+  String? _selectedGender;
+  String? _selectedMaritalStatus;
+  bool _isHeadOfDepartment = false;
 
   @override
   void dispose() {
     _pageController.dispose();
     _employeeNumberController.dispose();
     _nationalIdController.dispose();
-    _fullNameController.dispose();
+    _suffixController.dispose();
+    _firstNameController.dispose();
+    _surNameController.dispose();
+    _otherNamesController.dispose();
+    _dateOfBirthController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _homeOfOriginController.dispose();
+    _traditionalAuthorityController.dispose();
+    _districtController.dispose();
+    _currentAddressController.dispose();
+    _spouseNameController.dispose();
+    _spouseContactController.dispose();
+    _dateOfEmploymentController.dispose();
+    _yearsInServiceController.dispose();
+    _designationController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
-    if (_currentStep < 3) {
+    if (_currentStep < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -67,29 +96,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
     
     setState(() => _isLoading = true);
     
-    final success = await _registerService.register(
+    final response = await _registerService.register(
       employeeNumber: _employeeNumberController.text,
       nationalId: _nationalIdController.text,
-      fullName: _fullNameController.text,
+      suffix: _suffixController.text,
+      firstName: _firstNameController.text,
+      surName: _surNameController.text,
+      otherNames: _otherNamesController.text,
+      dateOfBirth: _dateOfBirthController.text,
+      gender: _selectedGender!,
       email: _emailController.text,
       phone: _phoneController.text,
+      homeOfOrigin: _homeOfOriginController.text,
+      traditionalAuthority: _traditionalAuthorityController.text,
+      district: _districtController.text,
+      currentAddress: _currentAddressController.text,
+      maritalStatus: _selectedMaritalStatus!,
+      spouseName: _spouseNameController.text,
+      spouseContact: _spouseContactController.text,
+      dateOfEmployment: _dateOfEmploymentController.text,
+      yearsInService: _yearsInServiceController.text,
+      designation: _designationController.text,
       role: _selectedRole!,
       department: _selectedDepartment!,
+      isHeadOfDepartment: _isHeadOfDepartment,
       password: _passwordController.text,
     );
     
     if (mounted) {
       setState(() => _isLoading = false);
       
-      if (success) {
+      if (response.success) {
         // Show success dialog
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: const Text('Registration Successful'),
-            content: const Text(
-              'Your account has been created and is pending HR approval. You will be notified once activated.',
+            content: Text(
+              response.message ?? 'Your account has been created and is pending HR approval. You will be notified once activated.',
             ),
             actions: [
               TextButton(
@@ -105,8 +150,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Please try again.')),
+        // Show error dialog with specific error message
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Registration Failed'),
+            content: Text(
+              response.message ?? 'Registration failed. Please try again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }
@@ -171,8 +229,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               setState(() => _currentStep = page);
                             },
                             children: [
-                              _buildWorkDetailsStep(theme),
                               _buildPersonalDetailsStep(theme),
+                              _buildLocationStep(theme),
+                              _buildFamilyDetailsStep(theme),
+                              _buildWorkDetailsStep(theme),
                               _buildSecurityStep(theme),
                               _buildProfileStep(theme),
                             ],
@@ -228,7 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStepIndicator() {
     return Row(
-      children: List.generate(4, (index) {
+      children: List.generate(5, (index) {
         bool isActive = index <= _currentStep;
         return Expanded(
           child: Container(
@@ -267,13 +327,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
             theme: theme,
           ),
           const SizedBox(height: 16),
-          _buildDropdown(
-            label: 'Role',
+          _buildTextField(
+            controller: _designationController,
+            label: 'Designation',
             icon: Icons.work_outline,
-            items: _registerService.getRoles(),
-            value: _selectedRole,
-            onChanged: (val) => setState(() => _selectedRole = val),
             theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _dateOfEmploymentController,
+            label: 'Date of Employment',
+            icon: Icons.calendar_today_outlined,
+            theme: theme,
+            keyboardType: TextInputType.datetime,
+            readOnly: true,
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now().subtract(const Duration(days: 365)),
+                firstDate: DateTime.now().subtract(const Duration(days: 365 * 50)),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                _dateOfEmploymentController.text = date.toIso8601String().split('T')[0];
+                // Auto-calculate years in service
+                final years = DateTime.now().difference(date).inDays / 365;
+                _yearsInServiceController.text = years.floor().toString();
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _yearsInServiceController,
+            label: 'Years in Service',
+            icon: Icons.timeline_outlined,
+            theme: theme,
+            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
           _buildDropdown(
@@ -283,6 +372,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             value: _selectedDepartment,
             onChanged: (val) => setState(() => _selectedDepartment = val),
             theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildDropdown(
+            label: 'Role',
+            icon: Icons.work_outline,
+            items: _registerService.getRoles(),
+            value: _selectedRole,
+            onChanged: (val) => setState(() => _selectedRole = val),
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          CheckboxListTile(
+            title: const Text('I am the Head of Department'),
+            subtitle: const Text('Check if you are the HOD for this department'),
+            value: _isHeadOfDepartment,
+            onChanged: (val) => setState(() => _isHeadOfDepartment = val ?? false),
+            activeColor: AppTheme.primaryBlue,
+            contentPadding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -294,12 +401,76 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStepTitle('Personal Details', 'Tell us more about yourself'),
+          _buildStepTitle(
+            'Personal Details',
+            'Tell us more about yourself',
+          ),
           const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  controller: _suffixController,
+                  label: 'Suffix',
+                  icon: Icons.person_outline,
+                  theme: theme,
+                  isRequired: false,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: _buildTextField(
+                  controller: _firstNameController,
+                  label: 'First Name',
+                  icon: Icons.person_outline,
+                  theme: theme,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           _buildTextField(
-            controller: _fullNameController,
-            label: 'Full Name',
+            controller: _surNameController,
+            label: 'Surname',
             icon: Icons.person_outline,
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _otherNamesController,
+            label: 'Other Names',
+            icon: Icons.person_outline,
+            theme: theme,
+            isRequired: false,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _dateOfBirthController,
+            label: 'Date of Birth',
+            icon: Icons.cake_outlined,
+            theme: theme,
+            keyboardType: TextInputType.datetime,
+            readOnly: true,
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
+                firstDate: DateTime.now().subtract(const Duration(days: 365 * 70)),
+                lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+              );
+              if (date != null) {
+                _dateOfBirthController.text = date.toIso8601String().split('T')[0];
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildDropdown(
+            label: 'Gender',
+            icon: Icons.person_outline,
+            items: const ['male', 'female', 'other'],
+            value: _selectedGender,
+            onChanged: (val) => setState(() => _selectedGender = val),
             theme: theme,
           ),
           const SizedBox(height: 16),
@@ -313,7 +484,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 16),
           _buildTextField(
             controller: _phoneController,
-            label: 'Phone Number',
+            label: 'Contact Number',
             icon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             theme: theme,
@@ -344,6 +515,92 @@ class _RegisterScreenState extends State<RegisterScreen> {
             icon: Icons.lock_reset_outlined,
             isPassword: true,
             theme: theme,
+            customValidator: (value) {
+              if (value != _passwordController.text) return 'Passwords do not match';
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationStep(ThemeData theme) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepTitle(
+            'Location Information',
+            'Tell us where you are based',
+          ),
+          const SizedBox(height: 24),
+          _buildTextField(
+            controller: _homeOfOriginController,
+            label: 'Home of Origin',
+            icon: Icons.home_outlined,
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _traditionalAuthorityController,
+            label: 'Traditional Authority',
+            icon: Icons.account_balance_outlined,
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _districtController,
+            label: 'District',
+            icon: Icons.location_city_outlined,
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _currentAddressController,
+            label: 'Current Address',
+            icon: Icons.place_outlined,
+            theme: theme,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFamilyDetailsStep(ThemeData theme) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepTitle(
+            'Family Information',
+            'Capture your family and spouse details',
+          ),
+          const SizedBox(height: 24),
+          _buildDropdown(
+            label: 'Marital Status',
+            icon: Icons.family_restroom_outlined,
+            items: const ['single', 'married', 'divorced', 'widowed'],
+            value: _selectedMaritalStatus,
+            onChanged: (val) => setState(() => _selectedMaritalStatus = val),
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _spouseNameController,
+            label: 'Spouse Name (optional)',
+            icon: Icons.person_outline,
+            theme: theme,
+            isRequired: false,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _spouseContactController,
+            label: 'Spouse Contact (optional)',
+            icon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+            theme: theme,
+            isRequired: false,
           ),
         ],
       ),
@@ -426,11 +683,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required ThemeData theme,
     bool isPassword = false,
     TextInputType? keyboardType,
+    bool isRequired = true,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    String? Function(String?)? customValidator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
       keyboardType: keyboardType,
+      readOnly: readOnly,
+      onTap: onTap,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 22),
@@ -452,6 +715,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       validator: (value) {
+        final custom = customValidator?.call(value);
+        if (custom != null) return custom;
+        if (!isRequired && (value == null || value.isEmpty)) return null;
         if (value == null || value.isEmpty) return 'This field is required';
         if (isPassword && value.length < 6) return 'Password too short';
         return null;
@@ -534,7 +800,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         strokeWidth: 2,
                       ),
                     )
-                  : Text(_currentStep == 3 ? 'Complete Registration' : 'Next Step'),
+                  : Text(_currentStep == 4 ? 'Complete Registration' : 'Next Step'),
             ),
           ),
         ],

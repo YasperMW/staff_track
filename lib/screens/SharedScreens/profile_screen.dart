@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_provider.dart';
-import '../../utils/mock_data.dart';
+import '../../controllers/auth_provider.dart';
 import '../login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -10,7 +10,12 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = MockData.currentUser;
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Not logged in')),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -85,7 +90,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                'HR Portal',
+                'Staff Track',
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
@@ -169,7 +174,7 @@ class ProfileScreen extends StatelessWidget {
               const Icon(Icons.phone_outlined, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 8),
               const Text(
-                '+1 234 567',
+                '+265 9997 823 454',
                 style: TextStyle(color: AppTheme.textLightBlue),
               ),
             ],
@@ -271,7 +276,7 @@ class ProfileScreen extends StatelessWidget {
             context: context,
             icon: Icons.location_on_outlined,
             title: 'Office',
-            trailing: 'Main HQ',
+            trailing: 'Main Office',
           ),
         ],
       ),
@@ -320,11 +325,14 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildSignOutButton(BuildContext context) {
     return Center(
       child: TextButton.icon(
-        onPressed: () {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
-          );
+        onPressed: () async {
+          await context.read<AuthProvider>().logout();
+          if (context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              (route) => false,
+            );
+          }
         },
         icon: const Icon(Icons.logout, color: AppTheme.errorRed),
         label: const Text(

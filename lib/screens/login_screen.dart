@@ -24,19 +24,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final success = await _loginService.login(_emailController.text, _passwordController.text);
+    final response = await _loginService.login(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
 
     if (mounted) {
       setState(() => _isLoading = false);
-      
-      if (success) {
+
+      if (response.success) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid credentials. Try admin@hospital.com / admin123 or employee@hospital.com / emp123'),
+          SnackBar(
+            content: Text(response.message ?? 'Invalid credentials.'),
             behavior: SnackBarBehavior.floating,
           ),
         );

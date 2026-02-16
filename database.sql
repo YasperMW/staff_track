@@ -9,24 +9,25 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE TABLE roles (
     role_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name          VARCHAR(100) NOT NULL UNIQUE,
-    description   TEXT,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at    TIMESTAMPTZ,
-    deleted_by    UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    deleted_by    UUID,
     CONSTRAINT chk_role_name_not_empty CHECK (TRIM(name) <> '')
 );
 
 CREATE TABLE departments (
-    department_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name          VARCHAR(150) NOT NULL UNIQUE,
-    description   TEXT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at    TIMESTAMPTZ,
-    deleted_by    UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    department_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name                VARCHAR(150) NOT NULL UNIQUE,
+    description         TEXT,
+    head_of_department_id UUID,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at          TIMESTAMPTZ,
+    deleted_by          UUID,
     CONSTRAINT chk_department_name_not_empty CHECK (TRIM(name) <> '')
 );
+
 
 -- =============================================================================
 -- Users & Employee Core
@@ -39,11 +40,25 @@ CREATE TABLE users (
     first_name          VARCHAR(100) NOT NULL,
     surname             VARCHAR(100) NOT NULL,
     other_names         VARCHAR(150),                    -- optional middle / additional names
+    suffix              VARCHAR(20),                     -- e.g., Jr., Sr., Dr., etc.
+    date_of_birth       DATE,
+    gender              VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+    home_of_origin      VARCHAR(150),                    -- home town/village
+    traditional_authority VARCHAR(100),                  -- T/A (Traditional Authority)
+    district            VARCHAR(100),
+    current_address     TEXT,
+    contact_number      VARCHAR(30) UNIQUE,
     email               VARCHAR(255) UNIQUE,
-    phone               VARCHAR(30)  UNIQUE,
+    marital_status      VARCHAR(20) CHECK (marital_status IN ('single', 'married', 'divorced', 'widowed')),
+    spouse_name         VARCHAR(150),
+    spouse_contact      VARCHAR(30),
+    date_of_employment  DATE,
+    designation         VARCHAR(150),                    -- job title/position
+    department_id       UUID         REFERENCES departments(department_id) ON DELETE SET NULL,
+    is_head_of_department BOOLEAN DEFAULT FALSE,       -- marks if user is HOD of their department
+    phone               VARCHAR(30)  UNIQUE,             -- keeping for backward compatibility
     password_hash       TEXT         NOT NULL,
     role_id             UUID         NOT NULL REFERENCES roles(role_id) ON DELETE RESTRICT,
-    department_id       UUID         REFERENCES departments(department_id) ON DELETE SET NULL,
     status              VARCHAR(30)  NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'active', 'suspended', 'blacklisted', 'terminated')),
     profile_photo_url   TEXT,
@@ -60,6 +75,8 @@ CREATE TABLE users (
     CONSTRAINT chk_employee_number_not_empty CHECK (TRIM(employee_number) <> ''),
     CONSTRAINT chk_names_not_empty CHECK (TRIM(first_name) <> '' AND TRIM(surname) <> '')
 );
+
+
 
 -- =============================================================================
 -- Leave Balances
@@ -206,8 +223,23 @@ CREATE TABLE pending_registrations (
     first_name              VARCHAR(100),
     surname                 VARCHAR(100),
     other_names             VARCHAR(150),
+    suffix                  VARCHAR(20),
+    date_of_birth           DATE,
+    gender                  VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')),
+    home_of_origin          VARCHAR(150),
+    traditional_authority   VARCHAR(100),
+    district                VARCHAR(100),
+    current_address         TEXT,
+    contact_number          VARCHAR(30),
     email                   VARCHAR(255),
-    phone                   VARCHAR(30),
+    marital_status          VARCHAR(20) CHECK (marital_status IN ('single', 'married', 'divorced', 'widowed')),
+    spouse_name             VARCHAR(150),
+    spouse_contact          VARCHAR(30),
+    date_of_employment      DATE,
+    designation             VARCHAR(150),
+    department_id           UUID REFERENCES departments(department_id) ON DELETE SET NULL,
+    is_head_of_department BOOLEAN DEFAULT FALSE,       -- marks if user is HOD of their department
+    phone                   VARCHAR(30),                     -- keeping for backward compatibility
     selfie_url              TEXT,
     status                  VARCHAR(30) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -247,6 +279,25 @@ BEGIN
         ', tbl, tbl, tbl, tbl);
     END LOOP;
 END $$;
+
+-- =============================================================================
+-- Add Foreign Key Constraints After All Tables Are Created
+-- =============================================================================
+
+-- Add foreign key constraints for roles table (drop if exists first)
+ALTER TABLE roles DROP CONSTRAINT IF EXISTS fk_roles_deleted_by;
+ALTER TABLE roles 
+ADD CONSTRAINT fk_roles_deleted_by 
+FOREIGN KEY (deleted_by) REFERENCES users(user_id) ON DELETE SET NULL;
+
+-- Add foreign key constraints for departments table (drop if exists first)
+ALTER TABLE departments DROP CONSTRAINT IF EXISTS fk_departments_head_of_department;
+ALTER TABLE departments DROP CONSTRAINT IF EXISTS fk_departments_deleted_by;
+ALTER TABLE departments 
+ADD CONSTRAINT fk_departments_head_of_department 
+FOREIGN KEY (head_of_department_id) REFERENCES users(user_id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_departments_deleted_by 
+FOREIGN KEY (deleted_by) REFERENCES users(user_id) ON DELETE SET NULL;
 
 -- =============================================================================
 -- Soft-Delete Trigger (log deletions to audit_logs)
