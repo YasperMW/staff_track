@@ -28,11 +28,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440
 # sessions_db = {}
 
 # Helper functions
+import bcrypt
+
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash password using bcrypt with salt"""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 def verify_password(password: str, hashed: str) -> bool:
-    return hashlib.sha256(password.encode()).hexdigest() == hashed
+    """Verify password against bcrypt hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -47,39 +52,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 # Endpoints
 @router.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    # Check for demo admin user
-    if request.email == "admin@hospital.com" and request.password == "admin123":
-        token = create_access_token(data={"sub": "admin@hospital.com", "role": "admin"})
-        return AuthResponse(
-            success=True,
-            message="Login successful",
-            token=token,
-            user={
-                "email": "admin@hospital.com",
-                "first_name": "Admin",
-                "surname": "User",
-                "role": "admin",
-                "department": "Administration",
-            }
-        )
-    
-    # Check for demo test user
-    if request.password == "test123":
-        token = create_access_token(data={"sub": request.email, "role": "user"})
-        return AuthResponse(
-            success=True,
-            message="Login successful",
-            token=token,
-            user={
-                "email": request.email,
-                "first_name": "Test",
-                "surname": "User",
-                "role": "user",
-                "department": "",
-            }
-        )
-    
-    # Check against database users
+    # Check against database users only
     user = db.query(User).filter(User.email == request.email).first()
     if user and verify_password(request.password, user.password_hash):
         # Update last login
@@ -98,7 +71,6 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 "surname": user.surname,
                 "role": user.role.name,
                 "department": dept_name,
-                "user_id": str(user.user_id),
             }
         )
     
@@ -170,31 +142,29 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     new_user = User(
         employee_number=request.employee_number,
         national_id=request.national_id,
-        suffix=request.suffix or None,
+        suffix=request.suffix,
         first_name=request.first_name,
         surname=request.surname,
-        other_names=request.other_names or None,
-        date_of_birth=date_of_birth_val,
+        other_names=request.other_names,
+        date_of_birth=request.date_of_birth,
         gender=request.gender,
         email=request.email,
         phone=request.phone,
-        contact_number=request.phone,
         home_of_origin=request.home_of_origin,
         traditional_authority=request.traditional_authority,
         district=request.district,
         current_address=request.current_address,
         marital_status=request.marital_status,
-        spouse_name=request.spouse_name or None,
-        spouse_contact=request.spouse_contact or None,
-        date_of_employment=date_of_employment_val,
+        spouse_name=request.spouse_name,
+        spouse_contact=request.spouse_contact,
+        date_of_employment=request.date_of_employment,
         designation=request.designation,
         role_id=role.role_id,
-        department_id=department.department_id,
-        is_head_of_department=request.is_head_of_department,
         password_hash=hashed_password,
+        profile_photo_url=request.profile_photo_url,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
-        registration_timestamp=datetime.utcnow(),
+        registration_timestamp=datetime.utcnow()
     )
     
     db.add(new_user)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/login_service.dart';
+import '../controllers/auth_provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
@@ -14,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final LoginService _loginService = LoginService();
   final _emailController = TextEditingController(text: 'admin@hospital.com');
   final _passwordController = TextEditingController(text: 'admin123');
   bool _obscurePassword = true;
@@ -25,22 +25,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final response = await _loginService.login(
-      email: _emailController.text,
-      password: _passwordController.text,
+    final authProvider = context.read<AuthProvider>();
+    final result = await authProvider.login(
+      _emailController.text,
+      _passwordController.text,
     );
 
     if (mounted) {
       setState(() => _isLoading = false);
 
-      if (response.success) {
+      if (result.success) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response.message ?? 'Invalid credentials.'),
+            content: Text(result.message ?? 'Invalid credentials.'),
             behavior: SnackBarBehavior.floating,
           ),
         );

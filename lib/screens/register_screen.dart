@@ -1,6 +1,13 @@
+
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+
 import '../services/register_service.dart';
+import '../services/image_service.dart';
+import '../config/app_config.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/custom_dropdown.dart';
+import '../widgets/step_indicator.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -46,6 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedGender;
   String? _selectedMaritalStatus;
   bool _isHeadOfDepartment = false;
+  String? _profilePhotoUrl;
 
   @override
   void initState() {
@@ -152,6 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       department: _selectedDepartment!,
       isHeadOfDepartment: _isHeadOfDepartment,
       password: _passwordController.text,
+      profilePhotoUrl: _profilePhotoUrl,
     );
     
     if (mounted) {
@@ -633,7 +642,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             subtitle: const Text('Are you the HOD?'),
             value: _isHeadOfDepartment,
             onChanged: (val) => setState(() => _isHeadOfDepartment = val),
-            activeColor: AppTheme.primaryBlue,
+            activeThumbColor: AppTheme.primaryBlue,
             contentPadding: EdgeInsets.zero,
           ),
           const SizedBox(height: 20),
@@ -676,14 +685,89 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildProfileStep(ThemeData theme) {
+    final ImageService imageService = ImageService();
+    
     return Column(
       children: [
         _buildStepTitle('Profile Picture', 'Upload a professional photo'),
         const Spacer(),
         GestureDetector(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Camera/Gallery opening...')),
+          onTap: () async {
+            // Show image source selection dialog
+            showModalBottomSheet(
+              context: context,
+              builder: (BuildContext context) {
+                return SafeArea(
+                  child: Wrap(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.camera_alt),
+                        title: const Text('Take Photo'),
+                        onTap: () async {
+                          Navigator.of(context).pop();
+                          final imagePath = await imageService.takePhoto();
+                          if (imagePath != null) {
+                            setState(() => _isLoading = true);
+                            final uploadedUrl = await imageService.uploadImage(imagePath);
+                            setState(() {
+                              _isLoading = false;
+                              if (uploadedUrl != null) {
+                                _profilePhotoUrl = uploadedUrl;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Profile photo uploaded successfully!')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Failed to upload photo')),
+                                );
+                              }
+                            });
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.photo_library),
+                        title: const Text('Choose from Gallery'),
+                        onTap: () async {
+                          Navigator.of(context).pop();
+                          final imagePath = await imageService.pickImage();
+                          if (imagePath != null) {
+                            setState(() => _isLoading = true);
+                            final uploadedUrl = await imageService.uploadImage(imagePath);
+                            setState(() {
+                              _isLoading = false;
+                              if (uploadedUrl != null) {
+                                _profilePhotoUrl = uploadedUrl;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Profile photo uploaded successfully!')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Failed to upload photo')),
+                                );
+                              }
+                            });
+                          }
+                        },
+                      ),
+                      if (_profilePhotoUrl != null)
+                        ListTile(
+                          leading: const Icon(Icons.delete, color: Colors.red),
+                          title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            setState(() {
+                              _profilePhotoUrl = null;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Profile photo removed')),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              },
             );
           },
           child: Stack(
@@ -699,11 +783,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: 2,
                   ),
                 ),
-                child: const Icon(
-                  Icons.person_outline,
-                  size: 80,
-                  color: AppTheme.primaryBlue,
-                ),
+                child: _profilePhotoUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          _profilePhotoUrl!,
+                          width: 160,
+                          height: 160,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person_outline,
+                              size: 80,
+                              color: AppTheme.primaryBlue,
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_outline,
+                        size: 80,
+                        color: AppTheme.primaryBlue,
+                      ),
               ),
               Positioned(
                 bottom: 0,
@@ -721,14 +827,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
+              if (_isLoading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
         const SizedBox(height: 24),
+        Text(
+          _profilePhotoUrl != null 
+              ? 'Profile photo added successfully!'
+              : 'Tap to add a professional photo',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _profilePhotoUrl != null ? Colors.green : Colors.grey,
+            fontWeight: _profilePhotoUrl != null ? FontWeight.w500 : FontWeight.normal,
+          ),
+        ),
+        const SizedBox(height: 8),
         const Text(
           'A clear photo helps HR identify you quickly.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: Colors.grey, fontSize: 12),
         ),
         const Spacer(),
       ],
@@ -808,7 +940,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required ThemeData theme,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       items: items.map((String item) {
         return DropdownMenuItem<String>(
           value: item,

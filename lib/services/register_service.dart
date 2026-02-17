@@ -53,6 +53,7 @@ class RegisterService {
     required String department,
     required bool isHeadOfDepartment,
     required String password,
+    String? profilePhotoUrl,
   }) async {
     try {
       final response = await http.post(
@@ -83,6 +84,7 @@ class RegisterService {
           'department': department,
           'is_head_of_department': isHeadOfDepartment,
           'password': password,
+          'profile_photo_url': ?profilePhotoUrl,
         }),
       );
       

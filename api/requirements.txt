@@ -1,15 +1,19 @@
 
 fastapi==0.109.2
-uvicorn[standard]==0.27.1
+uvicorn
 sqlalchemy>=2.0.36
 pydantic==2.12.4
 pydantic-core==2.41.5
 passlib[bcrypt]==1.7.4
-psycopg2-binary==2.9.11
-python-jose[cryptography]==3.3.0
-python-multipart==0.0.9
-python-dotenv==1.0.1
-starlette==0.36.3
+python-jose[cryptography]
+python-multipart
+aiofiles==23.2.1
+email-validator
+pydantic[email]
+python-dotenv
+psycopg2-binary
+sqlalchemy
+bcrypt==5.0.0
 anyio==4.11.0
 annotated-types==0.7.0
 typing-extensions==4.15.0
