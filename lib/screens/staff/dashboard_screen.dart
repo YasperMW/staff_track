@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_provider.dart';
-import '../../utils/mock_data.dart';
+import '../../controllers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -165,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               const TextSpan(text: 'Good Morning, '),
               TextSpan(
-                text: MockData.currentUser.name,
+                text: context.watch<AuthProvider>().user?.name ?? 'User',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const TextSpan(text: ' 👋'),
@@ -353,8 +353,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivityList(BuildContext context) {
+    // TODO: Replace with actual activity data from API
+    final activities = <Map<String, dynamic>>[];
     return Column(
-      children: MockData.recentActivity.map((activity) => _buildActivityItem(context, activity)).toList(),
+      children: activities.map((activity) => _buildActivityItem(context, activity)).toList(),
     );
   }
 

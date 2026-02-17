@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'controllers/auth_provider.dart';
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -11,7 +12,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()..loadFromStorage()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: const StaffTrackApp(),
     ),
@@ -31,13 +32,7 @@ class StaffTrackApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
-          home: authProvider.isLoading
-              ? const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                )
-              : authProvider.isLoggedIn
-                  ? const HomeScreen()
-                  : const LoginScreen(),
+          home: const SplashScreen(),
         );
       },
     );

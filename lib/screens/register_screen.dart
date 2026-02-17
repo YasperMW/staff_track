@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/register_service.dart';
 import '../services/image_service.dart';
+import '../services/lookup_service.dart';
 import '../config/app_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_text_field.dart';
@@ -26,6 +27,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _showScrollHint = false;
 
+  // API data
+  List<String> _roles = [];
+  List<Department> _departments = [];
+  List<Designation> _designations = [];
+  List<String> _designationNames = [];
+  bool _isLoadingLookupData = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    _loadLookupData();
+  }
+
+  Future<void> _loadLookupData() async {
+    try {
+      final roles = await LookupService.getRoles();
+      final departments = await LookupService.getDepartments();
+      
+      setState(() {
+        _roles = roles.map((role) => role.name).toList();
+        _departments = departments;
+        _selectedRole = _roles.isNotEmpty ? _roles.first : null;
+        _selectedDepartment = _departments.isNotEmpty ? _departments.first.name : null;
+        _isLoadingLookupData = false;
+      });
+    } catch (e) {
+      print('Error loading lookup data: $e');
+      setState(() {
+        _isLoadingLookupData = false;
+      });
+    }
+  }
+
+  void _updateDesignations(String? departmentName) {
+    if (departmentName != null) {
+      // Find department and get its designations from already loaded data
+      final selectedDept = _departments.firstWhere(
+        (dept) => dept.name == departmentName,
+        orElse: () => Department(
+          departmentId: '',
+          name: departmentName,
+          designations: [],
+          createdAt: '',
+        ),
+      );
+      
+      setState(() {
+        _designationNames = selectedDept.designations;
+        // Set designation to first available if current value is not in the list or is empty
+        if (_designationController.text.isEmpty || 
+            !_designationNames.contains(_designationController.text)) {
+          _designationController.text = _designationNames.isNotEmpty ? _designationNames.first : '';
+        }
+      });
+    }
+  }
+
   // Controllers for form fields
   final _employeeNumberController = TextEditingController();
   final _nationalIdController = TextEditingController();
@@ -43,7 +102,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _spouseNameController = TextEditingController();
   final _spouseContactController = TextEditingController();
   final _dateOfEmploymentController = TextEditingController();
-  final _yearsInServiceController = TextEditingController();
   final _designationController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -54,12 +112,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedMaritalStatus;
   bool _isHeadOfDepartment = false;
   String? _profilePhotoUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_scrollListener);
-  }
 
   void _scrollListener() {
     if (_scrollController.hasClients) {
@@ -101,7 +153,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _spouseNameController.dispose();
     _spouseContactController.dispose();
     _dateOfEmploymentController.dispose();
-    _yearsInServiceController.dispose();
     _designationController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -154,8 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       spouseName: _spouseNameController.text,
       spouseContact: _spouseContactController.text,
       dateOfEmployment: _dateOfEmploymentController.text,
-      yearsInService: _yearsInServiceController.text,
-      designation: _designationController.text,
+      designationId: _designationController.text,
       role: _selectedRole!,
       department: _selectedDepartment!,
       isHeadOfDepartment: _isHeadOfDepartment,
@@ -584,13 +634,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 16),
           _buildTextField(
-            controller: _designationController,
-            label: 'Designation / Job Title',
-            icon: Icons.work_history_outlined,
-            theme: theme,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
             controller: _dateOfEmploymentController,
             label: 'Employment Date',
             icon: Icons.calendar_month_outlined,
@@ -605,45 +648,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
               );
               if (date != null) {
                 _dateOfEmploymentController.text = date.toIso8601String().split('T')[0];
-                final years = DateTime.now().difference(date).inDays / 365;
-                _yearsInServiceController.text = years.floor().toString();
               }
             },
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _yearsInServiceController,
-            label: 'Years in Service',
-            icon: Icons.timer_outlined,
-            theme: theme,
-            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 16),
           _buildDropdown(
             label: 'Department',
             icon: Icons.corporate_fare_outlined,
-            items: _registerService.getDepartments(),
-            value: _selectedDepartment,
-            onChanged: (val) => setState(() => _selectedDepartment = val),
+            items: _isLoadingLookupData ? ['Loading...'] : _departments.map((d) => d.name).toList(),
+            value: _isLoadingLookupData ? null : _selectedDepartment,
+            onChanged: (String? value) {
+              setState(() => _selectedDepartment = value);
+              if (value != null) {
+                // Update designations based on selected department
+                _updateDesignations(value);
+              }
+            },
+            theme: theme,
+          ),
+          const SizedBox(height: 16),
+          _buildDropdown(
+            label: 'Designation / Job Title',
+            icon: Icons.work_history_outlined,
+            items: _designationNames.isNotEmpty ? _designationNames : ['Select department first'],
+            value: _designationNames.isNotEmpty && _designationNames.contains(_designationController.text) 
+                ? _designationController.text 
+                : (_designationNames.isNotEmpty ? _designationNames.first : null),
+            onChanged: (val) {
+              _designationController.text = val ?? '';
+            },
             theme: theme,
           ),
           const SizedBox(height: 16),
           _buildDropdown(
             label: 'Role',
             icon: Icons.account_tree_outlined,
-            items: _registerService.getRoles(),
-            value: _selectedRole,
+            items: _isLoadingLookupData ? ['Loading...'] : _roles,
+            value: _isLoadingLookupData ? null : _selectedRole,
             onChanged: (val) => setState(() => _selectedRole = val),
             theme: theme,
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            title: const Text('Head of Department'),
-            subtitle: const Text('Are you the HOD?'),
-            value: _isHeadOfDepartment,
-            onChanged: (val) => setState(() => _isHeadOfDepartment = val),
-            activeThumbColor: AppTheme.primaryBlue,
-            contentPadding: EdgeInsets.zero,
           ),
           const SizedBox(height: 20),
         ],

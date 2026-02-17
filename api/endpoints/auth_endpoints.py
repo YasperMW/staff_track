@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from models.auth_models import LoginRequest, RegisterRequest, AuthResponse, ResetPasswordRequest
-from models.db_models import User, Role, Department
+from models.db_models import User, Role, Department, Designation
 from typing import Optional
 import hashlib
 import jwt
@@ -122,6 +122,19 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(department)
     
+    # Get or create designation from request
+    designation = db.query(Designation).filter(Designation.name == request.designation_id).first()
+    if not designation:
+        designation = Designation(
+            name=request.designation_id,
+            department_id=department.department_id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(designation)
+        db.commit()
+        db.refresh(designation)
+    
     # Parse dates (API sends YYYY-MM-DD strings)
     from datetime import date
     date_of_birth_val = None
@@ -158,7 +171,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         spouse_name=request.spouse_name,
         spouse_contact=request.spouse_contact,
         date_of_employment=request.date_of_employment,
-        designation=request.designation,
+        designation_id=designation.designation_id,
+        department_id=department.department_id,
         role_id=role.role_id,
         password_hash=hashed_password,
         profile_photo_url=request.profile_photo_url,

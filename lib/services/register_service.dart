@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../utils/mock_data.dart';
+import 'lookup_service.dart';
 
 class RegisterResponse {
   final bool success;
@@ -47,8 +48,7 @@ class RegisterService {
     required String spouseName,
     required String spouseContact,
     required String dateOfEmployment,
-    required String yearsInService,
-    required String designation,
+    required String designationId,
     required String role,
     required String department,
     required bool isHeadOfDepartment,
@@ -78,13 +78,12 @@ class RegisterService {
           'spouse_name': spouseName,
           'spouse_contact': spouseContact,
           'date_of_employment': dateOfEmployment,
-          'years_in_service': yearsInService,
-          'designation': designation,
+          'designation_id': designationId,
           'role': role,
           'department': department,
           'is_head_of_department': isHeadOfDepartment,
           'password': password,
-          'profile_photo_url': ?profilePhotoUrl,
+          'profile_photo_url': profilePhotoUrl,
         }),
       );
       
@@ -109,10 +108,35 @@ class RegisterService {
   }
 
   List<String> getRoles() {
+    // TODO: Replace with actual API call
+    // For now, return mock data until API is ready
     return MockData.roles;
   }
 
   List<String> getDepartments() {
+    // TODO: Replace with actual API call
+    // For now, return mock data until API is ready
     return MockData.departments;
+  }
+
+  // Future methods for API integration
+  static Future<List<String>> getRolesFromAPI() async {
+    try {
+      final roles = await LookupService.getRoles();
+      return roles.map((role) => role.name).toList();
+    } catch (e) {
+      print('Error fetching roles from API: $e');
+      return MockData.roles; // Fallback to mock data
+    }
+  }
+
+  static Future<List<String>> getDepartmentsFromAPI() async {
+    try {
+      final departments = await LookupService.getDepartments();
+      return departments.map((dept) => dept.name).toList();
+    } catch (e) {
+      print('Error fetching departments from API: $e');
+      return MockData.departments; // Fallback to mock data
+    }
   }
 }
