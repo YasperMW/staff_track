@@ -24,8 +24,7 @@ class RegisterRequest(BaseModel):
     spouse_name: Optional[str] = ""
     spouse_contact: Optional[str] = ""
     date_of_employment: str
-    years_in_service: str
-    designation: str
+    designation_id: str
     role: str
     department: str
     is_head_of_department: bool = False

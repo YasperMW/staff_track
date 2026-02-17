@@ -23,8 +23,7 @@ class RegisterController {
   String spouseName = '';
   String spouseContact = '';
   String dateOfEmployment = '';
-  String yearsInService = '';
-  String designation = '';
+  String designationId = '';
   String role = '';
   String department = '';
   bool isHeadOfDepartment = false;
@@ -95,26 +94,11 @@ class RegisterController {
   void updateSpouseName(String value) => spouseName = value;
   void updateSpouseContact(String value) => spouseContact = value;
   void updateDateOfEmployment(String value) => dateOfEmployment = value;
-  void updateYearsInService(String value) => yearsInService = value;
-  void updateDesignation(String value) => designation = value;
+  void updateDesignationId(String value) => designationId = value;
   void updateRole(String value) => role = value;
   void updateDepartment(String value) => department = value;
   void updateIsHeadOfDepartment(bool value) => isHeadOfDepartment = value;
   void updatePassword(String value) => password = value;
-
-  // Calculate years in service from employment date
-  void calculateYearsInService(String employmentDate) {
-    if (employmentDate.isEmpty) return;
-    
-    try {
-      final employment = DateTime.parse(employmentDate);
-      final now = DateTime.now();
-      final years = now.difference(employment).inDays / 365;
-      yearsInService = years.floor().toString();
-    } catch (e) {
-      yearsInService = '';
-    }
-  }
 
   // Registration method
   Future<RegisterResponse> register() async {
@@ -174,12 +158,7 @@ class RegisterController {
       return RegisterResponse(success: false, message: employmentDateError);
     }
 
-    final yearsError = validateYearsInService();
-    if (yearsError != null) {
-      return RegisterResponse(success: false, message: yearsError);
-    }
-
-    final designationError = validateName(designation, 'Designation');
+    final designationError = validateDesignation(designationId);
     if (designationError != null) {
       return RegisterResponse(success: false, message: designationError);
     }
@@ -218,8 +197,8 @@ class RegisterController {
       spouseName: spouseName,
       spouseContact: spouseContact,
       dateOfEmployment: dateOfEmployment,
-      yearsInService: yearsInService,
-      designation: designation,
+      
+      designationId: designationId,
       role: role,
       department: department,
       isHeadOfDepartment: isHeadOfDepartment,
@@ -248,10 +227,8 @@ class RegisterController {
     return null;
   }
 
-  String? validateYearsInService() {
-    if (yearsInService.isEmpty) return 'Years in service is required';
-    final years = int.tryParse(yearsInService);
-    if (years == null || years < 0) return 'Invalid years in service';
+  String? validateDesignation(String? value) {
+    if (value == null || value.isEmpty) return 'Designation is required';
     return null;
   }
 
@@ -281,8 +258,7 @@ class RegisterController {
     spouseName = '';
     spouseContact = '';
     dateOfEmployment = '';
-    yearsInService = '';
-    designation = '';
+    designationId = '';
     role = '';
     department = '';
     isHeadOfDepartment = false;

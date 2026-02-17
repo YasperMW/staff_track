@@ -26,7 +26,7 @@ class User(Base):
     spouse_name = Column(String(150))
     spouse_contact = Column(String(30))
     date_of_employment = Column(Date)
-    designation = Column(String(150))
+    designation_id = Column(UUID(as_uuid=True), ForeignKey("designations.designation_id"))
     department_id = Column(UUID(as_uuid=True), ForeignKey("departments.department_id"))
     is_head_of_department = Column(Boolean, default=False)
     phone = Column(String(30), unique=True)
@@ -47,6 +47,23 @@ class User(Base):
     # Relationships
     role = relationship("Role", back_populates="users", foreign_keys=[role_id])
     department = relationship("Department", back_populates="users", foreign_keys=[department_id])
+    designation = relationship("Designation", back_populates="users", foreign_keys=[designation_id])
+
+class Designation(Base):
+    __tablename__ = "designations"
+    
+    designation_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(150), nullable=False)
+    description = Column(Text)
+    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.department_id"))
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True))
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
+    
+    # Relationships
+    department = relationship("Department", back_populates="designations", foreign_keys=[department_id])
+    users = relationship("User", back_populates="designation", foreign_keys="User.designation_id")
 
 class Role(Base):
     __tablename__ = "roles"
@@ -67,7 +84,6 @@ class Department(Base):
     department_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(150), nullable=False, unique=True)
     description = Column(Text)
-    head_of_department_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
     created_at = Column(DateTime(timezone=True), nullable=False)
     updated_at = Column(DateTime(timezone=True), nullable=False)
     deleted_at = Column(DateTime(timezone=True))
@@ -75,3 +91,4 @@ class Department(Base):
     
     # Relationships
     users = relationship("User", back_populates="department", foreign_keys="User.department_id")
+    designations = relationship("Designation", back_populates="department", foreign_keys="Designation.department_id")

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../utils/mock_data.dart';
+import '../controllers/auth_provider.dart';
 import 'staff/dashboard_screen.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'admin/admin_attendance_screen.dart';
@@ -22,8 +23,14 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   List<Widget> _getScreens() {
-    final user = MockData.currentUser;
-    if (user.isApprover) {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) return [];
+    
+    final isAdmin = user.role.toLowerCase().contains('admin') || 
+                  user.role.toLowerCase().contains('hr') || 
+                  user.role.toLowerCase().contains('manager');
+    
+    if (isAdmin) {
       return [
         const AdminDashboardScreen(),
         const AdminAttendanceScreen(),
@@ -42,25 +49,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<BottomNavigationBarItem> _getNavItems() {
-    final user = MockData.currentUser;
-    final isApprover = user.isApprover;
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) return [];
+    
+    final isAdmin = user.role.toLowerCase().contains('admin') || 
+                  user.role.toLowerCase().contains('hr') || 
+                  user.role.toLowerCase().contains('manager');
 
     return [
       BottomNavigationBarItem(
-        icon: _buildNavIcon(0, isApprover ? Icons.dashboard : Icons.home, isApprover ? Icons.dashboard_outlined : Icons.home_outlined),
-        label: isApprover ? 'Dashboard' : 'Home',
+        icon: _buildNavIcon(0, isAdmin ? Icons.dashboard : Icons.home, isAdmin ? Icons.dashboard_outlined : Icons.home_outlined),
+        label: isAdmin ? 'Dashboard' : 'Home',
       ),
       BottomNavigationBarItem(
-        icon: _buildNavIcon(1, isApprover ? Icons.access_time : Icons.access_time, isApprover ? Icons.access_time_outlined : Icons.access_time_outlined),
+        icon: _buildNavIcon(1, Icons.access_time, Icons.access_time_outlined),
         label: 'Attendance',
       ),
       BottomNavigationBarItem(
-        icon: _buildNavIcon(2, isApprover ? Icons.assignment_turned_in : Icons.bar_chart, isApprover ? Icons.assignment_turned_in_outlined : Icons.bar_chart_outlined),
-        label: isApprover ? 'Requests' : 'Reports',
+        icon: _buildNavIcon(2, isAdmin ? Icons.assignment_turned_in : Icons.bar_chart, isAdmin ? Icons.assignment_turned_in_outlined : Icons.bar_chart_outlined),
+        label: isAdmin ? 'Requests' : 'Reports',
       ),
       BottomNavigationBarItem(
-        icon: _buildNavIcon(3, isApprover ? Icons.analytics : Icons.description, isApprover ? Icons.analytics_outlined : Icons.description_outlined),
-        label: isApprover ? 'Analytics' : 'Requests',
+        icon: _buildNavIcon(3, isAdmin ? Icons.analytics : Icons.description, isAdmin ? Icons.analytics_outlined : Icons.description_outlined),
+        label: isAdmin ? 'Analytics' : 'Requests',
       ),
       BottomNavigationBarItem(
         icon: _buildNavIcon(4, Icons.person, Icons.person_outline),

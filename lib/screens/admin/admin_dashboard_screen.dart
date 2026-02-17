@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_provider.dart';
-import '../../utils/mock_data.dart';
+import '../../controllers/auth_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -271,7 +271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               const TextSpan(text: 'Admin Dashboard, '),
               TextSpan(
-                text: MockData.currentUser.name,
+                text: context.watch<AuthProvider>().user?.name ?? 'Admin',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const TextSpan(text: ' 🏥'),
