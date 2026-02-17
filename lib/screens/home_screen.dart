@@ -10,7 +10,6 @@ import 'admin/admin_requests_screen.dart';
 import 'staff/attendance_screen.dart';
 import 'staff/reports_screen.dart';
 import 'staff/requests_screen.dart';
-import 'SharedScreens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
         const AdminAttendanceScreen(),
         const AdminRequestsScreen(),
         const AdminReportsScreen(),
-        const ProfileScreen(),
       ];
     }
     return [
@@ -44,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
       const AttendanceScreen(),
       const ReportsScreen(),
       const RequestsScreen(),
-      const ProfileScreen(),
     ];
   }
 
@@ -72,10 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
       BottomNavigationBarItem(
         icon: _buildNavIcon(3, isAdmin ? Icons.analytics : Icons.description, isAdmin ? Icons.analytics_outlined : Icons.description_outlined),
         label: isAdmin ? 'Analytics' : 'Requests',
-      ),
-      BottomNavigationBarItem(
-        icon: _buildNavIcon(4, Icons.person, Icons.person_outline),
-        label: 'Profile',
       ),
     ];
   }

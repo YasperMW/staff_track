@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_provider.dart';
 import '../../controllers/auth_provider.dart';
+import '../../widgets/app_header.dart';
 import '../login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -24,7 +25,10 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(context),
+              const AppHeader(
+                subtitle: 'Staff Track',
+                enableProfileNavigation: false,
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -54,67 +58,6 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.withValues(alpha:0.1), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.apartment, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "ST JOHN'S HOSPITAL",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                'Staff Track',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Consumer<ThemeProvider>(
-            builder: (context, themeProvider, child) {
-              return IconButton(
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                onPressed: () => themeProvider.toggleTheme(),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications_outlined, color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {},
-          ),
-        ],
       ),
     );
   }
@@ -303,7 +246,7 @@ class ProfileScreen extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ?trailingWidget,
+          if (trailingWidget != null) trailingWidget,
           if (trailing != null)
             Text(
               trailing,
