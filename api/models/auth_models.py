@@ -30,6 +30,7 @@ class RegisterRequest(BaseModel):
     department: str
     is_head_of_department: bool = False
     password: str
+    profile_photo_url: Optional[str] = None
 
 class AuthResponse(BaseModel):
     success: bool
