@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
-import '../utils/mock_data.dart';
 import 'lookup_service.dart';
 
 class RegisterResponse {
@@ -108,15 +107,13 @@ class RegisterService {
   }
 
   List<String> getRoles() {
-    // TODO: Replace with actual API call
-    // For now, return mock data until API is ready
-    return MockData.roles;
+    // Use API call directly - return empty list for now since it's async
+    return [];
   }
 
   List<String> getDepartments() {
-    // TODO: Replace with actual API call
-    // For now, return mock data until API is ready
-    return MockData.departments;
+    // Use API call directly - return empty list for now since it's async
+    return [];
   }
 
   // Future methods for API integration
@@ -126,7 +123,7 @@ class RegisterService {
       return roles.map((role) => role.name).toList();
     } catch (e) {
       print('Error fetching roles from API: $e');
-      return MockData.roles; // Fallback to mock data
+      return [];
     }
   }
 
@@ -136,7 +133,7 @@ class RegisterService {
       return departments.map((dept) => dept.name).toList();
     } catch (e) {
       print('Error fetching departments from API: $e');
-      return MockData.departments; // Fallback to mock data
+      return [];
     }
   }
 }

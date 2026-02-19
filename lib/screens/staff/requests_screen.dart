@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/mock_data.dart';
 import '../../widgets/app_header.dart';
 
 class RequestsScreen extends StatefulWidget {
@@ -12,9 +10,37 @@ class RequestsScreen extends StatefulWidget {
 }
 
 class _RequestsScreenState extends State<RequestsScreen> {
+  List<Map<String, dynamic>> requestsHistory = [];
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRequests();
+  }
+
+  Future<void> _loadRequests() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // TODO: Replace with actual requests API call
+      // For now, showing empty state until API is ready
+      await Future.delayed(const Duration(seconds: 1));
+      setState(() {
+        requestsHistory = [];
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> _onRefresh() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    await _loadRequests();
   }
 
   @override
@@ -145,11 +171,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Widget _buildRequestsList(BuildContext context) {
-    if (MockData.requestsHistory.isEmpty) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (requestsHistory.isEmpty) {
       return _buildEmptyState(context, 'No requests found');
     }
     return Column(
-      children: MockData.requestsHistory.map((request) => _buildRequestCard(context, request)).toList(),
+      children: requestsHistory.map((request) => _buildRequestCard(context, request)).toList(),
     );
   }
 

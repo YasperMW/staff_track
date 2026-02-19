@@ -246,7 +246,7 @@ class ProfileScreen extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (trailingWidget != null) trailingWidget,
+          ?trailingWidget,
           if (trailing != null)
             Text(
               trailing,
