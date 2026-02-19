@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, desc
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from typing import Optional
 import pytz
 
 from models.db_models import AttendanceLog, User
 from database import get_db
-from auth_endpoints import get_current_user
+from endpoints.auth_endpoints import get_current_user
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
@@ -229,8 +229,6 @@ async def get_attendance_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get attendance summary for the current user"""
-    
     query = db.query(AttendanceLog).filter(AttendanceLog.user_id == current_user.user_id)
     
     if start_date:
@@ -253,7 +251,6 @@ async def get_attendance_summary(
                 detail="Invalid end_date format. Use YYYY-MM-DD"
             )
     
-    # Get all attendance records
     attendances = query.all()
     
     if not attendances:
@@ -266,11 +263,9 @@ async def get_attendance_summary(
             "average_work_hours": 0
         }
     
-    # Calculate statistics
     total_days = len(attendances)
     present_days = len([a for a in attendances if a.check_out_time is not None])
     
-    # Calculate late check-ins (after 9:00 AM)
     late_days = 0
     total_work_seconds = 0
     total_overtime_seconds = 0
@@ -278,14 +273,13 @@ async def get_attendance_summary(
     for att in attendances:
         if att.check_in_time:
             check_in_hour = att.check_in_time.hour
-            if check_in_hour >= 9:  # Consider late if 9 AM or later
+            if check_in_hour >= 9:
                 late_days += 1
         
         if att.check_out_time:
             work_seconds = (att.check_out_time - att.check_in_time).total_seconds()
             total_work_seconds += work_seconds
             
-            # Calculate overtime (after 8 hours)
             work_hours = work_seconds / 3600.0
             if work_hours > 8:
                 total_overtime_seconds += (work_hours - 8) * 3600.0
@@ -301,3 +295,359 @@ async def get_attendance_summary(
         "total_overtime_hours": round(total_overtime_hours, 2),
         "average_work_hours": round(total_work_hours / present_days, 2) if present_days > 0 else 0
     }
+
+
+@router.get("/team-today-summary")
+async def get_team_today_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    staff_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    if current_user.department_id:
+        staff_query = staff_query.filter(User.department_id == current_user.department_id)
+    
+    staff = staff_query.all()
+    
+    if not staff:
+        return {
+            "total_staff": 0,
+            "present": 0,
+            "absent": 0,
+            "late": 0
+        }
+    
+    staff_ids = [u.user_id for u in staff]
+    
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    logs = (
+        db.query(AttendanceLog)
+        .filter(
+            AttendanceLog.user_id.in_(staff_ids),
+            AttendanceLog.check_in_time >= today_start,
+            AttendanceLog.check_in_time <= today_end,
+        )
+        .order_by(AttendanceLog.user_id, AttendanceLog.check_in_time)
+        .all()
+    )
+    
+    earliest_by_user = {}
+    
+    for log in logs:
+        uid = log.user_id
+        if uid not in earliest_by_user or log.check_in_time < earliest_by_user[uid]:
+            earliest_by_user[uid] = log.check_in_time
+    
+    present_count = len(earliest_by_user)
+    late_count = 0
+    
+    for dt in earliest_by_user.values():
+        if dt.hour >= 9:
+            late_count += 1
+    
+    total_staff = len(staff)
+    absent_count = total_staff - present_count
+    
+    return {
+        "total_staff": total_staff,
+        "present": present_count,
+        "absent": absent_count,
+        "late": late_count
+    }
+
+
+@router.get("/team-today-list")
+async def get_team_today_list(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    staff_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    if current_user.department_id:
+        staff_query = staff_query.filter(User.department_id == current_user.department_id)
+    
+    staff = staff_query.all()
+    
+    if not staff:
+        return []
+    
+    staff_ids = [u.user_id for u in staff]
+    
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    logs = (
+        db.query(AttendanceLog)
+        .filter(
+            AttendanceLog.user_id.in_(staff_ids),
+            AttendanceLog.check_in_time >= today_start,
+            AttendanceLog.check_in_time <= today_end,
+        )
+        .order_by(AttendanceLog.user_id, AttendanceLog.check_in_time)
+        .all()
+    )
+    
+    earliest_log_by_user = {}
+    latest_checkout_by_user = {}
+    
+    for log in logs:
+        uid = log.user_id
+        if log.check_in_time:
+            if uid not in earliest_log_by_user or log.check_in_time < earliest_log_by_user[uid].check_in_time:
+                earliest_log_by_user[uid] = log
+        if log.check_out_time:
+            existing = latest_checkout_by_user.get(uid)
+            if existing is None or log.check_out_time > existing:
+                latest_checkout_by_user[uid] = log.check_out_time
+    
+    result = []
+    
+    for user in staff:
+        log = earliest_log_by_user.get(user.user_id)
+        check_in_time_str = None
+        check_out_time_str = None
+        status = "Absent"
+        
+        if log and log.check_in_time:
+            check_in_time = log.check_in_time
+            hour = check_in_time.hour
+            status = "Late" if hour >= 9 else "Present"
+            check_in_time_str = check_in_time.strftime("%H:%M:%S")
+        
+        checkout_dt = latest_checkout_by_user.get(user.user_id)
+        if checkout_dt:
+            check_out_time_str = checkout_dt.strftime("%H:%M:%S")
+        
+        full_name = f"{user.first_name or ''} {user.surname or ''}".strip()
+        role_name = user.role.name if getattr(user, "role", None) else ""
+        
+        result.append(
+            {
+                "user_id": str(user.user_id),
+                "name": full_name,
+                "role": role_name,
+                "status": status,
+                "check_in_time": check_in_time_str,
+                "check_out_time": check_out_time_str,
+            }
+        )
+    
+    return result
+
+
+@router.get("/department-overview")
+async def get_department_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    staff_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    if current_user.department_id:
+        staff_query = staff_query.filter(User.department_id == current_user.department_id)
+    
+    staff = staff_query.all()
+    
+    if not staff:
+        return {
+            "avg_attendance": 0,
+            "total_overtime_hours": 0
+        }
+    
+    staff_ids = [u.user_id for u in staff]
+    
+    first_day = date.today().replace(day=1)
+    if first_day.month == 12:
+        next_month = first_day.replace(year=first_day.year + 1, month=1, day=1)
+    else:
+        next_month = first_day.replace(month=first_day.month + 1, day=1)
+    
+    start_dt = datetime.combine(first_day, time.min)
+    end_dt = datetime.combine(next_month, time.min)
+    
+    logs = (
+        db.query(AttendanceLog)
+        .filter(
+            AttendanceLog.user_id.in_(staff_ids),
+            AttendanceLog.check_in_time >= start_dt,
+            AttendanceLog.check_in_time < end_dt,
+        )
+        .all()
+    )
+    
+    if not logs:
+        return {
+            "avg_attendance": 0,
+            "total_overtime_hours": 0
+        }
+    
+    present_by_user = set()
+    total_overtime_seconds = 0.0
+    
+    for log in logs:
+        if log.check_in_time:
+            key = (log.user_id, log.check_in_time.date())
+            present_by_user.add(key)
+        
+        if log.check_in_time and log.check_out_time:
+            work_seconds = (log.check_out_time - log.check_in_time).total_seconds()
+            work_hours = work_seconds / 3600.0
+            if work_hours > 8:
+                total_overtime_seconds += (work_hours - 8) * 3600.0
+    
+    total_days_in_month = (end_dt.date() - first_day).days
+    if total_days_in_month <= 0:
+        avg_attendance = 0.0
+    else:
+        total_possible = len(staff) * total_days_in_month
+        attendance_ratio = len(present_by_user) / total_possible if total_possible > 0 else 0.0
+        avg_attendance = round(attendance_ratio * 100, 1)
+    
+    total_overtime_hours = round(total_overtime_seconds / 3600.0, 2)
+    
+    return {
+        "avg_attendance": avg_attendance,
+        "total_overtime_hours": total_overtime_hours
+    }
+
+
+@router.get("/department-weekly")
+async def get_department_weekly_attendance(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    staff_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    if current_user.department_id:
+        staff_query = staff_query.filter(User.department_id == current_user.department_id)
+    
+    staff = staff_query.all()
+    
+    if not staff:
+        return {"points": []}
+    
+    staff_ids = [u.user_id for u in staff]
+    
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=7)
+    
+    start_dt = datetime.combine(start_of_week, time.min)
+    end_dt = datetime.combine(end_of_week, time.min)
+    
+    logs = (
+        db.query(AttendanceLog)
+        .filter(
+            AttendanceLog.user_id.in_(staff_ids),
+            AttendanceLog.check_in_time >= start_dt,
+            AttendanceLog.check_in_time < end_dt,
+        )
+        .all()
+    )
+    
+    present_by_day = {}
+    
+    for log in logs:
+        if log.check_in_time:
+            d = log.check_in_time.date()
+            if d < start_of_week or d >= end_of_week:
+                continue
+            key = (log.user_id, d)
+            present_by_day[key] = True
+    
+    total_staff = len(staff)
+    total_possible_per_day = total_staff if total_staff > 0 else 1
+    
+    points = []
+    for i in range(7):
+        day = start_of_week + timedelta(days=i)
+        label = day.strftime("%a")[:3]
+        present_count = len([1 for (uid, d) in present_by_day.keys() if d == day])
+        ratio = present_count / total_possible_per_day
+        percentage = round(ratio * 100, 1)
+        points.append(
+            {
+                "label": label,
+                "percentage": percentage,
+            }
+        )
+    
+    return {"points": points}
+
+
+@router.get("/department-top-performers")
+async def get_department_top_performers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    staff_query = db.query(User).filter(User.deleted_at.is_(None))
+    
+    if current_user.department_id:
+        staff_query = staff_query.filter(User.department_id == current_user.department_id)
+    
+    staff = staff_query.all()
+    
+    if not staff:
+        return {"performers": []}
+    
+    staff_ids = [u.user_id for u in staff]
+    
+    first_day = date.today().replace(day=1)
+    if first_day.month == 12:
+        next_month = first_day.replace(year=first_day.year + 1, month=1, day=1)
+    else:
+        next_month = first_day.replace(month=first_day.month + 1, day=1)
+    
+    start_dt = datetime.combine(first_day, time.min)
+    end_dt = datetime.combine(next_month, time.min)
+    
+    logs = (
+        db.query(AttendanceLog)
+        .filter(
+            AttendanceLog.user_id.in_(staff_ids),
+            AttendanceLog.check_in_time >= start_dt,
+            AttendanceLog.check_in_time < end_dt,
+        )
+        .all()
+    )
+    
+    if not logs:
+        return {"performers": []}
+    
+    present_days_by_user = {}
+    
+    for log in logs:
+        if log.check_in_time:
+            key = (log.user_id, log.check_in_time.date())
+            present_days_by_user[key] = True
+    
+    days_in_month = (end_dt.date() - first_day).days
+    if days_in_month <= 0:
+        return {"performers": []}
+    
+    user_present_counts = {}
+    for (uid, d) in present_days_by_user.keys():
+        user_present_counts[uid] = user_present_counts.get(uid, 0) + 1
+    
+    performers = []
+    for user in staff:
+        present_days = user_present_counts.get(user.user_id, 0)
+        attendance_ratio = present_days / days_in_month
+        attendance_percentage = round(attendance_ratio * 100, 1)
+        full_name = f"{user.first_name or ''} {user.surname or ''}".strip()
+        role_name = user.designation.name if getattr(user, "designation", None) else ""
+        performers.append(
+            {
+                "user_id": str(user.user_id),
+                "name": full_name,
+                "role": role_name,
+                "attendance_percentage": attendance_percentage,
+            }
+        )
+    
+    performers.sort(key=lambda p: p["attendance_percentage"], reverse=True)
+    
+    top_performers = performers[:5]
+    
+    return {"performers": top_performers}

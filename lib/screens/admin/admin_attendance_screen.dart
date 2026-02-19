@@ -1,12 +1,97 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../check_in_out_screen.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../models/models.dart';
 
-class AdminAttendanceScreen extends StatelessWidget {
+class AdminAttendanceScreen extends StatefulWidget {
   const AdminAttendanceScreen({super.key});
 
+  @override
+  State<AdminAttendanceScreen> createState() => _AdminAttendanceScreenState();
+}
+
+class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
+  Map<String, dynamic>? summary;
+  bool isLoading = false;
+  Map<String, dynamic>? teamSummary;
+  bool isLoadingTeam = false;
+  List<TeamAttendanceMember> _teamAttendance = [];
+  bool _isLoadingStaff = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSummary();
+    _loadTeamSummary();
+    _loadStaffList();
+  }
+
+  Future<void> _loadSummary() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final data = await AttendanceController.getAttendanceSummary();
+      if (!mounted) return;
+      setState(() {
+        summary = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> _onRefresh() async {
-    await Future.delayed(const Duration(seconds: 1));
+    await _loadSummary();
+    await _loadTeamSummary();
+    await _loadStaffList();
+  }
+
+  Future<void> _loadTeamSummary() async {
+    setState(() {
+      isLoadingTeam = true;
+    });
+
+    try {
+      final data = await AttendanceController.getTeamTodaySummary();
+      if (!mounted) return;
+      setState(() {
+        teamSummary = data;
+        isLoadingTeam = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingTeam = false;
+      });
+    }
+  }
+
+  Future<void> _loadStaffList() async {
+    setState(() {
+      _isLoadingStaff = true;
+    });
+
+    try {
+      final list = await AttendanceController.getTeamTodayList();
+      if (!mounted) return;
+      setState(() {
+        _teamAttendance = list;
+        _isLoadingStaff = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingStaff = false;
+      });
+    }
   }
 
   @override
@@ -110,11 +195,10 @@ class AdminAttendanceScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Checking in...'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CheckInOutScreen(),
               ),
             );
           },
@@ -141,6 +225,11 @@ class AdminAttendanceScreen extends StatelessWidget {
   }
 
   Widget _buildPersonalSummaryCard() {
+    final int totalDays = (summary?['total_days'] as num?)?.toInt() ?? 0;
+    final int presentDays = (summary?['present_days'] as num?)?.toInt() ?? 0;
+    final int lateDays = (summary?['late_days'] as num?)?.toInt() ?? 0;
+    final int absentDays = totalDays - presentDays;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -148,25 +237,29 @@ class AdminAttendanceScreen extends StatelessWidget {
         color: AppTheme.primaryBlue,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _PersonalSummaryItem(value: '22', label: 'Present'),
-          _PersonalSummaryItem(value: '3', label: 'Late'),
-          _PersonalSummaryItem(value: '1', label: 'Absent'),
+          _PersonalSummaryItem(value: '$presentDays', label: 'Present'),
+          _PersonalSummaryItem(value: '$lateDays', label: 'Late'),
+          _PersonalSummaryItem(value: '$absentDays', label: 'Absent'),
         ],
       ),
     );
   }
 
   Widget _buildSummaryStats(BuildContext context) {
+    final int present = (teamSummary?['present'] as num?)?.toInt() ?? 0;
+    final int absent = (teamSummary?['absent'] as num?)?.toInt() ?? 0;
+    final int late = (teamSummary?['late'] as num?)?.toInt() ?? 0;
+
     return Row(
       children: [
-        _buildStatCard(context, 'Present', '42', Colors.green),
+        _buildStatCard(context, 'Present', '$present', Colors.green),
         const SizedBox(width: 12),
-        _buildStatCard(context, 'Absent', '5', Colors.red),
+        _buildStatCard(context, 'Absent', '$absent', Colors.red),
         const SizedBox(width: 12),
-        _buildStatCard(context, 'On Leave', '3', Colors.blue),
+        _buildStatCard(context, 'Late', '$late', Colors.orange),
       ],
     );
   }
@@ -204,21 +297,52 @@ class AdminAttendanceScreen extends StatelessWidget {
   }
 
   Widget _buildStaffList(BuildContext context) {
-    final staffMembers = [
-      {'name': 'Sarah Wilson', 'role': 'Nurse', 'status': 'Present', 'time': '07:45 AM'},
-      {'name': 'Michael Chen', 'role': 'Technician', 'status': 'Present', 'time': '08:15 AM'},
-      {'name': 'Emily Davis', 'role': 'Admin', 'status': 'Absent', 'time': '-'},
-      {'name': 'Robert Brown', 'role': 'Nurse', 'status': 'On Leave', 'time': '-'},
-    ];
+    if (_isLoadingStaff) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: AppTheme.primaryBlue,
+          ),
+        ),
+      );
+    }
+
+    if (_teamAttendance.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No team attendance data available',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
-      children: staffMembers.map((staff) => _buildStaffItem(context, staff)).toList(),
+      children: _teamAttendance
+          .map((member) => _buildStaffItem(context, member))
+          .toList(),
     );
   }
 
-  Widget _buildStaffItem(BuildContext context, Map<String, String> staff) {
-    bool isPresent = staff['status'] == 'Present';
-    Color statusColor = isPresent ? Colors.green : (staff['status'] == 'Absent' ? Colors.red : Colors.blue);
+  Widget _buildStaffItem(BuildContext context, TeamAttendanceMember member) {
+    bool isPresent = member.status == 'Present';
+    Color statusColor = member.status == 'Present'
+        ? Colors.green
+        : (member.status == 'Absent' ? Colors.red : Colors.orange);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -238,7 +362,10 @@ class AdminAttendanceScreen extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-            child: Text(staff['name']![0], style: const TextStyle(color: AppTheme.primaryBlue)),
+            child: Text(
+              member.name.isNotEmpty ? member.name[0] : '?',
+              style: const TextStyle(color: AppTheme.primaryBlue),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -246,16 +373,17 @@ class AdminAttendanceScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  staff['name']!,
+                  member.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  staff['role']!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                if (member.role.isNotEmpty)
+                  Text(
+                    member.role,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -263,15 +391,18 @@ class AdminAttendanceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                staff['status']!,
+                member.status,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: statusColor,
                 ),
               ),
-              if (isPresent)
+              if (member.checkInTime != null || member.checkOutTime != null)
                 Text(
-                  staff['time']!,
+                  [
+                    if (member.checkInTime != null) 'In: ${member.checkInTime}',
+                    if (member.checkOutTime != null) 'Out: ${member.checkOutTime}',
+                  ].join('  '),
                   style: const TextStyle(fontSize: 10, color: AppTheme.textLightBlue),
                 ),
             ],

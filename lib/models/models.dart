@@ -111,3 +111,32 @@ class AppUser {
     return approverRoles.contains(role);
   }
 }
+
+class TeamAttendanceMember {
+  final String userId;
+  final String name;
+  final String role;
+  final String status;
+  final String? checkInTime;
+  final String? checkOutTime;
+
+  TeamAttendanceMember({
+    required this.userId,
+    required this.name,
+    required this.role,
+    required this.status,
+    this.checkInTime,
+    this.checkOutTime,
+  });
+
+  factory TeamAttendanceMember.fromJson(Map<String, dynamic> json) {
+    return TeamAttendanceMember(
+      userId: json['user_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      role: json['role'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      checkInTime: json['check_in_time'] as String?,
+      checkOutTime: json['check_out_time'] as String?,
+    );
+  }
+}

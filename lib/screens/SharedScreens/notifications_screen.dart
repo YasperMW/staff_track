@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../services/notifications_service.dart';
+import '../../controllers/auth_provider.dart';
+import '../home_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -35,6 +38,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() {
         isLoading = false;
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading notifications: $e'),
@@ -48,10 +52,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await NotificationsService.markNotificationAsRead(notificationId);
       setState(() {
-        final notification = notifications.firstWhere((n) => n.id == notificationId);
-        notification.isRead = true;
+        notifications = notifications.map((n) {
+          if (n.id == notificationId) {
+            return NotificationItem(
+              id: n.id,
+              title: n.title,
+              message: n.message,
+              type: n.type,
+              isRead: true,
+              createdAt: n.createdAt,
+              updatedAt: n.updatedAt,
+            );
+          }
+          return n;
+        }).toList();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error marking notification as read: $e'),
@@ -65,11 +82,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await NotificationsService.markAllNotificationsAsRead();
       setState(() {
-        for (var notification in notifications) {
-          notification.isRead = true;
-        }
+        notifications = notifications
+            .map(
+              (n) => NotificationItem(
+                id: n.id,
+                title: n.title,
+                message: n.message,
+                type: n.type,
+                isRead: true,
+                createdAt: n.createdAt,
+                updatedAt: n.updatedAt,
+              ),
+            )
+            .toList();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error marking all notifications as read: $e'),
@@ -152,6 +180,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: const _NotificationsBottomNavigation(),
     );
   }
 
@@ -353,5 +382,125 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } else {
       return 'Just now';
     }
+  }
+}
+
+class _NotificationsBottomNavigation extends StatelessWidget {
+  const _NotificationsBottomNavigation();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) return const SizedBox.shrink();
+
+    final isAdmin = user.role.toLowerCase().contains('admin') ||
+        user.role.toLowerCase().contains('hr') ||
+        user.role.toLowerCase().contains('manager');
+
+    const currentIndex = 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(initialIndex: index),
+            ),
+            (route) => false,
+          );
+        },
+        selectedItemColor: AppTheme.primaryBlue,
+        unselectedItemColor: Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: 0.4),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        items: [
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              0,
+              isAdmin ? Icons.dashboard : Icons.home,
+              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Dashboard' : 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              1,
+              Icons.access_time,
+              Icons.access_time_outlined,
+              currentIndex,
+            ),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              2,
+              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
+              isAdmin
+                  ? Icons.assignment_turned_in_outlined
+                  : Icons.bar_chart_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Requests' : 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              3,
+              isAdmin ? Icons.analytics : Icons.description,
+              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Analytics' : 'Requests',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavIcon(
+    BuildContext context,
+    int index,
+    IconData activeIcon,
+    IconData inactiveIcon,
+    int currentIndex,
+  ) {
+    final isActive = currentIndex == index;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isActive)
+          Container(
+            width: 24,
+            height: 2,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        const SizedBox(height: 4),
+        Icon(isActive ? activeIcon : inactiveIcon),
+      ],
+    );
   }
 }

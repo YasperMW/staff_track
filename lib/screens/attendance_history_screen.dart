@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../controllers/attendance_controller.dart';
+import '../controllers/auth_provider.dart';
 import '../models/models.dart';
+import '../theme/app_theme.dart';
+import 'home_screen.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
-  const AttendanceHistoryScreen({Key? key}) : super(key: key);
+  const AttendanceHistoryScreen({super.key});
 
   @override
   State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
@@ -130,6 +134,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: const _AttendanceHistoryBottomNavigation(),
     );
   }
 
@@ -537,5 +542,125 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     } else {
       return 'COMPLETE';
     }
+  }
+}
+
+class _AttendanceHistoryBottomNavigation extends StatelessWidget {
+  const _AttendanceHistoryBottomNavigation();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) return const SizedBox.shrink();
+
+    final isAdmin = user.role.toLowerCase().contains('admin') ||
+        user.role.toLowerCase().contains('hr') ||
+        user.role.toLowerCase().contains('manager');
+
+    const currentIndex = 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(initialIndex: index),
+            ),
+            (route) => false,
+          );
+        },
+        selectedItemColor: AppTheme.primaryBlue,
+        unselectedItemColor: Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: 0.4),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        items: [
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              0,
+              isAdmin ? Icons.dashboard : Icons.home,
+              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Dashboard' : 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              1,
+              Icons.access_time,
+              Icons.access_time_outlined,
+              currentIndex,
+            ),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              2,
+              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
+              isAdmin
+                  ? Icons.assignment_turned_in_outlined
+                  : Icons.bar_chart_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Requests' : 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              3,
+              isAdmin ? Icons.analytics : Icons.description,
+              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Analytics' : 'Requests',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavIcon(
+    BuildContext context,
+    int index,
+    IconData activeIcon,
+    IconData inactiveIcon,
+    int currentIndex,
+  ) {
+    final isActive = currentIndex == index;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isActive)
+          Container(
+            width: 24,
+            height: 2,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        const SizedBox(height: 4),
+        Icon(isActive ? activeIcon : inactiveIcon),
+      ],
+    );
   }
 }

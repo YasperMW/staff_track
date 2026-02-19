@@ -26,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // API data
   List<String> _roles = [];
   List<Department> _departments = [];
-  final List<Designation> _designations = [];
+
   List<String> _designationNames = [];
   bool _isLoadingLookupData = true;
 
