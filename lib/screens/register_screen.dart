@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/register_service.dart';
 import '../services/image_service.dart';
 import '../services/lookup_service.dart';
-import '../config/app_config.dart';
 import '../theme/app_theme.dart';
-import '../widgets/custom_text_field.dart';
-import '../widgets/custom_dropdown.dart';
-import '../widgets/step_indicator.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -30,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // API data
   List<String> _roles = [];
   List<Department> _departments = [];
-  List<Designation> _designations = [];
+  final List<Designation> _designations = [];
   List<String> _designationNames = [];
   bool _isLoadingLookupData = true;
 
@@ -110,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedDepartment;
   String? _selectedGender;
   String? _selectedMaritalStatus;
-  bool _isHeadOfDepartment = false;
+  final bool _isHeadOfDepartment = false;
   String? _profilePhotoUrl;
 
   void _scrollListener() {

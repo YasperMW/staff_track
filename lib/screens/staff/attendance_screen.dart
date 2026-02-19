@@ -1,15 +1,53 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/mock_data.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../models/models.dart';
 import '../../widgets/app_header.dart';
+import '../check_in_out_screen.dart';
+import '../attendance_history_screen.dart';
 
-class AttendanceScreen extends StatelessWidget {
+class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
 
+  @override
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  List<AttendanceRecord> attendanceHistory = [];
+  bool isLoading = false;
+  Map<String, dynamic>? summary;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAttendanceData();
+  }
+
+  Future<void> _loadAttendanceData() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final history = await AttendanceController.getAttendanceHistory(limit: 10);
+      final summaryData = await AttendanceController.getAttendanceSummary();
+      
+      setState(() {
+        attendanceHistory = history;
+        summary = summaryData;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> _onRefresh() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    await _loadAttendanceData();
   }
 
   @override
@@ -79,11 +117,17 @@ class AttendanceScreen extends StatelessWidget {
   }
 
   Widget _buildHistoryList(BuildContext context) {
-    if (MockData.attendanceHistory.isEmpty) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (attendanceHistory.isEmpty) {
       return _buildEmptyState(context, 'No attendance records found');
     }
     return Column(
-      children: MockData.attendanceHistory.map((data) => _buildHistoryItem(context, data)).toList(),
+      children: attendanceHistory.map((attendance) => _buildHistoryItem(context, attendance)).toList(),
     );
   }
 
@@ -129,11 +173,10 @@ class AttendanceScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Checking in...'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 1),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CheckInOutScreen(),
               ),
             );
           },
@@ -145,7 +188,7 @@ class AttendanceScreen extends StatelessWidget {
                 Icon(Icons.login, color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Text(
-                  'Check In',
+                  'Check In/Out',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -167,45 +210,65 @@ class AttendanceScreen extends StatelessWidget {
         color: AppTheme.primaryBlue,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _SummaryItem(value: '22', label: 'Present'),
-          _SummaryItem(value: '3', label: 'Late'),
-          _SummaryItem(value: '1', label: 'Absent'),
+          _SummaryItem(
+            value: '${summary?['present_days'] ?? 0}', 
+            label: 'Present'
+          ),
+          _SummaryItem(
+            value: '${summary?['late_days'] ?? 0}', 
+            label: 'Late'
+          ),
+          _SummaryItem(
+            value: '${(summary?['total_days'] ?? 0) - (summary?['present_days'] ?? 0)}', 
+            label: 'Absent'
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFilterButton(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withValues(alpha:0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface),
-          const SizedBox(width: 8),
-          Text(
-            'This Week',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AttendanceHistoryScreen(),
           ),
-          const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down, size: 20, color: Theme.of(context).colorScheme.onSurface),
-        ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha:0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface),
+            const SizedBox(width: 8),
+            Text(
+              'View Full History',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down, size: 20, color: Theme.of(context).colorScheme.onSurface),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHistoryItem(BuildContext context, Map<String, dynamic> data) {
-    bool isOnTime = data['status'] == 'On Time';
+  Widget _buildHistoryItem(BuildContext context, AttendanceRecord attendance) {
+    bool isOnTime = attendance.checkInTime != null && attendance.checkInTime!.hour < 9;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -227,7 +290,7 @@ class AttendanceScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                data['date'],
+                DateFormat('EEE, MMM d').format(attendance.date),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -241,7 +304,7 @@ class AttendanceScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  data['status'],
+                  isOnTime ? 'On Time' : 'Late',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -257,21 +320,21 @@ class AttendanceScreen extends StatelessWidget {
               const Icon(Icons.access_time, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 8),
               Text(
-                data['time'],
+                '${attendance.checkInTime != null ? DateFormat('h:mm a').format(attendance.checkInTime!) : '--:--'} - ${attendance.checkOutTime != null ? DateFormat('h:mm a').format(attendance.checkOutTime!) : '--:--'}',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
               const SizedBox(width: 16),
               const Icon(Icons.location_on_outlined, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 4),
               Text(
-                data['location'],
+                attendance.location ?? 'Office',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            data['totalHours'],
+            attendance.workHours != null ? '${attendance.workHours!.toStringAsFixed(1)}h total' : '--:-- total',
             style: const TextStyle(
               color: AppTheme.primaryBlue,
               fontWeight: FontWeight.w600,

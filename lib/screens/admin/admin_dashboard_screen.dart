@@ -428,89 +428,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildTeamAttendanceList(BuildContext context) {
-    // Mock team attendance data
-    final teamData = [
-      {'name': 'Sarah Wilson', 'status': 'On Duty', 'time': '07:45 AM', 'isLate': false},
-      {'name': 'Michael Chen', 'status': 'On Duty', 'time': '08:15 AM', 'isLate': true},
-      {'name': 'Emily Davis', 'status': 'Off Duty', 'time': '--:--', 'isLate': false},
-      {'name': 'Robert Brown', 'status': 'On Duty', 'time': '07:55 AM', 'isLate': false},
-    ];
-
-    return Column(
-      children: teamData.map((staff) => _buildTeamStaffItem(context, staff)).toList(),
-    );
-  }
-
-  Widget _buildTeamStaffItem(BuildContext context, Map<String, dynamic> staff) {
-    bool isOnDuty = staff['status'] == 'On Duty';
-    bool isLate = staff['isLate'] as bool;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.05)),
-      ),
-      child: Row(
+    // TODO: Replace with actual team attendance API call
+    // For now, showing empty state until API is ready
+    return Center(
+      child: Column(
         children: [
-          CircleAvatar(
-            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-            child: Text(
-              staff['name'].substring(0, 1),
-              style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
-            ),
+          Icon(
+            Icons.people_outline,
+            size: 48,
+            color: Colors.grey[400],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  staff['name'],
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  staff['time'],
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLightBlue,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            'No team attendance data available',
+            style: TextStyle(
+              fontSize: 16,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isOnDuty ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  staff['status'],
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: isOnDuty ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
-                  ),
-                ),
-              ),
-              if (isLate) ...[
-                const SizedBox(height: 4),
-                const Text(
-                  'Late Arrival',
-                  style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ],
           ),
         ],
       ),

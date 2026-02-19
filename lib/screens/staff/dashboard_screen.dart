@@ -4,7 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../models/models.dart';
 import '../../widgets/app_header.dart';
+import '../check_in_out_screen.dart';
+import '../attendance_history_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,13 +20,76 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late Timer _timer;
   String _timeString = '';
-  bool _isClockedIn = false;
+  AttendanceRecord? todayAttendance;
+  bool isLoadingAttendance = false;
+  List<AttendanceRecord> recentAttendance = [];
+  bool isLoadingRecent = false;
 
   @override
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
+    _loadTodayAttendance();
+    _loadRecentAttendance();
+  }
+
+  Future<void> _loadRecentAttendance() async {
+    setState(() {
+      isLoadingRecent = true;
+    });
+
+    try {
+      final attendance = await AttendanceController.getAttendanceHistory(limit: 5);
+      setState(() {
+        recentAttendance = attendance;
+        isLoadingRecent = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingRecent = false;
+      });
+    }
+  }
+
+  Future<void> _loadTodayAttendance() async {
+    setState(() {
+      isLoadingAttendance = true;
+    });
+
+    try {
+      final attendance = await AttendanceController.getTodayAttendance();
+      setState(() {
+        todayAttendance = attendance;
+        isLoadingAttendance = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingAttendance = false;
+      });
+    }
+  }
+
+  String _getAttendanceStatusText() {
+    if (todayAttendance == null) {
+      return 'Ready to check in';
+    } else if (!todayAttendance!.isCheckedIn) {
+      return 'Not checked in today';
+    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+      return 'Currently working';
+    } else {
+      return 'Completed for today';
+    }
+  }
+
+  String _getButtonText() {
+    if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+      return 'Clock In';
+    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+      return 'Clock Out';
+    } else {
+      return 'View Details';
+    }
   }
 
   void _getTime() {
@@ -167,7 +234,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _isClockedIn ? 'Currently working' : 'Ready to clock in',
+                  _getAttendanceStatusText(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha:0.8),
                     fontSize: 14,
@@ -187,9 +254,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        _isClockedIn = !_isClockedIn;
-                      });
+                      if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+                        // Check in
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CheckInOutScreen(),
+                          ),
+                        ).then((_) => _loadTodayAttendance());
+                      } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+                        // Check out
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CheckInOutScreen(),
+                          ),
+                        ).then((_) => _loadTodayAttendance());
+                      } else {
+                        // View details (already completed)
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CheckInOutScreen(),
+                          ),
+                        ).then((_) => _loadTodayAttendance());
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -201,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: Text(
-                      _isClockedIn ? 'Clock Out' : 'Clock In',
+                      _getButtonText(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -281,7 +370,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         TextButton(
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AttendanceHistoryScreen(),
+              ),
+            );
+          },
           child: const Row(
             children: [
               Text('View all', style: TextStyle(color: AppTheme.primaryBlue)),
@@ -294,15 +390,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivityList(BuildContext context) {
-    // TODO: Replace with actual activity data from API
-    final activities = <Map<String, dynamic>>[];
+    if (isLoadingRecent) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (recentAttendance.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.history,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No recent activity',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
-      children: activities.map((activity) => _buildActivityItem(context, activity)).toList(),
+      children: recentAttendance.map((attendance) => _buildAttendanceItem(context, attendance)).toList(),
     );
   }
 
-  Widget _buildActivityItem(BuildContext context, Map<String, dynamic> activity) {
-    bool isActive = activity['status'] == 'Active';
+  Widget _buildAttendanceItem(BuildContext context, AttendanceRecord attendance) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -318,34 +439,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                activity['day'],
+                DateFormat('MMM d').format(attendance.date),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                activity['time'],
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textLightBlue,
+              if (attendance.checkInTime != null)
+                Text(
+                  'In: ${DateFormat('h:mm a').format(attendance.checkInTime!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textLightBlue,
+                  ),
                 ),
-              ),
+              if (attendance.checkOutTime != null)
+                Text(
+                  'Out: ${DateFormat('h:mm a').format(attendance.checkOutTime!)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textLightBlue,
+                  ),
+                ),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isActive ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
+              color: attendance.isCheckedOut ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              activity['status'],
+              attendance.isCheckedOut ? 'Complete' : 'Active',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: isActive ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
+                color: attendance.isCheckedOut ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
               ),
             ),
           ),

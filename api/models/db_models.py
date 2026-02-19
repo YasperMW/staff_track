@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Text, Numeric, Integer, Date, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Text, Numeric, Integer, Date, ForeignKey, Time
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from database import Base
@@ -92,3 +92,40 @@ class Department(Base):
     # Relationships
     users = relationship("User", back_populates="department", foreign_keys="User.department_id")
     designations = relationship("Designation", back_populates="department", foreign_keys="Designation.department_id")
+
+class AttendanceLog(Base):
+    __tablename__ = "attendance_logs"
+    
+    attendance_log_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
+    check_in_time = Column(DateTime(timezone=True))
+    check_out_time = Column(DateTime(timezone=True))
+    location = Column(String)  # This will store the geography as text for simplicity
+    accuracy = Column(Numeric(6, 2))
+    device_id = Column(String(100))
+    offline_flag = Column(Boolean, default=False)
+    sync_time = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True))
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    notification_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(50), nullable=False)  # attendance, request, system, reminder
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
+    deleted_at = Column(DateTime(timezone=True))
+    deleted_by = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
+    
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])

@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../controllers/auth_provider.dart';
 import '../screens/SharedScreens/profile_screen.dart';
+import '../screens/SharedScreens/notifications_screen.dart';
 
 class AppHeader extends StatelessWidget {
   final String subtitle;
@@ -87,7 +88,13 @@ class AppHeader extends StatelessWidget {
                 Icons.notifications_outlined,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen(),
+                  ),
+                );
+              },
             ),
           const SizedBox(width: 4),
           _buildProfileAvatar(context, user),

@@ -18,16 +18,67 @@ class UserRequest {
   });
 }
 
-class CheckInRecord {
-  final DateTime timestamp;
-  final String location;
-  final bool isCheckIn;
+class AttendanceRecord {
+  final String id;
+  final String userId;
+  final DateTime date;
+  final DateTime? checkInTime;
+  final DateTime? checkOutTime;
+  final String? location;
+  final double? workHours;
+  final String? deviceId;
+  final double? accuracy;
 
-  CheckInRecord({
-    required this.timestamp,
-    required this.location,
-    required this.isCheckIn,
+  AttendanceRecord({
+    required this.id,
+    required this.userId,
+    required this.date,
+    this.checkInTime,
+    this.checkOutTime,
+    this.location,
+    this.workHours,
+    this.deviceId,
+    this.accuracy,
   });
+
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
+    return AttendanceRecord(
+      id: json['attendance_log_id'] ?? '',
+      userId: '', // Will be set from auth context
+      date: DateTime.parse(json['date']),
+      checkInTime: json['check_in_time'] != null 
+          ? DateTime.parse('${json['date']} ${json['check_in_time']}')
+          : null,
+      checkOutTime: json['check_out_time'] != null 
+          ? DateTime.parse('${json['date']} ${json['check_out_time']}')
+          : null,
+      location: json['location'],
+      workHours: json['work_hours']?.toDouble(),
+      deviceId: json['device_id'],
+      accuracy: json['accuracy']?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'attendance_log_id': id,
+      'date': date.toIso8601String().split('T')[0],
+      'check_in_time': checkInTime != null 
+          ? '${checkInTime!.hour.toString().padLeft(2, '0')}:${checkInTime!.minute.toString().padLeft(2, '0')}:${checkInTime!.second.toString().padLeft(2, '0')}'
+          : null,
+      'check_out_time': checkOutTime != null 
+          ? '${checkOutTime!.hour.toString().padLeft(2, '0')}:${checkOutTime!.minute.toString().padLeft(2, '0')}:${checkOutTime!.second.toString().padLeft(2, '0')}'
+          : null,
+      'location': location,
+      'work_hours': workHours,
+      'device_id': deviceId,
+      'accuracy': accuracy,
+    };
+  }
+
+  bool get isCheckedIn => checkInTime != null;
+  bool get isCheckedOut => checkOutTime != null;
+  bool get isComplete => isCheckedIn && isCheckedOut;
 }
 
 class AppUser {
