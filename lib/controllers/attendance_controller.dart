@@ -186,4 +186,57 @@ class AttendanceController {
       throw Exception('Failed to get attendance summary: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> getTeamTodaySummary() async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/attendance/team-today-summary'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to get team attendance summary');
+      }
+    } catch (e) {
+      throw Exception('Failed to get team attendance summary: $e');
+    }
+  }
+
+  static Future<List<TeamAttendanceMember>> getTeamTodayList() async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/attendance/team-today-list'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((item) => TeamAttendanceMember.fromJson(item as Map<String, dynamic>))
+            .toList();
+      } else {
+        throw Exception('Failed to get team attendance list');
+      }
+    } catch (e) {
+      throw Exception('Failed to get team attendance list: $e');
+    }
+  }
 }

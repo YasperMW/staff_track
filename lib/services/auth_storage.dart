@@ -31,6 +31,13 @@ abstract class AuthStorage {
     }
   }
 
+  static Future<String?> getUserId() async {
+    final user = await getUser();
+    if (user == null) return null;
+    final id = user['id'] ?? user['user_id'];
+    return id?.toString();
+  }
+
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);

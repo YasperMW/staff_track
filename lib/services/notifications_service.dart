@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
-import '../controllers/auth_provider.dart';
+import 'auth_storage.dart';
 
 class NotificationItem {
   final String id;
@@ -98,7 +98,7 @@ class NotificationsService {
           'title': title,
           'message': message,
           'type': type,
-          if (recipientUserId != null) 'recipient_user_id': recipientUserId,
+          'recipient_user_id': ?recipientUserId,
         }),
       );
 

@@ -1,9 +1,90 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../services/admin_reports_service.dart';
 
-class AdminReportsScreen extends StatelessWidget {
+class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
+
+  @override
+  State<AdminReportsScreen> createState() => _AdminReportsScreenState();
+}
+
+class _AdminReportsScreenState extends State<AdminReportsScreen> {
+  bool _isLoadingOverview = false;
+  AdminReportsOverview? _overview;
+  bool _isLoadingWeekly = false;
+  List<WeeklyAttendancePoint> _weeklyPoints = [];
+  bool _isLoadingTop = false;
+  List<TopPerformer> _topPerformers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOverview();
+    _loadWeekly();
+    _loadTopPerformers();
+  }
+
+  Future<void> _loadOverview() async {
+    setState(() {
+      _isLoadingOverview = true;
+    });
+
+    try {
+      final data = await AdminReportsService.getOverview();
+      if (!mounted) return;
+      setState(() {
+        _overview = data;
+        _isLoadingOverview = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingOverview = false;
+      });
+    }
+  }
+
+  Future<void> _loadWeekly() async {
+    setState(() {
+      _isLoadingWeekly = true;
+    });
+
+    try {
+      final data = await AdminReportsService.getWeeklyAttendance();
+      if (!mounted) return;
+      setState(() {
+        _weeklyPoints = data;
+        _isLoadingWeekly = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingWeekly = false;
+      });
+    }
+  }
+
+  Future<void> _loadTopPerformers() async {
+    setState(() {
+      _isLoadingTop = true;
+    });
+
+    try {
+      final data = await AdminReportsService.getTopPerformers();
+      if (!mounted) return;
+      setState(() {
+        _topPerformers = data;
+        _isLoadingTop = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingTop = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +137,44 @@ class AdminReportsScreen extends StatelessWidget {
   }
 
   Widget _buildOverviewCards(BuildContext context) {
+    if (_isLoadingOverview) {
+      return const Row(
+        children: [
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final avgAttendance = _overview?.avgAttendance ?? 0;
+    final totalOt = _overview?.totalOvertimeHours ?? 0;
+
     return Row(
       children: [
-        _buildStatCard(context, 'Avg Attendance', '94%', Icons.check_circle_outline, Colors.green),
+        _buildStatCard(
+          context,
+          'Avg Attendance',
+          '${avgAttendance.toStringAsFixed(1)}%',
+          Icons.check_circle_outline,
+          Colors.green,
+        ),
         const SizedBox(width: 12),
-        _buildStatCard(context, 'Total OT Hours', '124h', Icons.timer_outlined, Colors.orange),
+        _buildStatCard(
+          context,
+          'Total OT Hours',
+          '${totalOt.toStringAsFixed(1)}h',
+          Icons.timer_outlined,
+          Colors.orange,
+        ),
       ],
     );
   }
@@ -132,19 +246,32 @@ class AdminReportsScreen extends StatelessWidget {
           const SizedBox(height: 24),
           SizedBox(
             height: 150,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildBar(90, 'Mon'),
-                _buildBar(85, 'Tue'),
-                _buildBar(95, 'Wed'),
-                _buildBar(80, 'Thu'),
-                _buildBar(88, 'Fri'),
-                _buildBar(40, 'Sat'),
-                _buildBar(30, 'Sun'),
-              ],
-            ),
+            child: _isLoadingWeekly
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: (_weeklyPoints.isNotEmpty
+                            ? _weeklyPoints
+                            : [
+                                WeeklyAttendancePoint(label: 'Mon', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Tue', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Wed', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Thu', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Fri', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Sat', percentage: 0),
+                                WeeklyAttendancePoint(label: 'Sun', percentage: 0),
+                              ])
+                        .map((p) {
+                      final height = (p.percentage.clamp(0, 100) / 100) * 140;
+                      return _buildBar(height, p.label);
+                    }).toList(),
+                  ),
           ),
         ],
       ),
@@ -178,8 +305,37 @@ class AdminReportsScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         const SizedBox(height: 16),
-        _buildPerformerItem(context, 'Sarah Wilson', 'Nurse', '98% Attendance'),
-        _buildPerformerItem(context, 'Michael Chen', 'Technician', '96% Attendance'),
+        if (_isLoadingTop)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+          )
+        else if (_topPerformers.isEmpty)
+          Text(
+            'No performance data available',
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          )
+        else
+          Column(
+            children: _topPerformers
+                .map(
+                  (p) => _buildPerformerItem(
+                    context,
+                    p.name,
+                    p.role,
+                    '${p.attendancePercentage.toStringAsFixed(1)}% Attendance',
+                  ),
+                )
+                .toList(),
+          ),
       ],
     );
   }

@@ -4,7 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../models/models.dart';
+import '../../services/requests_service.dart';
 import '../../widgets/app_header.dart';
+import '../check_in_out_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -16,13 +20,45 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late Timer _timer;
   String _timeString = '';
-  bool _isClockedIn = false;
+  AttendanceRecord? todayAttendance;
+  bool isLoadingAttendance = false;
+  int _pendingLeaveCount = 0;
+  int _pendingWfhCount = 0;
+  int _pendingShiftChangeCount = 0;
+  int _teamTotalStaff = 0;
+  int _teamPresentCount = 0;
+  int _teamLateCount = 0;
+  int _teamAbsentCount = 0;
+  bool _isLoadingTeamAttendance = false;
+  List<TeamAttendanceMember> _teamAttendance = [];
 
   @override
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
+    _loadTodayAttendance();
+    _loadRequestsSummary();
+    _loadTeamTodaySummary();
+    _loadTeamTodayList();
+  }
+
+  Future<void> _loadTodayAttendance() async {
+    setState(() {
+      isLoadingAttendance = true;
+    });
+
+    try {
+      final attendance = await AttendanceController.getTodayAttendance();
+      setState(() {
+        todayAttendance = attendance;
+        isLoadingAttendance = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoadingAttendance = false;
+      });
+    }
   }
 
   void _getTime() {
@@ -37,6 +73,93 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return DateFormat('hh:mm:ss a').format(dateTime);
+  }
+
+  Future<void> _loadRequestsSummary() async {
+    try {
+      final summary = await RequestsService.getRequestsSummary();
+      int leave = 0;
+      int wfh = 0;
+      int shift = 0;
+
+      for (final item in summary.byType) {
+        final type = item.type.toLowerCase();
+        if (type.contains('wfh')) {
+          wfh += item.count;
+        } else if (type.contains('shift')) {
+          shift += item.count;
+        } else {
+          leave += item.count;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _pendingLeaveCount = leave;
+        _pendingWfhCount = wfh;
+        _pendingShiftChangeCount = shift;
+      });
+    } catch (e) {
+      //error
+    }
+  }
+
+  Future<void> _loadTeamTodaySummary() async {
+    try {
+      final summary = await AttendanceController.getTeamTodaySummary();
+      if (!mounted) return;
+      setState(() {
+        _teamTotalStaff = (summary['total_staff'] as num?)?.toInt() ?? 0;
+        _teamPresentCount = (summary['present'] as num?)?.toInt() ?? 0;
+        _teamLateCount = (summary['late'] as num?)?.toInt() ?? 0;
+        _teamAbsentCount = (summary['absent'] as num?)?.toInt() ?? 0;
+      });
+    } catch (e) {
+      //error
+    }
+  }
+
+  Future<void> _loadTeamTodayList() async {
+    setState(() {
+      _isLoadingTeamAttendance = true;
+    });
+
+    try {
+      final list = await AttendanceController.getTeamTodayList();
+      if (!mounted) return;
+      setState(() {
+        _teamAttendance = list;
+        _isLoadingTeamAttendance = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingTeamAttendance = false;
+      });
+    }
+  }
+
+  String _getAttendanceStatusText() {
+    if (todayAttendance == null) {
+      return 'Ready to check in';
+    } else if (!todayAttendance!.isCheckedIn) {
+      return 'Not checked in today';
+    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+      return 'Currently working';
+    } else {
+      return 'Completed for today';
+    }
+  }
+
+  String _getButtonText() {
+    if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+      return 'Clock In';
+    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+      return 'Clock Out';
+    } else {
+      return 'View Details';
+    }
   }
 
   @override
@@ -136,7 +259,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _isClockedIn ? 'Currently working' : 'Ready to clock in',
+                  _getAttendanceStatusText(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
@@ -156,15 +279,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      setState(() {
-                        _isClockedIn = !_isClockedIn;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(_isClockedIn ? 'Clocked in successfully' : 'Clocked out successfully'),
-                          behavior: SnackBarBehavior.floating,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CheckInOutScreen(),
                         ),
-                      );
+                      ).then((_) => _loadTodayAttendance());
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -176,7 +296,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     child: Text(
-                      _isClockedIn ? 'Clock Out' : 'Clock In',
+                      _getButtonText(),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -273,9 +393,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildRequestStat('8', 'Leave'),
-                _buildRequestStat('3', 'WFH'),
-                _buildRequestStat('2', 'Shift Change'),
+                _buildRequestStat(_pendingLeaveCount, 'Leave'),
+                _buildRequestStat(_pendingWfhCount, 'WFH'),
+                _buildRequestStat(_pendingShiftChangeCount, 'Shift Change'),
               ],
             ),
             const SizedBox(height: 24),
@@ -304,11 +424,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildRequestStat(String count, String label) {
+  Widget _buildRequestStat(int count, String label) {
     return Column(
       children: [
         Text(
-          count,
+          '$count',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 28,
@@ -333,7 +453,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: _buildAnalyticCard(
             context,
             Icons.group,
-            '42/50',
+            '$_teamPresentCount/$_teamTotalStaff',
             'Staff Present',
             Colors.blue,
           ),
@@ -343,7 +463,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: _buildAnalyticCard(
             context,
             Icons.warning_amber_rounded,
-            '5',
+            '$_teamLateCount',
             'Late Arrivals',
             Colors.orange,
           ),
@@ -353,7 +473,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: _buildAnalyticCard(
             context,
             Icons.person_off,
-            '3',
+            '$_teamAbsentCount',
             'Absent',
             Colors.red,
           ),
@@ -428,23 +548,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildTeamAttendanceList(BuildContext context) {
-    // TODO: Replace with actual team attendance API call
-    // For now, showing empty state until API is ready
-    return Center(
-      child: Column(
-        children: [
-          Icon(
-            Icons.people_outline,
-            size: 48,
-            color: Colors.grey[400],
+    if (_isLoadingTeamAttendance) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: AppTheme.primaryBlue,
           ),
-          const SizedBox(height: 12),
-          Text(
-            'No team attendance data available',
-            style: TextStyle(
-              fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface,
+        ),
+      );
+    }
+
+    if (_teamAttendance.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: Colors.grey[400],
             ),
+            const SizedBox(height: 12),
+            Text(
+              'No team attendance data available',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: _teamAttendance
+          .map((member) => _buildTeamAttendanceItem(context, member))
+          .toList(),
+    );
+  }
+
+  Widget _buildTeamAttendanceItem(BuildContext context, TeamAttendanceMember member) {
+    final Color statusColor = member.status == 'Present'
+        ? Colors.green
+        : (member.status == 'Absent' ? Colors.red : Colors.orange);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+            child: Text(
+              member.name.isNotEmpty ? member.name[0] : '?',
+              style: const TextStyle(color: AppTheme.primaryBlue),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (member.role.isNotEmpty)
+                  Text(
+                    member.role,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                member.status,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+              if (member.checkInTime != null || member.checkOutTime != null)
+                Text(
+                  [
+                    if (member.checkInTime != null) 'In: ${member.checkInTime}',
+                    if (member.checkOutTime != null) 'Out: ${member.checkOutTime}',
+                  ].join('  '),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textLightBlue,
+                  ),
+                ),
+            ],
           ),
         ],
       ),

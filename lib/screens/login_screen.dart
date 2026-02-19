@@ -15,8 +15,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@hospital.com');
-  final _passwordController = TextEditingController(text: 'admin123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -389,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: EdgeInsets.only(
                                 bottom: 16, top: isShort ? 12 : 16),
                             child: Text(
-                              'v1.0.2 • Secure Enterprise Edition',
+                              'v1.0.0 • St Johns Hospital',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.6),
                                 fontSize: 12,

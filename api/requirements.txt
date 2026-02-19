@@ -32,3 +32,4 @@ google-auth==2.25.2
 google-auth-oauthlib==1.2.0
 google-api-python-client==2.108.0
 reportlab
+pytz
