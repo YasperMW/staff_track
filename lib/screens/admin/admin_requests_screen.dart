@@ -67,9 +67,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AppHeader(
-                subtitle: 'HR Admin Portal',
-              ),
+              const AppHeader(subtitle: 'HR Admin Portal'),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -94,7 +92,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               'Manage leave and WFH requests',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -147,7 +147,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         DateTimeRange? selectedRange;
         bool isSubmitting = false;
 
-        String _formatDate(DateTime d) {
+        String formatDate(DateTime d) {
           return d.toIso8601String().split('T').first;
         }
 
@@ -163,11 +163,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   context: ctx,
                   firstDate: DateTime(now.year - 1),
                   lastDate: DateTime(now.year + 1),
-                  initialDateRange: selectedRange ??
-                      DateTimeRange(
-                        start: now,
-                        end: now,
-                      ),
+                  initialDateRange:
+                      selectedRange ?? DateTimeRange(start: now, end: now),
                 );
                 if (range != null) {
                   setSheetState(() {
@@ -182,8 +179,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   isSubmitting = true;
                 });
                 try {
-                  final start = _formatDate(selectedRange!.start);
-                  final end = _formatDate(selectedRange!.end);
+                  final start = formatDate(selectedRange!.start);
+                  final end = formatDate(selectedRange!.end);
                   await RequestsService.createRequest(
                     type: selectedType,
                     startDate: start,
@@ -203,9 +200,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                     isSubmitting = false;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to submit request'),
-                    ),
+                    const SnackBar(content: Text('Failed to submit request')),
                   );
                 }
               }
@@ -296,8 +291,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               selectedRange == null
                                   ? 'Select dates'
                                   : selectedRange!.start == selectedRange!.end
-                                      ? _formatDate(selectedRange!.start)
-                                      : '${_formatDate(selectedRange!.start)} - ${_formatDate(selectedRange!.end)}',
+                                  ? formatDate(selectedRange!.start)
+                                  : '${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}',
                             ),
                           ],
                         ),
@@ -307,8 +302,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed:
-                            selectedRange == null || isSubmitting ? null : handleSubmit,
+                        onPressed: selectedRange == null || isSubmitting
+                            ? null
+                            : handleSubmit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryBlue,
                           foregroundColor: Colors.white,
@@ -320,7 +316,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           child: Text(
-                            isSubmitting ? 'Submitting...' : 'Submit for approval',
+                            isSubmitting
+                                ? 'Submitting...'
+                                : 'Submit for approval',
                           ),
                         ),
                       ),
@@ -352,11 +350,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       return Center(
         child: Column(
           children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 48,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 12),
             Text(
               'No pending team requests',
@@ -382,13 +376,18 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             ),
             Text(
               '${_requests.length} Total',
-              style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: AppTheme.primaryBlue,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 16),
         Column(
-          children: _requests.map((req) => _buildRequestItem(context, req)).toList(),
+          children: _requests
+              .map((req) => _buildRequestItem(context, req))
+              .toList(),
         ),
       ],
     );
@@ -403,9 +402,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: isOwnRequest 
-          ? Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3), width: 1)
-          : null,
+        border: isOwnRequest
+            ? Border.all(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                width: 1,
+              )
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -419,15 +421,15 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: isOwnRequest 
-                  ? Colors.orange.withValues(alpha: 0.1)
-                  : AppTheme.primaryBlue.withValues(alpha: 0.1),
+                backgroundColor: isOwnRequest
+                    ? Colors.orange.withValues(alpha: 0.1)
+                    : AppTheme.primaryBlue.withValues(alpha: 0.1),
                 child: Text(
-                  req.userName.isNotEmpty ? req.userName[0] : '?', 
+                  req.userName.isNotEmpty ? req.userName[0] : '?',
                   style: TextStyle(
                     color: isOwnRequest ? Colors.orange : AppTheme.primaryBlue,
                     fontWeight: FontWeight.bold,
-                  )
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -437,36 +439,69 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(req.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          req.userName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         if (isOwnRequest) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               'MY REQUEST',
-                              style: TextStyle(color: Colors.orange, fontSize: 8, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ],
                     ),
-                    Text(req.type, style: const TextStyle(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w500)),
+                    Text(
+                      req.type,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Text(req.duration, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              Text(
+                req.duration,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.calendar_today, size: 14, color: AppTheme.textLightBlue),
+              const Icon(
+                Icons.calendar_today,
+                size: 14,
+                color: AppTheme.textLightBlue,
+              ),
               const SizedBox(width: 8),
-              Text(req.dateRange, style: const TextStyle(fontSize: 12, color: AppTheme.textLightBlue)),
+              Text(
+                req.dateRange,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textLightBlue,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -504,7 +539,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Decline'),
                   ),
@@ -517,7 +554,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text('Approve'),
                   ),

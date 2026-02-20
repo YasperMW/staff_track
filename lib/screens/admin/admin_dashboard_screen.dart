@@ -365,37 +365,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pending Team Requests',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Action Required',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Pending Team Requests',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Action Required',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildRequestStat(_pendingLeaveCount, 'Leave'),
-                _buildRequestStat(_pendingWfhCount, 'WFH'),
-                _buildRequestStat(_pendingShiftChangeCount, 'Shift Change'),
+                Expanded(child: _buildRequestStat(_pendingLeaveCount, 'Leave')),
+                Expanded(child: _buildRequestStat(_pendingWfhCount, 'WFH')),
+                Expanded(child: _buildRequestStat(_pendingShiftChangeCount, 'Shift Change')),
               ],
             ),
             const SizedBox(height: 24),
@@ -427,20 +431,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildRequestStat(int count, String label) {
     return Column(
       children: [
-        Text(
-          '$count',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 12,
+            fontSize: 11,
           ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ],
     );
@@ -523,25 +534,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildTeamAttendanceHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'My Team Attendance',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        TextButton(
-          onPressed: () {},
-          child: const Row(
-            children: [
-              Text('Live View', style: TextStyle(color: AppTheme.primaryBlue)),
-              Icon(Icons.chevron_right, size: 18, color: AppTheme.primaryBlue),
-            ],
-          ),
+        Row(
+          children: [
+            Text(
+              'My Team Attendance',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () {},
+              child: const Row(
+                children: [
+                  Text('Live View', style: TextStyle(color: AppTheme.primaryBlue)),
+                  Icon(Icons.chevron_right, size: 18, color: AppTheme.primaryBlue),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
