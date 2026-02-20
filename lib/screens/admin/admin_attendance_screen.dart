@@ -116,8 +116,8 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,7 +139,13 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                               ),
                             ],
                           ),
-                          _buildCheckInButton(context),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              _buildCheckInButton(context),
+                            ],
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),

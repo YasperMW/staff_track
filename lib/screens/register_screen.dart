@@ -6,6 +6,7 @@ import '../services/image_service.dart';
 import '../services/lookup_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -213,26 +214,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = false);
       
       if (response.success) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('Registration Successful'),
-            content: Text(
-              response.message ?? 'Your account has been created and is pending HR approval.',
+        // Redirect to OTP verification screen instead of showing dialog
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => OTPVerificationScreen(
+              email: _emailController.text,
+              purpose: 'registration',
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
-                },
-                child: const Text('Go to Login'),
-              ),
-            ],
           ),
+          (route) => false,
         );
       } else {
         showDialog(
@@ -397,7 +387,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 'Join ST JOHN\'S HOSPITAL',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),

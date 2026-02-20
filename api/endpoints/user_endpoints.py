@@ -170,9 +170,10 @@ async def get_current_user_profile(
         
         print(f"Found user: {user.first_name} {user.surname}")
         
-        # Get role and department separately to avoid join issues
+        # Get role, department, and designation separately to avoid join issues
         role_name = "Unknown"
         department_name = None
+        designation_name = None
         
         try:
             if user.role_id:
@@ -187,26 +188,42 @@ async def get_current_user_profile(
                 department = db.query(Department).filter(Department.department_id == user.department_id).first()
                 if department:
                     department_name = department.name
+                    print(f"Found department: {department_name}")
+                else:
+                    print(f"No department found for department_id: {user.department_id}")
+            else:
+                print(f"User has no department_id")
         except Exception as e:
             print(f"Error getting department: {e}")
         
+        try:
+            if user.designation_id:
+                from models.db_models import Designation
+                designation = db.query(Designation).filter(Designation.designation_id == user.designation_id).first()
+                if designation:
+                    designation_name = designation.name
+        except Exception as e:
+            print(f"Error getting designation: {e}")
+        
         # Return user profile data
-        return UserProfileResponse(
-            user_id=str(user.user_id),
-            employee_number=user.employee_number,
-            first_name=user.first_name,
-            surname=user.surname,
-            other_names=user.other_names,
-            email=user.email,
-            phone=user.phone,
-            role_name=role_name,
-            department_name=department_name,
-            designation=user.designation,
-            status=user.status,
-            profile_photo_url=user.profile_photo_url,
-            last_login_at=user.last_login_at.isoformat() if user.last_login_at else None,
-            created_at=user.created_at.isoformat() if user.created_at else None
-        )
+        profile_data = {
+            "user_id": str(user.user_id),
+            "employee_number": user.employee_number,
+            "first_name": user.first_name,
+            "surname": user.surname,
+            "other_names": user.other_names,
+            "email": user.email,
+            "phone": user.phone,
+            "role_name": role_name,
+            "department_name": department_name,
+            "designation": designation_name,
+            "status": user.status,
+            "profile_photo_url": user.profile_photo_url,
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+        print(f"Profile response data: {profile_data}")
+        return UserProfileResponse(**profile_data)
         
     except HTTPException:
         raise

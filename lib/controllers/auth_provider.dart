@@ -33,6 +33,7 @@ AppUser appUserFromMap(Map<String, dynamic> map) {
     id: map['user_id'] as String? ?? map['email'] as String? ?? '',
     name: name.isEmpty ? (map['email'] as String? ?? '') : name,
     email: map['email'] as String? ?? '',
+    phone: map['phone'] as String? ?? map['phone_number'] as String? ?? '',
     role: map['role'] as String? ?? '',
     department: map['department'] as String? ?? '',
     profileImage: '',
