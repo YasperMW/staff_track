@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../controllers/auth_provider.dart';
+import '../services/otp_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import 'otp_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,12 +41,31 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message ?? 'Invalid credentials.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Check if the error is related to email verification
+        if (result.message?.contains('Email not verified') == true) {
+          // Send OTP before redirecting
+          await OTPService.sendOTP(
+            email: _emailController.text,
+            purpose: 'registration',
+          );
+          
+          // Redirect to OTP verification screen
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => OTPVerificationScreen(
+                email: _emailController.text,
+                purpose: 'registration',
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Invalid credentials.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }

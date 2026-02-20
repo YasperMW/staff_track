@@ -6,9 +6,53 @@ import '../../controllers/auth_provider.dart';
 import '../../widgets/app_header.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
+import '../../services/user_profile_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  UserProfile? userProfile;
+  bool isLoadingProfile = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.token;
+    
+    if (token == null) return;
+    
+    setState(() {
+      isLoadingProfile = true;
+    });
+
+    try {
+      final profile = await UserProfileService.getUserProfile(token);
+      if (mounted) {
+        print('Profile data received: ${profile?.toJson()}');
+        setState(() {
+          userProfile = profile;
+          isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading profile: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingProfile = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,21 +150,31 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
+          Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.email_outlined, size: 18, color: AppTheme.textLightBlue),
-              const SizedBox(width: 8),
-              Text(
-                user.email,
-                style: const TextStyle(color: AppTheme.textLightBlue),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.email_outlined, size: 18, color: AppTheme.textLightBlue),
+                  const SizedBox(width: 8),
+                  Text(
+                    userProfile?.email ?? 'Loading...',
+                    style: const TextStyle(color: AppTheme.textLightBlue),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              const Icon(Icons.phone_outlined, size: 18, color: AppTheme.textLightBlue),
-              const SizedBox(width: 8),
-              const Text(
-                '+265 9997 823 454',
-                style: TextStyle(color: AppTheme.textLightBlue),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.phone_outlined, size: 18, color: AppTheme.textLightBlue),
+                  const SizedBox(width: 8),
+                  Text(
+                    userProfile?.phone?.isNotEmpty == true ? userProfile!.phone! : 'No phone number',
+                    style: const TextStyle(color: AppTheme.textLightBlue),
+                  ),
+                ],
               ),
             ],
           ),
@@ -214,14 +268,14 @@ class ProfileScreen extends StatelessWidget {
             context: context,
             icon: Icons.business_outlined,
             title: 'Department',
-            trailing: 'Engineering',
+            trailing: userProfile?.departmentName ?? 'Loading...',
           ),
           const Divider(height: 1, indent: 60),
           _buildOptionTile(
             context: context,
-            icon: Icons.location_on_outlined,
-            title: 'Office',
-            trailing: 'Main Office',
+            icon: Icons.work_outline,
+            title: 'Designation',
+            trailing: userProfile?.designation ?? 'Not specified',
           ),
         ],
       ),

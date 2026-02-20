@@ -61,6 +61,25 @@ class UserProfile {
     }
     return parts.where((s) => s.isNotEmpty).join(' ');
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'employee_number': employeeNumber,
+      'first_name': firstName,
+      'surname': surname,
+      'other_names': otherNames,
+      'email': email,
+      'phone': phone,
+      'role_name': roleName,
+      'department_name': departmentName,
+      'designation': designation,
+      'status': status,
+      'profile_photo_url': profilePhotoUrl,
+      'last_login_at': lastLoginAt,
+      'created_at': createdAt,
+    };
+  }
 }
 
 class UserProfileService {

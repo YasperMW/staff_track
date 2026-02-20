@@ -49,3 +49,17 @@ class UserResponse(BaseModel):
     employee_number: str
     department: str
     designation: str
+
+class OTPRequest(BaseModel):
+    email: EmailStr
+    purpose: str = "registration"  # registration, password_reset
+
+class OTPVerifyRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    purpose: str = "registration"
+
+class OTPResponse(BaseModel):
+    success: bool
+    message: str
+    verified: bool = False

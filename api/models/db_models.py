@@ -129,3 +129,16 @@ class Notification(Base):
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+    
+    verification_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), nullable=False, index=True)
+    otp_code = Column(String(6), nullable=False)
+    purpose = Column(String(20), nullable=False)  # registration, password_reset
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, default=False)
+    attempts = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)

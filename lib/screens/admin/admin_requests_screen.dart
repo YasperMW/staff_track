@@ -74,34 +74,40 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Staff Requests',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                    Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Staff Requests',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Manage leave and WFH requests',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                              Text(
+                                'Manage leave and WFH requests',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        _buildAddButton(),
-                      ],
-                    ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              _buildAddButton(),
+                            ],
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: 24),
                     _buildPendingRequestsList(context),
                     const SizedBox(height: 24),

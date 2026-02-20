@@ -85,6 +85,7 @@ class AppUser {
   final String id;
   final String name;
   final String email;
+  final String? phone;
   final String role;
   final String department;
   final String profileImage;
@@ -93,6 +94,7 @@ class AppUser {
     required this.id,
     required this.name,
     required this.email,
+    this.phone,
     required this.role,
     required this.department,
     required this.profileImage,
