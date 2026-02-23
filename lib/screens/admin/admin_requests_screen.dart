@@ -601,7 +601,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
-                            'MY REQUEST',
+                            '',
                             style: TextStyle(
                               color: AppTheme.primaryBlue,
                               fontSize: 8,

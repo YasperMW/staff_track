@@ -297,14 +297,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
               const Icon(Icons.calendar_today, size: 16, color: AppTheme.textLightBlue),
               const SizedBox(width: 8),
               Text(
-                request['dateRange'],
+                request['date_range'] ?? '',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
               const SizedBox(width: 12),
               const Icon(Icons.access_time, size: 16, color: AppTheme.textLightBlue),
               const SizedBox(width: 4),
               Text(
-                request['duration'],
+                request['duration'] ?? '',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
               ),
             ],

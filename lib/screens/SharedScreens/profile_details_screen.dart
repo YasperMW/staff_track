@@ -1,0 +1,513 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/app_header.dart';
+import '../../services/user_profile_service.dart';
+import '../../services/complete_user_profile_service.dart';
+import '../../controllers/auth_provider.dart';
+import '../home_screen.dart';
+
+class ProfileDetailsScreen extends StatefulWidget {
+  const ProfileDetailsScreen({super.key});
+
+  @override
+  State<ProfileDetailsScreen> createState() => _ProfileDetailsScreenState();
+}
+
+class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
+  CompleteUserProfile? completeProfile;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final token = authProvider.token;
+    
+    if (token == null) return;
+    
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final profile = await CompleteUserProfileService.getCompleteUserProfile();
+      if (mounted) {
+        setState(() {
+          completeProfile = profile;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load profile details')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Not logged in')),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              const AppHeader(
+                subtitle: 'Complete Profile',
+              ),
+              if (isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (completeProfile != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildProfileHeader(context, user),
+                      const SizedBox(height: 32),
+                      _buildPersonalInfoSection(context, user),
+                      const SizedBox(height: 24),
+                      _buildWorkInfoSection(context),
+                      const SizedBox(height: 24),
+                      _buildContactInfoSection(context),
+                      const SizedBox(height: 24),
+                      _buildFamilyInfoSection(context),
+                      const SizedBox(height: 24),
+                      _buildLocationInfoSection(context),
+                      const SizedBox(height: 24),
+                      _buildSystemInfoSection(context),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                )
+              else
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: Text('Failed to load profile data'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: _ProfileBottomNavigation(),
+    );
+  }
+
+  Widget _buildProfileHeader(BuildContext context, user) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              color: Colors.white,
+              size: 50,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            user.name,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              user.role,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.email_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                completeProfile?.email ?? 'Loading...',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfoSection(BuildContext context, user) {
+    return _buildSectionCard(
+      context,
+      title: 'Personal Information',
+      icon: Icons.person_outline,
+      children: [
+        _buildDetailRow('Employee Number', completeProfile?.employeeNumber ?? 'N/A'),
+        _buildDetailRow('National ID', completeProfile?.nationalId ?? 'Not specified'),
+        _buildDetailRow('Full Name', completeProfile?.fullName ?? user?.name ?? 'N/A'),
+        _buildDetailRow('First Name', completeProfile?.firstName ?? 'N/A'),
+        _buildDetailRow('Surname', completeProfile?.surname ?? 'N/A'),
+        _buildDetailRow('Other Names', completeProfile?.otherNames ?? 'Not specified'),
+        _buildDetailRow('Suffix', completeProfile?.suffix ?? 'Not specified'),
+        _buildDetailRow('Date of Birth', completeProfile?.dateOfBirth ?? 'Not specified'),
+        _buildDetailRow('Gender', completeProfile?.gender ?? 'Not specified'),
+        _buildDetailRow('Email', completeProfile?.email ?? 'N/A'),
+        _buildDetailRow('Phone', completeProfile?.phone ?? 'Not specified'),
+        _buildDetailRow('Contact Number', completeProfile?.contactNumber ?? 'Not specified'),
+      ],
+    );
+  }
+
+  Widget _buildWorkInfoSection(BuildContext context) {
+    return _buildSectionCard(
+      context,
+      title: 'Work Information',
+      icon: Icons.work_outline,
+      children: [
+        _buildDetailRow('Department', completeProfile?.departmentName ?? 'Not assigned'),
+        _buildDetailRow('Designation', completeProfile?.designationName ?? 'Not specified'),
+        _buildDetailRow('Role', completeProfile?.roleName ?? 'N/A'),
+        _buildDetailRow('Employee Status', completeProfile?.status ?? 'Unknown'),
+        _buildDetailRow('Date of Employment', completeProfile?.dateOfEmployment ?? 'Not specified'),
+        _buildDetailRow('Head of Department', completeProfile?.isHeadOfDepartment == true ? 'Yes' : 'No'),
+      ],
+    );
+  }
+
+  Widget _buildContactInfoSection(BuildContext context) {
+    return _buildSectionCard(
+      context,
+      title: 'Contact Information',
+      icon: Icons.contact_phone_outlined,
+      children: [
+        _buildDetailRow('Email Address', completeProfile?.email ?? 'N/A'),
+        _buildDetailRow('Phone Number', completeProfile?.phone ?? 'Not specified'),
+        _buildDetailRow('Contact Number', completeProfile?.contactNumber ?? 'Not specified'),
+        _buildDetailRow('Current Address', completeProfile?.currentAddress ?? 'Not specified'),
+      ],
+    );
+  }
+
+  Widget _buildFamilyInfoSection(BuildContext context) {
+    return _buildSectionCard(
+      context,
+      title: 'Family Information',
+      icon: Icons.family_restroom,
+      children: [
+        _buildDetailRow('Marital Status', completeProfile?.maritalStatus ?? 'Not specified'),
+        _buildDetailRow('Spouse Name', completeProfile?.spouseName ?? 'Not specified'),
+        _buildDetailRow('Spouse Contact', completeProfile?.spouseContact ?? 'Not specified'),
+      ],
+    );
+  }
+
+  Widget _buildLocationInfoSection(BuildContext context) {
+    return _buildSectionCard(
+      context,
+      title: 'Location Information',
+      icon: Icons.location_on_outlined,
+      children: [
+        _buildDetailRow('Home of Origin', completeProfile?.homeOfOrigin ?? 'Not specified'),
+        _buildDetailRow('Traditional Authority', completeProfile?.traditionalAuthority ?? 'Not specified'),
+        _buildDetailRow('District', completeProfile?.district ?? 'Not specified'),
+        _buildDetailRow('Current Address', completeProfile?.currentAddress ?? 'Not specified'),
+      ],
+    );
+  }
+
+  Widget _buildSystemInfoSection(BuildContext context) {
+    return _buildSectionCard(
+      context,
+      title: 'System Information',
+      icon: Icons.info_outline,
+      children: [
+        _buildDetailRow('User ID', completeProfile?.userId ?? 'N/A'),
+        _buildDetailRow('Registration Date', completeProfile?.registrationTimestamp ?? 'Unknown'),
+        _buildDetailRow('Created Date', completeProfile?.createdAt ?? 'Unknown'),
+        _buildDetailRow('Last Updated', completeProfile?.updatedAt ?? 'Unknown'),
+        _buildDetailRow('Last Login', completeProfile?.lastLoginAt ?? 'Never'),
+        _buildDetailRow('Profile Status', completeProfile?.status ?? 'Unknown'),
+        _buildDetailRow('Selfie Verified', completeProfile?.selfieVerified == true ? 'Yes' : 'No'),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppTheme.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: children,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileBottomNavigation extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    if (user == null) return const SizedBox.shrink();
+
+    final isAdmin = user.role.toLowerCase().contains('admin') ||
+        user.role.toLowerCase().contains('hr') ||
+        user.role.toLowerCase().contains('manager');
+
+    const currentIndex = 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(initialIndex: index),
+            ),
+            (route) => false,
+          );
+        },
+        selectedItemColor: AppTheme.primaryBlue,
+        unselectedItemColor: Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: 0.4),
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        items: [
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              0,
+              isAdmin ? Icons.dashboard : Icons.home,
+              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Dashboard' : 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              1,
+              Icons.access_time,
+              Icons.access_time_outlined,
+              currentIndex,
+            ),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              2,
+              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
+              isAdmin
+                  ? Icons.assignment_turned_in_outlined
+                  : Icons.bar_chart_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Requests' : 'Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: _buildNavIcon(
+              context,
+              3,
+              isAdmin ? Icons.analytics : Icons.description,
+              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
+              currentIndex,
+            ),
+            label: isAdmin ? 'Analytics' : 'Requests',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavIcon(
+    BuildContext context,
+    int index,
+    IconData activeIcon,
+    IconData inactiveIcon,
+    int currentIndex,
+  ) {
+    final isActive = currentIndex == index;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isActive)
+          Container(
+            width: 24,
+            height: 2,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        const SizedBox(height: 4),
+        Icon(isActive ? activeIcon : inactiveIcon),
+      ],
+    );
+  }
+}

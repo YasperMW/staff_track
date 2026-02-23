@@ -188,7 +188,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 Icon(Icons.login, color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Text(
-                  'Check In/Out',
+                  'Check In',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

@@ -71,6 +71,49 @@ class UserProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CompleteUserProfileResponse(BaseModel):
+    user_id: str
+    employee_number: str
+    national_id: Optional[str]
+    first_name: str
+    surname: str
+    other_names: Optional[str]
+    suffix: Optional[str]
+    date_of_birth: Optional[str]
+    gender: Optional[str]
+    home_of_origin: Optional[str]
+    traditional_authority: Optional[str]
+    district: Optional[str]
+    current_address: Optional[str]
+    contact_number: Optional[str]
+    email: str
+    marital_status: Optional[str]
+    spouse_name: Optional[str]
+    spouse_contact: Optional[str]
+    date_of_employment: Optional[str]
+    designation_id: Optional[str]
+    department_id: Optional[str]
+    is_head_of_department: bool
+    phone: Optional[str]
+    role_id: str
+    status: str
+    profile_photo_url: Optional[str]
+    blacklisted_at: Optional[str]
+    blacklisted_reason: Optional[str]
+    registration_timestamp: Optional[str]
+    selfie_verified: bool
+    last_login_at: Optional[str]
+    created_at: str
+    updated_at: str
+    deleted_at: Optional[str]
+    deleted_by: Optional[str]
+    role_name: str
+    department_name: Optional[str]
+    designation_name: Optional[str]
+
+    class Config:
+        from_attributes = True
+
 class UsersListResponse(BaseModel):
     success: bool
     message: str
@@ -234,6 +277,111 @@ async def get_current_user_profile(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving user profile: {str(e)}"
+        )
+
+@router.get("/profile/complete", response_model=CompleteUserProfileResponse)
+async def get_complete_user_profile(
+    token: Optional[str] = Depends(get_token_from_bearer),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the complete profile of the currently authenticated user.
+    Returns all information submitted during account creation.
+    """
+    print(f"Complete profile endpoint called with token: {token is not None}")
+    
+    # Verify authentication
+    if not token:
+        print("No token provided")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization header"
+        )
+    
+    # Extract email from token
+    email = get_email_from_token(token)
+    if not email:
+        print("Could not extract email from token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token - could not extract user information"
+        )
+    
+    try:
+        print(f"Querying complete user profile with email: {email}")
+        # Query user with all relationships
+        user = db.query(User).filter(
+            User.email == email,
+            User.deleted_at.is_(None)
+        ).first()
+        
+        if not user:
+            print(f"User not found with email: {email}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        print(f"Found complete user: {user.first_name} {user.surname}")
+        
+        # Get related information
+        role_name = user.role.name if user.role else "Unknown"
+        department_name = user.department.name if user.department else None
+        designation_name = user.designation.name if user.designation else None
+        
+        # Return complete user profile data
+        profile_data = {
+            "user_id": str(user.user_id),
+            "employee_number": user.employee_number,
+            "national_id": user.national_id,
+            "first_name": user.first_name,
+            "surname": user.surname,
+            "other_names": user.other_names,
+            "suffix": user.suffix,
+            "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
+            "gender": user.gender,
+            "home_of_origin": user.home_of_origin,
+            "traditional_authority": user.traditional_authority,
+            "district": user.district,
+            "current_address": user.current_address,
+            "contact_number": user.contact_number,
+            "email": user.email,
+            "marital_status": user.marital_status,
+            "spouse_name": user.spouse_name,
+            "spouse_contact": user.spouse_contact,
+            "date_of_employment": user.date_of_employment.isoformat() if user.date_of_employment else None,
+            "designation_id": str(user.designation_id) if user.designation_id else None,
+            "department_id": str(user.department_id) if user.department_id else None,
+            "is_head_of_department": user.is_head_of_department,
+            "phone": user.phone,
+            "role_id": str(user.role_id),
+            "status": user.status,
+            "profile_photo_url": user.profile_photo_url,
+            "blacklisted_at": user.blacklisted_at.isoformat() if user.blacklisted_at else None,
+            "blacklisted_reason": user.blacklisted_reason,
+            "registration_timestamp": user.registration_timestamp.isoformat() if user.registration_timestamp else None,
+            "selfie_verified": user.selfie_verified,
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+            "deleted_at": user.deleted_at.isoformat() if user.deleted_at else None,
+            "deleted_by": str(user.deleted_by) if user.deleted_by else None,
+            "role_name": role_name,
+            "department_name": department_name,
+            "designation_name": designation_name
+        }
+        print(f"Complete profile response data prepared with {len([k for k, v in profile_data.items() if v is not None])} fields")
+        return CompleteUserProfileResponse(**profile_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Database error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving complete user profile: {str(e)}"
         )
 
 @router.get("/users", response_model=UsersListResponse)
