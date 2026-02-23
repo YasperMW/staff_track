@@ -517,7 +517,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              '${_myRequests?.length ?? 0} Total',
+              '${_myRequests.length} Total',
               style: const TextStyle(
                 color: AppTheme.primaryBlue,
                 fontWeight: FontWeight.bold,
@@ -526,7 +526,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        if ((_myRequests?.length ?? 0) == 0)
+        if ((_myRequests.length) == 0)
           Center(
             child: Column(
               children: [
@@ -544,7 +544,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           )
         else
           Column(
-            children: (_myRequests ?? [])
+            children: (_myRequests)
                 .map((req) => _buildMyRequestItem(context, req))
                 .toList(),
           ),
@@ -681,7 +681,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
-              '${_teamRequests?.length ?? 0} Total',
+              '${_teamRequests.length} Total',
               style: const TextStyle(
                 color: AppTheme.primaryBlue,
                 fontWeight: FontWeight.bold,
@@ -690,7 +690,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        if ((_teamRequests?.length ?? 0) == 0)
+        if ((_teamRequests.length) == 0)
           Center(
             child: Column(
               children: [
@@ -708,7 +708,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           )
         else
           Column(
-            children: (_teamRequests ?? [])
+            children: (_teamRequests)
                 .map((req) => _buildTeamRequestItem(context, req))
                 .toList(),
           ),
@@ -841,7 +841,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.hourglass_empty, size: 16, color: Colors.orange),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     'Pending Self-Approval',
                     style: TextStyle(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/login_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -11,21 +12,47 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _loginService = LoginService();
   bool _isLoading = false;
 
   void _sendOTP() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
     
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => OTPScreen(email: _emailController.text),
-        ),
-      );
+    try {
+      final success = await _loginService.resetPassword(_emailController.text);
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        if (success) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => OTPScreen(email: _emailController.text),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to send reset code. Please try again.'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -173,24 +200,51 @@ class OTPScreen extends StatefulWidget {
 }
 
 class _OTPScreenState extends State<OTPScreen> {
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final _loginService = LoginService();
   bool _isLoading = false;
+  bool _isResending = false;
 
   void _verifyOTP() async {
     String otp = _controllers.map((e) => e.text).join();
-    if (otp.length < 4) return;
+    if (otp.length < 6) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const ResetPasswordScreen(),
-        ),
-      );
+    
+    try {
+      final success = await _loginService.verifyPasswordResetOTP(widget.email, otp);
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        if (success) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ResetPasswordScreen(email: widget.email, otp: otp),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid or expired code. Please try again.'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -249,15 +303,15 @@ class _OTPScreenState extends State<OTPScreen> {
                         const SizedBox(height: 48),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: List.generate(4, (index) => SizedBox(
-                            width: 64,
+                          children: List.generate(6, (index) => SizedBox(
+                            width: 50,
                             child: TextField(
                               controller: _controllers[index],
                               focusNode: _focusNodes[index],
                               textAlign: TextAlign.center,
                               keyboardType: TextInputType.number,
                               maxLength: 1,
-                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                               decoration: InputDecoration(
                                 counterText: '',
                                 filled: true,
@@ -265,16 +319,16 @@ class _OTPScreenState extends State<OTPScreen> {
                                     ? Colors.white.withValues(alpha: 0.05)
                                     : Colors.grey.withValues(alpha: 0.05),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide.none,
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
                                 ),
                               ),
                               onChanged: (value) {
-                                if (value.isNotEmpty && index < 3) {
+                                if (value.isNotEmpty && index < 5) {
                                   _focusNodes[index + 1].requestFocus();
                                 }
                                 if (value.isEmpty && index > 0) {
@@ -303,13 +357,56 @@ class _OTPScreenState extends State<OTPScreen> {
                         ),
                         const SizedBox(height: 32),
                         TextButton(
-                          onPressed: () {
-                            // Logic to resend code
+                          onPressed: _isResending ? null : () async {
+                            setState(() => _isResending = true);
+                            
+                            try {
+                              final success = await _loginService.resendPasswordResetOTP(widget.email);
+                              
+                              if (mounted) {
+                                setState(() => _isResending = false);
+                                
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('New code sent successfully'),
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Failed to resend code. Please try again.'),
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                setState(() => _isResending = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Network error. Please check your connection.'),
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
-                          child: const Text(
-                            'Didn\'t receive code? Resend',
-                            style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
-                          ),
+                          child: _isResending
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(color: AppTheme.primaryBlue, strokeWidth: 2),
+                              )
+                            : const Text(
+                                'Didn\'t receive code? Resend',
+                                style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+                              ),
                         ),
                       ],
                     ),
@@ -325,7 +422,9 @@ class _OTPScreenState extends State<OTPScreen> {
 }
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  final String email;
+  final String otp;
+  const ResetPasswordScreen({super.key, required this.email, required this.otp});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -335,21 +434,54 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
+  final _loginService = LoginService();
   bool _isLoading = false;
 
   void _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
+    
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password changed successfully!'),
-          behavior: SnackBarBehavior.floating,
-        )
+    
+    try {
+      final success = await _loginService.confirmPasswordReset(
+        widget.email,
+        widget.otp,
+        _passController.text,
       );
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password changed successfully!'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to reset password. Please try again.'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Network error. Please check your connection.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

@@ -7,7 +7,6 @@ import '../../widgets/app_header.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
-import '../admin/employee_details_screen.dart';
 import 'profile_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {

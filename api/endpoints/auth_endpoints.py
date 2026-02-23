@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from models.auth_models import LoginRequest, RegisterRequest, AuthResponse, ResetPasswordRequest, OTPRequest, OTPVerifyRequest, OTPResponse
+from models.auth_models import LoginRequest, RegisterRequest, AuthResponse, ResetPasswordRequest, OTPRequest, OTPVerifyRequest, OTPResponse, ConfirmPasswordResetRequest
 from models.db_models import User, Role, Department, Designation, EmailVerification
 from typing import Optional
 import hashlib
@@ -302,17 +302,35 @@ async def logout():
         message="Logout successful"
     )
 
-@router.post("/reset-password", response_model=AuthResponse)
+@router.post("/reset-password", response_model=OTPResponse)
 async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
-    # Check if user exists in database (don't reveal result for security)
-    user_exists = db.query(User).filter(User.email == request.email).first() is not None
-    if request.email == "admin@hospital.com":
-        user_exists = True
-    # In a real application, you would send an email with reset link
-    return AuthResponse(
-        success=True,
-        message="If the email exists, a password reset link has been sent"
-    )
+    """Send OTP for password reset"""
+    try:
+        # Check if user exists (don't reveal if not for security)
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            # Return success message anyway for security
+            return OTPResponse(
+                success=True,
+                message="If the email exists, a password reset code has been sent",
+                verified=False
+            )
+        
+        # Generate and send OTP for password reset
+        otp_code = create_otp_record(db, request.email, "password_reset")
+        await email_service.send_password_reset_otp_email(request.email, otp_code)
+        
+        return OTPResponse(
+            success=True,
+            message=f"Password reset code sent to {request.email}",
+            verified=False
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send password reset code"
+        ) from e
 
 def get_token_from_bearer(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[str]:
     if credentials and credentials.scheme == "Bearer":
@@ -490,4 +508,56 @@ async def resend_otp(request: OTPRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to resend OTP"
+        ) from e
+
+@router.post("/confirm-password-reset", response_model=AuthResponse)
+async def confirm_password_reset(request: ConfirmPasswordResetRequest, db: Session = Depends(get_db)):
+    """Confirm password reset with OTP and new password"""
+    try:
+        # Verify OTP code
+        is_valid = verify_otp_code(db, request.email, request.otp_code, "password_reset")
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP code"
+            )
+        
+        # Get user and update password
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Hash new password and update
+        user.password_hash = hash_password(request.new_password)
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        
+        # Send password change confirmation email
+        try:
+            await email_service.send_password_reset_email(user.email, user.first_name)
+        except Exception as e:
+            # Log error but don't fail the password reset
+            print(f"Failed to send password reset confirmation email: {e}")
+        
+        return AuthResponse(
+            success=True,
+            message="Password reset successfully",
+            token=None,
+            user={
+                "email": user.email,
+                "first_name": user.first_name,
+                "surname": user.surname,
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset password"
         ) from e
