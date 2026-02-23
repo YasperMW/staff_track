@@ -9,6 +9,7 @@ import '../controllers/attendance_controller.dart';
 import '../controllers/auth_provider.dart';
 import '../models/models.dart';
 import '../widgets/app_header.dart';
+import '../services/permission_service.dart';
 import 'attendance_history_screen.dart';
 import 'home_screen.dart';
 
@@ -64,17 +65,10 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
         throw Exception('Location services are disabled');
       }
 
-      // Check location permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied');
+      // Check location permissions using permission service
+      bool hasPermission = await PermissionService.requestLocationPermission();
+      if (!hasPermission) {
+        throw Exception('Location permissions are required for check-in/out');
       }
 
       // Get current position

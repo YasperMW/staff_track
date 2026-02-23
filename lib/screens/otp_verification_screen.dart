@@ -354,54 +354,67 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: List.generate(6, (index) {
-        return SizedBox(
-          width: 35,
-          height: 45,
-          child: TextFormField(
-            controller: _otpControllers[index],
-            focusNode: _focusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-            decoration: InputDecoration(
-              counterText: '',
-              border: OutlineInputBorder(
+        return AnimatedBuilder(
+          animation: _focusNodes[index],
+          builder: (context, child) {
+            final isFocused = _focusNodes[index].hasFocus;
+            return Container(
+              width: 45,
+              height: 55,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.black,
-                  width: 1,
+                border: Border.all(
+                  color: isFocused 
+                      ? AppTheme.primaryBlue 
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  width: isFocused ? 2 : 1,
                 ),
+                boxShadow: isFocused ? [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppTheme.primaryBlue,
-                  width: 2,
+              child: TextFormField(
+                controller: _otpControllers[index],
+                focusNode: _focusNodes[index],
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                maxLength: 1,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
                 ),
+                decoration: InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onChanged: (value) {
+                  // Only allow digits
+                  if (value.isNotEmpty && !RegExp(r'^[0-9]$').hasMatch(value)) {
+                    _otpControllers[index].clear();
+                    return;
+                  }
+                  _onOTPChanged(value, index);
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return '';
+                  }
+                  return null;
+                },
               ),
-              filled: true,
-              fillColor: theme.colorScheme.surface,
-            ),
-            onChanged: (value) {
-              // Only allow digits
-              if (value.isNotEmpty && !RegExp(r'^[0-9]$').hasMatch(value)) {
-                _otpControllers[index].clear();
-                return;
-              }
-              _onOTPChanged(value, index);
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return '';
-              }
-              return null;
-            },
-          ),
+            );
+          },
         );
       }),
     );
