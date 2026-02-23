@@ -59,6 +59,11 @@ class OTPVerifyRequest(BaseModel):
     otp_code: str
     purpose: str = "registration"
 
+class ConfirmPasswordResetRequest(BaseModel):
+    email: EmailStr
+    otp_code: str
+    new_password: str
+
 class OTPResponse(BaseModel):
     success: bool
     message: str

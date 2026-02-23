@@ -5,7 +5,6 @@ import '../services/register_service.dart';
 import '../services/image_service.dart';
 import '../services/lookup_service.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
 import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
