@@ -7,6 +7,8 @@ import '../../widgets/app_header.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
+import '../admin/employee_details_screen.dart';
+import 'profile_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -264,18 +266,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'Privacy',
           ),
           const Divider(height: 1, indent: 60),
-          _buildOptionTile(
+          _buildInfoTile(
             context: context,
             icon: Icons.business_outlined,
             title: 'Department',
-            trailing: userProfile?.departmentName ?? 'Loading...',
+            subtitle: userProfile?.departmentName ?? 'Loading...',
           ),
           const Divider(height: 1, indent: 60),
-          _buildOptionTile(
+          _buildInfoTile(
             context: context,
             icon: Icons.work_outline,
             title: 'Designation',
-            trailing: userProfile?.designation ?? 'Not specified',
+            subtitle: userProfile?.designation ?? 'Not specified',
+          ),
+          const Divider(height: 1, indent: 60),
+          _buildActionTile(
+            context: context,
+            icon: Icons.person_outline,
+            title: 'View Complete Profile',
+            onTap: () => _navigateToProfileDetails(context),
           ),
         ],
       ),
@@ -325,6 +334,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       onTap: () {},
+    );
+  }
+
+  Widget _buildActionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.primaryBlue),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: AppTheme.primaryBlue,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        size: 20,
+        color: AppTheme.primaryBlue,
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildInfoTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.textLightBlue),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: AppTheme.textLightBlue,
+          fontSize: 14,
+        ),
+      ),
+      trailing: const SizedBox.shrink(),
+      onTap: null,
+    );
+  }
+
+  void _navigateToProfileDetails(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileDetailsScreen(),
+      ),
     );
   }
 
