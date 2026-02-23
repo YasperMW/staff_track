@@ -13,8 +13,6 @@ class AdminAttendanceScreen extends StatefulWidget {
 }
 
 class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
-  Map<String, dynamic>? summary;
-  bool isLoading = false;
   Map<String, dynamic>? teamSummary;
   bool isLoadingTeam = false;
   List<TeamAttendanceMember> _teamAttendance = [];
@@ -23,33 +21,12 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSummary();
     _loadTeamSummary();
     _loadStaffList();
   }
 
-  Future<void> _loadSummary() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final data = await AttendanceController.getAttendanceSummary();
-      if (!mounted) return;
-      setState(() {
-        summary = data;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
 
   Future<void> _onRefresh() async {
-    await _loadSummary();
     await _loadTeamSummary();
     await _loadStaffList();
   }
@@ -148,17 +125,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Your Summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildPersonalSummaryCard(),
                       const SizedBox(height: 32),
                       Text(
                         'Team Status',
@@ -230,29 +196,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  Widget _buildPersonalSummaryCard() {
-    final int totalDays = (summary?['total_days'] as num?)?.toInt() ?? 0;
-    final int presentDays = (summary?['present_days'] as num?)?.toInt() ?? 0;
-    final int lateDays = (summary?['late_days'] as num?)?.toInt() ?? 0;
-    final int absentDays = totalDays - presentDays;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _PersonalSummaryItem(value: '$presentDays', label: 'Present'),
-          _PersonalSummaryItem(value: '$lateDays', label: 'Late'),
-          _PersonalSummaryItem(value: '$absentDays', label: 'Absent'),
-        ],
-      ),
-    );
-  }
 
   Widget _buildSummaryStats(BuildContext context) {
     final int present = (teamSummary?['present'] as num?)?.toInt() ?? 0;
@@ -419,33 +362,3 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 }
 
-class _PersonalSummaryItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _PersonalSummaryItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-}

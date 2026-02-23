@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../services/requests_service.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -25,17 +26,23 @@ class _RequestsScreenState extends State<RequestsScreen> {
     });
 
     try {
-      // TODO: Replace with actual requests API call
-      // For now, showing empty state until API is ready
-      await Future.delayed(const Duration(seconds: 1));
+      final data = await RequestsService.getMyRequests();
+      if (!mounted) return;
+      setState(() {
+        requestsHistory = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         requestsHistory = [];
         isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load requests')),
+        );
+      }
     }
   }
 
@@ -122,7 +129,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       ),
       child: IconButton(
         icon: const Icon(Icons.add, color: Colors.white),
-        onPressed: () {},
+        onPressed: _openCreateRequestSheet,
       ),
     );
   }
@@ -222,6 +229,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         icon = Icons.check;
         break;
       case 'Rejected':
+      case 'Denied':
         statusColor = const Color(0xFFEF5350);
         bgColor = const Color(0xFFFFEBEE);
         icon = Icons.close;
@@ -303,11 +311,209 @@ class _RequestsScreenState extends State<RequestsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            request['description'],
+            request['description'] ?? '',
             style: const TextStyle(color: AppTheme.textLightBlue),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openCreateRequestSheet() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        String selectedType = 'Leave';
+        DateTimeRange? selectedRange;
+        bool isSubmitting = false;
+
+        String formatDate(DateTime d) {
+          return d.toIso8601String().split('T').first;
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              Future<void> pickDateRange() async {
+                final now = DateTime.now();
+                final range = await showDateRangePicker(
+                  context: ctx,
+                  firstDate: DateTime(now.year - 1),
+                  lastDate: DateTime(now.year + 1),
+                  initialDateRange:
+                      selectedRange ?? DateTimeRange(start: now, end: now),
+                );
+                if (range != null) {
+                  setSheetState(() {
+                    selectedRange = range;
+                  });
+                }
+              }
+
+              Future<void> handleSubmit() async {
+                if (selectedRange == null || isSubmitting) return;
+                setSheetState(() {
+                  isSubmitting = true;
+                });
+                try {
+                  final start = formatDate(selectedRange!.start);
+                  final end = formatDate(selectedRange!.end);
+                  await RequestsService.createRequest(
+                    type: selectedType,
+                    startDate: start,
+                    endDate: end,
+                  );
+                  if (!mounted) return;
+                  Navigator.of(ctx).pop();
+                  await _loadRequests();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Request submitted for approval'),
+                    ),
+                  );
+                } catch (_) {
+                  if (!mounted) return;
+                  setSheetState(() {
+                    isSubmitting = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to submit request')),
+                  );
+                }
+              }
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Submit Request',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Request type',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Leave'),
+                          selected: selectedType == 'Leave',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Leave';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Work From Home'),
+                          selected: selectedType == 'Work From Home',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Work From Home';
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Date range',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: pickDateRange,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 18,
+                              color: AppTheme.textLightBlue,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedRange == null
+                                  ? 'Select dates'
+                                  : selectedRange!.start == selectedRange!.end
+                                  ? formatDate(selectedRange!.start)
+                                  : '${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: selectedRange == null || isSubmitting
+                            ? null
+                            : handleSubmit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(
+                            isSubmitting
+                                ? 'Submitting...'
+                                : 'Submit for approval',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

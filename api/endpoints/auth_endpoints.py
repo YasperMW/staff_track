@@ -142,6 +142,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             message="Login successful",
             token=token,
             user={
+                "user_id": str(user.user_id),
                 "email": user.email,
                 "first_name": user.first_name,
                 "surname": user.surname,
@@ -266,9 +267,9 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     # Generate and send OTP for email verification
     try:
         otp_code = create_otp_record(db, request.email, "registration")
-        await email_service.send_otp_email(request.email, otp_code, "verification")
+        await email_service.send_account_verification_email(request.email, otp_code)
     except Exception as e:
-        # If email fails, delete the user and return error
+        # If email fails, delete user and return error
         db.delete(new_user)
         db.commit()
         raise HTTPException(

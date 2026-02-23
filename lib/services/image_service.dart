@@ -3,12 +3,20 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../config/app_config.dart';
+import 'permission_service.dart';
 
 class ImageService {
   final ImagePicker _picker = ImagePicker();
 
   Future<String?> pickImage() async {
     try {
+      // Request camera permission
+      bool hasPermission = await PermissionService.requestCameraPermission();
+      if (!hasPermission) {
+        print('Camera permission denied');
+        return null;
+      }
+
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 800,
@@ -28,6 +36,12 @@ class ImageService {
 
   Future<String?> takePhoto() async {
     try {
+      // Request camera permission
+      bool hasPermission = await PermissionService.requestCameraPermission();
+      if (!hasPermission) {
+        print('Camera permission denied');
+        return null;
+      }
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 800,

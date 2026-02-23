@@ -62,16 +62,50 @@ class AdminTeamRequest {
   });
 
   factory AdminTeamRequest.fromJson(Map<String, dynamic> json, String currentUserId) {
-    final userId = json['user_id'] as String? ?? '';
+    final apiUserId = json['user_id'] as String? ?? '';
+    final apiUserName = json['user_name'] as String? ?? '';
+    
+    // Simple logic: use email to identify own requests
+    // Extract name from email (user@example.com -> yankhochisale4)
+    final emailName = currentUserId.contains('@') 
+        ? currentUserId.split('@')[0].toLowerCase()
+        : currentUserId.toLowerCase();
+    
+    // Check if user name contains the email name or matches exactly
+    bool isOwnRequest = apiUserName.toLowerCase().contains(emailName) ||
+                       apiUserName.toLowerCase() == emailName;
+    
     return AdminTeamRequest(
       id: json['id'] as String? ?? '',
-      userId: userId,
-      userName: json['user_name'] as String? ?? '',
+      userId: apiUserId,
+      userName: apiUserName,
       type: json['type'] as String? ?? '',
       status: json['status'] as String? ?? '',
       dateRange: json['date_range'] as String? ?? '',
       duration: json['duration'] as String? ?? '',
-      isOwn: userId == currentUserId,
+      isOwn: isOwnRequest,
+    );
+  }
+
+  AdminTeamRequest copyWith({
+    String? id,
+    String? userId,
+    String? userName,
+    String? type,
+    String? status,
+    String? dateRange,
+    String? duration,
+    bool? isOwn,
+  }) {
+    return AdminTeamRequest(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      dateRange: dateRange ?? this.dateRange,
+      duration: duration ?? this.duration,
+      isOwn: isOwn ?? this.isOwn,
     );
   }
 }
@@ -134,6 +168,7 @@ class RequestsService {
   static Future<List<AdminTeamRequest>> getAdminPendingRequests() async {
     final token = await AuthStorage.getToken();
     final userId = await AuthStorage.getUserId();
+    print('Getting admin pending requests for user ID: $userId');
     if (token == null || userId == null) {
       throw Exception('No authentication context found');
     }
@@ -146,14 +181,120 @@ class RequestsService {
       },
     );
 
+    print('Admin requests response status: ${response.statusCode}');
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      print('Admin requests data length: ${data.length}');
       return data
           .map((e) => AdminTeamRequest.fromJson(e as Map<String, dynamic>, userId))
           .toList();
     } else {
+      print('Admin requests response body: ${response.body}');
       throw Exception(
         'Failed to load admin pending requests: ${response.statusCode}',
+      );
+    }
+  }
+
+  static Future<List<AdminTeamRequest>> getMyAdminRequests() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/my-requests'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print('My admin requests response status: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      print('My admin requests data length: ${data.length}');
+      // For own requests, always set isOwn to true since they're all from current user
+      return data
+          .map((e) => AdminTeamRequest.fromJson(e as Map<String, dynamic>, ''))
+          .map((req) => req.copyWith(isOwn: true))
+          .toList();
+    } else {
+      print('My admin requests response body: ${response.body}');
+      throw Exception(
+        'Failed to load my admin requests: ${response.statusCode}',
+      );
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllPendingRequestsDebug() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/all-pending-debug'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    print('Debug all pending requests response status: ${response.statusCode}');
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      print('Debug all pending requests data length: ${data.length}');
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } else {
+      print('Debug all pending requests response body: ${response.body}');
+      throw Exception(
+        'Failed to load debug pending requests: ${response.statusCode}',
+      );
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMyRequests() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/my-requests'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } else {
+      throw Exception(
+        'Failed to load my requests: ${response.statusCode}',
+      );
+    }
+  }
+
+  static Future<void> withdrawRequest(String requestId) async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/$requestId/withdraw'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to withdraw request: ${response.statusCode}',
       );
     }
   }

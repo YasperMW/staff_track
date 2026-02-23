@@ -57,16 +57,12 @@ class EmailService:
         if self.resend_api_key:
             resend.api_key = self.resend_api_key
 
-    async def send_otp_email(self, email: str, otp_code: str, purpose: str = "verification") -> None:
-        """Send OTP email for email verification or password reset"""
+    async def send_account_verification_email(self, email: str, otp_code: str) -> None:
+        """Send account verification email"""
         from_email = f"{self.mail_from_name} <{self.from_email}>" if self.mail_from_name else self.from_email
         
-        if purpose == "password_reset":
-            title = "Your Password Reset Code for Staff Track"
-            message = "Enter this code to reset your Staff Track account password."
-        else:
-            title = "Your Verification Code for Staff Track"
-            message = "Enter this code to complete your Staff Track account verification."
+        title = "Verify Your Staff Track Account"
+        message = "Enter this code to complete your Staff Track account registration and start using the system."
         
         body_html = f'''
 <h1 style="font-size: 28px; color: #1f2937; margin: 0 0 24px; font-weight: 600;">
@@ -81,18 +77,21 @@ class EmailService:
     </div>
 </div>
 <p style="font-size: 16px; color: #4b5563; margin: 0 0 32px;">
-    This code expires in <strong>{self.otp_expiry_minutes} minutes</strong>.
+    This verification code expires in <strong>{self.otp_expiry_minutes} minutes</strong>.
 </p>
 <div style="padding-top: 32px; border-top: 1px solid #e2e8f0; margin-top: 40px;">
     <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0;">
-        Didn't request this code? You can safely ignore this email.
+        🎉 Welcome to Staff Track! We're excited to have you join our team.
+    </p>
+    <p style="font-size: 14px; color: #94a3b8; margin: 16px 0 0;">
+        Didn't request this account? You can safely ignore this email.
     </p>
     <p style="font-size: 14px; color: #94a3b8; margin: 16px 0 0;">
         Never share this code — our team will never ask for it.
     </p>
 </div>
 '''
-        subject = "Your Staff Track Verification Code" if purpose == "verification" else "Your Staff Track Password Reset Code"
+        subject = "Verify Your Staff Track Account"
         html_body = self.build_email_html(subject, body_html)
 
         try:
@@ -104,13 +103,74 @@ class EmailService:
             }
             
             resend.Emails.send(params)
-            logger.info(f"OTP email sent to {email} for {purpose}")
+            logger.info(f"Account verification email sent to {email}")
         except Exception as exc:  # pragma: no cover - network/Resend
-            logger.error("Failed to send OTP email to %s: %s", email, exc)
+            logger.error("Failed to send account verification email to %s: %s", email, exc)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to send OTP email",
+                detail="Failed to send verification email",
             ) from exc
+
+    async def send_password_reset_otp_email(self, email: str, otp_code: str) -> None:
+        """Send password reset OTP email"""
+        from_email = f"{self.mail_from_name} <{self.from_email}>" if self.mail_from_name else self.from_email
+        
+        title = "Reset Your Staff Track Password"
+        message = "Enter this code to reset your Staff Track account password and regain access to your account."
+        
+        body_html = f'''
+<h1 style="font-size: 28px; color: #dc2626; margin: 0 0 24px; font-weight: 600;">
+    {title}
+</h1>
+<p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 36px;">
+    {message}
+</p>
+<div style="background-color: #fef2f2; padding: 24px; border-radius: 12px; margin: 36px 0; border-left: 4px solid #dc2626;">
+    <div style="font-size: 38px; font-weight: bold; letter-spacing: 10px; color: #dc2626; font-family: 'Courier New', monospace;">
+        {otp_code}
+    </div>
+</div>
+<p style="font-size: 16px; color: #4b5563; margin: 0 0 32px;">
+    This reset code expires in <strong>{self.otp_expiry_minutes} minutes</strong>.
+</p>
+<div style="padding-top: 32px; border-top: 1px solid #e2e8f0; margin-top: 40px;">
+    <p style="font-size: 14px; color: #991b1b; line-height: 1.6; margin: 0; font-weight: 500;">
+        🔒 Security Notice
+    </p>
+    <p style="font-size: 14px; color: #991b1b; margin: 8px 0 0; line-height: 1.5;">
+        If you did not request this password reset, please secure your account immediately and contact our support team.
+    </p>
+    <p style="font-size: 14px; color: #94a3b8; margin: 16px 0 0;">
+        Never share this code — our team will never ask for it.
+    </p>
+</div>
+'''
+        subject = "Reset Your Staff Track Password"
+        html_body = self.build_email_html(subject, body_html)
+
+        try:
+            params = {
+                "from": from_email,
+                "to": [email],
+                "subject": subject,
+                "html": html_body
+            }
+            
+            resend.Emails.send(params)
+            logger.info(f"Password reset OTP email sent to {email}")
+        except Exception as exc:  # pragma: no cover - network/Resend
+            logger.error("Failed to send password reset email to %s: %s", email, exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send password reset email",
+            ) from exc
+
+    async def send_otp_email(self, email: str, otp_code: str, purpose: str = "verification") -> None:
+        """Legacy method - use specific methods instead"""
+        if purpose == "password_reset":
+            await self.send_password_reset_otp_email(email, otp_code)
+        else:
+            await self.send_account_verification_email(email, otp_code)
 
     async def send_welcome_email(self, email: str, first_name: str, user_type: str = "staff") -> None:
         """Send welcome email to new users after successful account creation"""
