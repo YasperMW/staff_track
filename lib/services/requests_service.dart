@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'auth_storage.dart';
@@ -182,7 +183,15 @@ class RequestsService {
     );
 
     print('Admin requests response status: ${response.statusCode}');
+    print('Admin requests response headers: ${response.headers}');
+    print('Admin requests response body preview: ${response.body.substring(0, min(200, response.body.length))}');
+    
     if (response.statusCode == 200) {
+      // Check if response is actually JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') || response.body.trim().startsWith('<html')) {
+        throw Exception('Server returned HTML instead of JSON. Response body: ${response.body.substring(0, 200)}...');
+      }
+      
       final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
       print('Admin requests data length: ${data.length}');
       return data
@@ -191,7 +200,7 @@ class RequestsService {
     } else {
       print('Admin requests response body: ${response.body}');
       throw Exception(
-        'Failed to load admin pending requests: ${response.statusCode}',
+        'Failed to load admin pending requests: ${response.statusCode} - ${response.body}',
       );
     }
   }
@@ -211,7 +220,15 @@ class RequestsService {
     );
 
     print('My admin requests response status: ${response.statusCode}');
+    print('My admin requests response headers: ${response.headers}');
+    print('My admin requests response body preview: ${response.body.substring(0, min(200, response.body.length))}');
+    
     if (response.statusCode == 200) {
+      // Check if response is actually JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') || response.body.trim().startsWith('<html')) {
+        throw Exception('Server returned HTML instead of JSON. Response body: ${response.body.substring(0, 200)}...');
+      }
+      
       final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
       print('My admin requests data length: ${data.length}');
       // For own requests, always set isOwn to true since they're all from current user
@@ -222,7 +239,7 @@ class RequestsService {
     } else {
       print('My admin requests response body: ${response.body}');
       throw Exception(
-        'Failed to load my admin requests: ${response.statusCode}',
+        'Failed to load my admin requests: ${response.statusCode} - ${response.body}',
       );
     }
   }
@@ -242,14 +259,22 @@ class RequestsService {
     );
 
     print('Debug all pending requests response status: ${response.statusCode}');
+    print('Debug all pending requests response headers: ${response.headers}');
+    print('Debug all pending requests response body preview: ${response.body.substring(0, min(200, response.body.length))}');
+    
     if (response.statusCode == 200) {
+      // Check if response is actually JSON
+      if (response.body.trim().startsWith('<!DOCTYPE') || response.body.trim().startsWith('<html')) {
+        throw Exception('Server returned HTML instead of JSON. Response body: ${response.body.substring(0, 200)}...');
+      }
+      
       final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
       print('Debug all pending requests data length: ${data.length}');
       return data.map((e) => e as Map<String, dynamic>).toList();
     } else {
       print('Debug all pending requests response body: ${response.body}');
       throw Exception(
-        'Failed to load debug pending requests: ${response.statusCode}',
+        'Failed to load debug pending requests: ${response.statusCode} - ${response.body}',
       );
     }
   }

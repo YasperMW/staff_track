@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlng;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -442,6 +444,61 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                           .withValues(alpha: 0.7),
                                     ),
                                   ),
+                                  const SizedBox(height: 12),
+                                  if (currentPosition != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: SizedBox(
+                                        height: 220,
+                                        width: double.infinity,
+                                        child: FlutterMap(
+                                          options: MapOptions(
+                                            initialCenter: latlng.LatLng(
+                                              currentPosition!.latitude,
+                                              currentPosition!.longitude,
+                                            ),
+                                            initialZoom: 16,
+                                          ),
+                                          children: [
+                                            TileLayer(
+                                              urlTemplate:
+                                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                              subdomains: const ['a', 'b', 'c'],
+                                              userAgentPackageName:
+                                                  'com.hospital.hr.staff_track',
+                                            ),
+                                            MarkerLayer(
+                                              markers: [
+                                                Marker(
+                                                  point: latlng.LatLng(
+                                                    currentPosition!.latitude,
+                                                    currentPosition!.longitude,
+                                                  ),
+                                                  width: 40,
+                                                  height: 40,
+                                                  child: const Icon(
+                                                    Icons.location_on,
+                                                    color: Colors.redAccent,
+                                                    size: 40,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  if (currentPosition == null)
+                                    Text(
+                                      'Current coordinates not available. Please refresh location.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
                                   const SizedBox(height: 12),
                                   SizedBox(
                                     width: double.infinity,
