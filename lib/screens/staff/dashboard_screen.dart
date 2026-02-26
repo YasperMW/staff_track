@@ -424,6 +424,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAttendanceItem(BuildContext context, AttendanceRecord attendance) {
+    final attendanceShift = attendance.shiftType ?? 'Unknown Shift';
+    final isCurrentShift = attendanceShift == ShiftUtils.getCurrentShift();
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -432,53 +435,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                DateFormat('MMM d').format(attendance.date),
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateFormat('MMM d').format(attendance.date),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Shift information
+                  Row(
+                    children: [
+                      Icon(
+                        attendanceShift == 'Day Shift' ? Icons.wb_sunny : Icons.nightlight,
+                        size: 12,
+                        color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        attendanceShift,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: attendance.isCheckedOut ? AppTheme.skyBlue.withValues(alpha: 0.1) : AppTheme.paleRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  attendance.isCheckedOut ? 'Complete' : 'Active',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: attendance.isCheckedOut ? AppTheme.skyBlue : AppTheme.paleRed,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              if (attendance.checkInTime != null)
-                Text(
-                  'In: ${DateFormat('h:mm a').format(attendance.checkInTime!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLightBlue,
-                  ),
-                ),
-              if (attendance.checkOutTime != null)
-                Text(
-                  'Out: ${DateFormat('h:mm a').format(attendance.checkOutTime!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLightBlue,
-                  ),
-                ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: attendance.isCheckedOut ? AppTheme.skyBlue.withValues(alpha: 0.1) : AppTheme.paleRed.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              attendance.isCheckedOut ? 'Complete' : 'Active',
-              style: TextStyle(
+          const SizedBox(height: 8),
+          if (attendance.checkInTime != null)
+            Text(
+              'In: ${DateFormat('h:mm a').format(attendance.checkInTime!)}',
+              style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: attendance.isCheckedOut ? AppTheme.skyBlue : AppTheme.paleRed,
+                color: AppTheme.textLightBlue,
               ),
             ),
-          ),
+          if (attendance.checkOutTime != null)
+            Text(
+              'Out: ${DateFormat('h:mm a').format(attendance.checkOutTime!)}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textLightBlue,
+              ),
+            ),
         ],
       ),
     );

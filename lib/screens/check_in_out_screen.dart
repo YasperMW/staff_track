@@ -28,12 +28,30 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   bool isGettingLocation = false;
   String? currentLocation;
   Position? currentPosition;
+  String currentShift = '';
+  String shiftTimeRange = '';
 
   @override
   void initState() {
     super.initState();
+    _updateShiftInfo();
     _loadTodayAttendance();
     _getCurrentLocation();
+    
+    // Update time and shift info every second
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        _updateShiftInfo();
+        setState(() {}); // Trigger rebuild to update time
+      }
+    });
+  }
+
+  void _updateShiftInfo() {
+    setState(() {
+      currentShift = ShiftUtils.getCurrentShift();
+      shiftTimeRange = ShiftUtils.getShiftTimeRange(currentShift);
+    });
   }
 
   Future<void> _loadTodayAttendance() async {
@@ -124,18 +142,36 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       isLoading = true;
     });
 
+    // Ensure we have location data before proceeding
+    if (currentLocation == null || currentPosition == null) {
+      setState(() {
+        isLoading = false;
+      });
+      _showErrorSnackBar('Location is required for check-in. Please capture location first.');
+      return;
+    }
+
+    // Debug logging
+    print('DEBUG: Check-in called with:');
+    print('  currentLocation: $currentLocation');
+    print('  currentPosition: $currentPosition');
+    print('  latitude: ${currentPosition?.latitude}');
+    print('  longitude: ${currentPosition?.longitude}');
+    print('  currentShift: $currentShift');
+
     try {
       final result = await AttendanceController.checkIn(
         location: currentLocation,
         latitude: currentPosition?.latitude,
         longitude: currentPosition?.longitude,
+        shiftType: currentShift, // Store current shift
       );
 
       setState(() {
         isLoading = false;
       });
 
-      _showSuccessSnackBar('Check-in successful at ${result['check_in_time']}');
+      _showSuccessSnackBar('Check-in successful for $currentShift at ${result['check_in_time']}');
       _loadTodayAttendance(); // Refresh data
     } catch (e) {
       setState(() {
@@ -150,6 +186,15 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       isLoading = true;
     });
 
+    // Ensure we have location data before proceeding
+    if (currentLocation == null || currentPosition == null) {
+      setState(() {
+        isLoading = false;
+      });
+      _showErrorSnackBar('Location is required for check-out. Please capture location first.');
+      return;
+    }
+
     try {
       final result = await AttendanceController.checkOut(
         location: currentLocation,
@@ -161,7 +206,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
         isLoading = false;
       });
 
-      _showSuccessSnackBar('Check-out successful. Work hours: ${result['work_hours']}');
+      _showSuccessSnackBar('Check-out successful for $currentShift. Work hours: ${result['work_hours']}');
       _loadTodayAttendance(); // Refresh data
     } catch (e) {
       setState(() {
@@ -193,7 +238,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final formattedDate = DateFormat('EEEE, MMMM d, y').format(now);
-    final formattedTime = DateFormat('h:mm a').format(now);
+    final formattedTime = DateFormat('hh:mm:ss a').format(now);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -244,7 +289,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                             end: Alignment.bottomRight,
                             colors: [
                               AppTheme.skyBlue,
-                              Color(0xFF5D8BF4),
+                              AppTheme.lightGold,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(24),
@@ -277,12 +322,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Text(
-                              formattedTime,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 34,
-                                fontWeight: FontWeight.bold,
+                            Center(
+                              child: Text(
+                                formattedTime,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -310,6 +357,95 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.9),
                                     fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Shift Information Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: currentShift == 'Day Shift'
+                                ? [AppTheme.skyBlue.withValues(alpha: 0.1), AppTheme.skyBlue.withValues(alpha: 0.05)]
+                                : [AppTheme.lightGold.withValues(alpha: 0.1), AppTheme.lightGold.withValues(alpha: 0.05)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: currentShift == 'Day Shift' 
+                                ? AppTheme.skyBlue.withValues(alpha: 0.2)
+                                : AppTheme.lightGold.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: currentShift == 'Day Shift' 
+                                        ? AppTheme.skyBlue
+                                        : AppTheme.lightGold,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    currentShift == 'Day Shift' ? Icons.wb_sunny : Icons.nightlight,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Current Shift',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                      Text(
+                                        currentShift,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: currentShift == 'Day Shift' 
+                                              ? AppTheme.skyBlue
+                                              : AppTheme.lightGold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: currentShift == 'Day Shift' 
+                                        ? AppTheme.skyBlue.withValues(alpha: 0.1)
+                                        : AppTheme.lightGold.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    shiftTimeRange,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: currentShift == 'Day Shift' 
+                                          ? AppTheme.skyBlue
+                                          : AppTheme.lightGold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -571,6 +707,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                           builder: (context) {
                             final hasLocation =
                                 currentLocation != null && currentPosition != null;
+                            
+                            // Debug logging
+                            print('DEBUG: Button state check:');
+                            print('  currentLocation: $currentLocation');
+                            print('  currentPosition: $currentPosition');
+                            print('  hasLocation: $hasLocation');
+                            print('  isLoading: $isLoading');
+                            
                             if (todayAttendance == null ||
                                 !todayAttendance!.isCheckedIn) {
                               return ElevatedButton.icon(
@@ -717,7 +861,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tap Check in to start tracking your working hours for today.',
+                  'Ready to check in for $currentShift ($shiftTimeRange)',
                   style: TextStyle(
                     fontSize: 13,
                     color: AppTheme.textGrey.withValues(alpha: 0.9),
@@ -732,9 +876,64 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Widget _buildAttendanceStatus(AttendanceRecord attendance) {
+    final attendanceShift = attendance.shiftType ?? 'Unknown Shift';
+    final isCurrentShift = attendanceShift == currentShift;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Shift information row
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isCurrentShift 
+                ? AppTheme.skyBlue.withValues(alpha: 0.1)
+                : AppTheme.lightGold.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isCurrentShift 
+                  ? AppTheme.skyBlue.withValues(alpha: 0.3)
+                  : AppTheme.lightGold.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                attendanceShift == 'Day Shift' ? Icons.wb_sunny : Icons.nightlight,
+                size: 16,
+                color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$attendanceShift (${ShiftUtils.getShiftTimeRange(attendanceShift)})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                  ),
+                ),
+              ),
+              if (!isCurrentShift)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.paleRed.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Different shift',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.paleRed,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         _buildStatusRow(
           'Status',
           _getAttendanceStatus(attendance),
