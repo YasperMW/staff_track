@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_header.dart';
+import '../../widgets/floating_navigation.dart';
 import '../../widgets/tile_date_picker.dart';
 import '../../services/requests_service.dart';
 import '../../services/auth_storage.dart';
+import '../home_screen.dart';
 
 class AdminRequestsScreen extends StatefulWidget {
   const AdminRequestsScreen({super.key});
@@ -195,9 +196,21 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
+    return FloatingNavigation(
+      currentIndex: 2, // Requests is index 2 for admin
+      onTap: (index) {
+        if (index == 2) {
+          // Already on requests screen, do nothing
+          return;
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(initialIndex: index),
+          ),
+        );
+      },
+      child: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
           color: AppTheme.skyBlue,
@@ -205,7 +218,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppHeader(subtitle: 'HR Admin Portal'),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(

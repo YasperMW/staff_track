@@ -240,3 +240,179 @@ class TeamAttendanceMember {
     );
   }
 }
+
+class PublicHoliday {
+  final String id;
+  final String name;
+  final DateTime date;
+  final String? description;
+  final String? type; // 'national', 'religious', 'custom'
+  final bool isRecurring; // yearly recurring
+  final DateTime? createdAt;
+  final String? createdBy;
+
+  PublicHoliday({
+    required this.id,
+    required this.name,
+    required this.date,
+    this.description,
+    this.type,
+    this.isRecurring = false,
+    this.createdAt,
+    this.createdBy,
+  });
+
+  factory PublicHoliday.fromJson(Map<String, dynamic> json) {
+    return PublicHoliday(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      date: DateTime.parse(json['date']),
+      description: json['description'] as String?,
+      type: json['type'] as String?,
+      isRecurring: json['is_recurring'] as bool? ?? false,
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'])
+          : null,
+      createdBy: json['created_by'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'date': date.toIso8601String().split('T')[0],
+      'description': description,
+      'type': type,
+      'is_recurring': isRecurring,
+      'created_at': createdAt?.toIso8601String(),
+      'created_by': createdBy,
+    };
+  }
+
+  // Helper to check if a date matches this holiday (considering recurring)
+  bool matchesDate(DateTime checkDate) {
+    if (isRecurring) {
+      return checkDate.month == date.month && checkDate.day == date.day;
+    }
+    return checkDate.year == date.year && 
+           checkDate.month == date.month && 
+           checkDate.day == date.day;
+  }
+}
+
+class Announcement {
+  final String id;
+  final String title;
+  final String message;
+  final String type; // 'general', 'urgent', 'policy', 'event'
+  final String? targetDepartment; // null means all departments
+  final String? targetRole; // optional role targeting
+  final bool isActive;
+  final DateTime? expiresAt; // optional expiration date
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final String? createdBy;
+  final String? attachmentUrl; // optional file attachment
+
+  Announcement({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.type,
+    this.targetDepartment,
+    this.targetRole,
+    this.isActive = true,
+    this.expiresAt,
+    required this.createdAt,
+    this.updatedAt,
+    this.createdBy,
+    this.attachmentUrl,
+  });
+
+  factory Announcement.fromJson(Map<String, dynamic> json) {
+    return Announcement(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      message: json['message'] as String? ?? '',
+      type: json['type'] as String? ?? 'general',
+      targetDepartment: json['target_department'] as String?,
+      targetRole: json['target_role'] as String?,
+      isActive: json['is_active'] as bool? ?? true,
+      expiresAt: json['expires_at'] != null 
+          ? DateTime.parse(json['expires_at'])
+          : null,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at'])
+          : null,
+      createdBy: json['created_by'] as String?,
+      attachmentUrl: json['attachment_url'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'message': message,
+      'type': type,
+      'target_department': targetDepartment,
+      'target_role': targetRole,
+      'is_active': isActive,
+      'expires_at': expiresAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'created_by': createdBy,
+      'attachment_url': attachmentUrl,
+    };
+  }
+
+  // Helper to check if announcement is still valid
+  bool get isValid {
+    if (!isActive) return false;
+    if (expiresAt != null && DateTime.now().isAfter(expiresAt!)) return false;
+    return true;
+  }
+
+  // Helper to get display text for target audience
+  String get targetAudience {
+    if (targetDepartment != null && targetRole != null) {
+      return '$targetDepartment - $targetRole';
+    } else if (targetDepartment != null) {
+      return targetDepartment!;
+    } else if (targetRole != null) {
+      return targetRole!;
+    } else {
+      return 'All Staff';
+    }
+  }
+
+  // Helper to get type display text
+  String get typeDisplay {
+    switch (type) {
+      case 'urgent':
+        return '🚨 Urgent';
+      case 'policy':
+        return '📋 Policy Update';
+      case 'event':
+        return '🎉 Event';
+      default:
+        return '📢 General';
+    }
+  }
+
+  // Helper to get type color
+  String get typeColor {
+    switch (type) {
+      case 'urgent':
+        return '#FF5252'; // Red
+      case 'policy':
+        return '#2196F3'; // Blue
+      case 'event':
+        return '#4CAF50'; // Green
+      default:
+        return '#FF9800'; // Orange
+    }
+  }
+}

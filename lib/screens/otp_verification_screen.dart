@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/otp_service.dart';
-import '../theme/app_theme.dart';
+import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {

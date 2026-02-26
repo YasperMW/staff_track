@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../controllers/attendance_controller.dart';
-import '../controllers/auth_provider.dart';
-import '../models/models.dart';
-import '../theme/app_theme.dart';
-import '../widgets/tile_date_picker.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../controllers/auth_provider.dart';
+import '../../models/models.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/simple_header.dart';
+import '../../widgets/tile_date_picker.dart';
 import 'home_screen.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
@@ -96,10 +97,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Attendance History'),
-        backgroundColor: Colors.blue[600],
-        foregroundColor: Colors.white,
+      appBar: SimpleHeader(
+        title: 'Attendance History',
         actions: [
           IconButton(
             icon: const Icon(Icons.date_range),
@@ -135,7 +134,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const _AttendanceHistoryBottomNavigation(),
     );
   }
 

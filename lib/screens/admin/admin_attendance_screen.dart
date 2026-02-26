@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_header.dart';
+import '../../widgets/floating_navigation.dart';
 import '../check_in_out_screen.dart';
+import '../home_screen.dart';
 import '../../controllers/attendance_controller.dart';
 import '../../models/models.dart';
 
@@ -73,9 +74,21 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
+    return FloatingNavigation(
+      currentIndex: 1, // Attendance is index 1 for admin
+      onTap: (index) {
+        if (index == 1) {
+          // Already on attendance screen, do nothing
+          return;
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(initialIndex: index),
+          ),
+        );
+      },
+      child: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
           color: AppTheme.skyBlue,
@@ -84,9 +97,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppHeader(
-                  subtitle: 'HR Admin Portal',
-                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(

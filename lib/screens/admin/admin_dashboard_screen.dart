@@ -7,8 +7,13 @@ import '../../controllers/auth_provider.dart';
 import '../../controllers/attendance_controller.dart';
 import '../../models/models.dart';
 import '../../services/requests_service.dart';
-import '../../widgets/app_header.dart';
+import '../../services/holidays_service.dart';
+import '../../services/announcements_service.dart';
+import '../../widgets/floating_navigation.dart';
 import '../check_in_out_screen.dart';
+import '../home_screen.dart';
+import 'holidays_management_screen.dart';
+import 'announcements_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -31,6 +36,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _teamAbsentCount = 0;
   bool _isLoadingTeamAttendance = false;
   List<TeamAttendanceMember> _teamAttendance = [];
+  List<PublicHoliday> _upcomingHolidays = [];
+  bool _isLoadingHolidays = false;
+  List<Announcement> _recentAnnouncements = [];
+  bool _isLoadingAnnouncements = false;
 
   @override
   void initState() {
@@ -41,6 +50,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadRequestsSummary();
     _loadTeamTodaySummary();
     _loadTeamTodayList();
+    _loadUpcomingHolidays();
+    _loadRecentAnnouncements();
   }
 
   Future<void> _loadTodayAttendance() async {
@@ -140,6 +151,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _loadUpcomingHolidays() async {
+    setState(() {
+      _isLoadingHolidays = true;
+    });
+
+    try {
+      final holidays = await HolidaysService.getUpcomingHolidays(monthsAhead: 3);
+      if (!mounted) return;
+      setState(() {
+        _upcomingHolidays = holidays.take(3).toList(); // Show only next 3 holidays
+        _isLoadingHolidays = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingHolidays = false;
+      });
+    }
+  }
+
+  Future<void> _loadRecentAnnouncements() async {
+    setState(() {
+      _isLoadingAnnouncements = true;
+    });
+
+    try {
+      final announcements = await AnnouncementsService.getAnnouncements(limit: 5);
+      if (!mounted) return;
+      setState(() {
+        _recentAnnouncements = announcements.take(3).toList(); // Show only 3 recent announcements
+        _isLoadingAnnouncements = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingAnnouncements = false;
+      });
+    }
+  }
+
   String _getAttendanceStatusText() {
     if (todayAttendance == null) {
       return 'Ready to check in';
@@ -170,16 +221,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
+    return FloatingNavigation(
+      currentIndex: 0, // Dashboard is index 0 for admin
+      onTap: (index) {
+        if (index == 0) {
+          // Already on dashboard screen, do nothing
+          return;
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(initialIndex: index),
+          ),
+        );
+      },
+      child: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AppHeader(
-                subtitle: 'HR Admin Portal',
-              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -191,6 +251,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _buildClockInCard(),
                     const SizedBox(height: 24),
                     _buildQuickAnalyticsSnapshot(context),
+                    const SizedBox(height: 32),
+                    _buildRecentAnnouncementsCard(context),
+                    const SizedBox(height: 32),
+                    _buildUpcomingHolidaysCard(context),
                     const SizedBox(height: 32),
                     _buildRequestsSummaryCard(context),
                     const SizedBox(height: 32),
@@ -532,6 +596,410 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildRecentAnnouncementsCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.lightGold, AppTheme.paleRed],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.lightGold.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recent Announcements',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Latest 3',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_isLoadingAnnouncements)
+              const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else if (_recentAnnouncements.isEmpty)
+              Column(
+                children: [
+                  Icon(
+                    Icons.announcement_outlined,
+                    size: 48,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No announcements yet',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: _recentAnnouncements.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final announcement = entry.value;
+                  final typeColor = Color(int.parse(announcement.typeColor.replaceFirst('#', '0xFF')));
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index < _recentAnnouncements.length - 1 ? 16.0 : 0.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              _getAnnouncementTypeIcon(announcement.type),
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  announcement.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  announcement.targetAudience,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              announcement.typeDisplay.split(' ')[1], // Get just the type name
+                              style: const TextStyle(
+                                fontSize: 8,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AnnouncementsManagementScreen(),
+                    ),
+                  ).then((_) => _loadRecentAnnouncements());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.lightGold,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Manage Announcements',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getAnnouncementTypeIcon(String type) {
+    switch (type) {
+      case 'urgent':
+        return Icons.warning;
+      case 'policy':
+        return Icons.policy;
+      case 'event':
+        return Icons.celebration;
+      default:
+        return Icons.announcement;
+    }
+  }
+
+  Widget _buildUpcomingHolidaysCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.skyBlue, AppTheme.lightGold],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Upcoming Public Holidays',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Next 3 months',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (_isLoadingHolidays)
+              const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else if (_upcomingHolidays.isEmpty)
+              Column(
+                children: [
+                  Icon(
+                    Icons.event_busy,
+                    size: 48,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No upcoming holidays',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                children: _upcomingHolidays.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final holiday = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index < _upcomingHolidays.length - 1 ? 16.0 : 0.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              _getHolidayTypeIcon(holiday.type),
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  holiday.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat('MMM d, yyyy').format(holiday.date),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (holiday.isRecurring)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Yearly',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const HolidaysManagementScreen(),
+                    ),
+                  ).then((_) => _loadUpcomingHolidays());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.skyBlue,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Manage Holidays',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getHolidayTypeColor(String? type) {
+    switch (type) {
+      case 'national':
+        return AppTheme.skyBlue;
+      case 'religious':
+        return AppTheme.paleRed;
+      default:
+        return AppTheme.lightGold;
+    }
+  }
+
+  IconData _getHolidayTypeIcon(String? type) {
+    switch (type) {
+      case 'national':
+        return Icons.flag;
+      case 'religious':
+        return Icons.church;
+      default:
+        return Icons.event;
+    }
   }
 
   Widget _buildTeamAttendanceHeader(BuildContext context) {

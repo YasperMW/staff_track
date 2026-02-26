@@ -116,36 +116,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AppHeader(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: false,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 0,
+            flexibleSpace: const SafeArea(
+              child: AppHeader(
                 subtitle: 'HR Portal',
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildGreeting(context),
-                    const SizedBox(height: 24),
-                    _buildClockInCard(),
-                    const SizedBox(height: 24),
-                    _buildStatsRow(context),
-                    const SizedBox(height: 32),
-                    _buildRecentActivityHeader(context),
-                    const SizedBox(height: 16),
-                    _buildRecentActivityList(context),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 16),
+                _buildGreeting(context),
+                const SizedBox(height: 24),
+                _buildClockInCard(),
+                const SizedBox(height: 24),
+                _buildStatsRow(context),
+                const SizedBox(height: 32),
+                _buildRecentActivityHeader(context),
+                const SizedBox(height: 16),
+                _buildRecentActivityList(context),
+                const SizedBox(height: 24),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
