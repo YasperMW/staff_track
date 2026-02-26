@@ -302,6 +302,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   Widget _buildAttendanceCard(AttendanceRecord attendance) {
+    final attendanceShift = attendance.shiftType ?? 'Unknown Shift';
+    final isCurrentShift = attendanceShift == ShiftUtils.getCurrentShift();
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -316,11 +319,38 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    DateFormat('EEEE, MMM d, y').format(attendance.date),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('EEEE, MMM d, y').format(attendance.date),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Shift information
+                        Row(
+                          children: [
+                            Icon(
+                              attendanceShift == 'Day Shift' ? Icons.wb_sunny : Icons.nightlight,
+                              size: 14,
+                              color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$attendanceShift (${ShiftUtils.getShiftTimeRange(attendanceShift)})',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   Container(
@@ -350,7 +380,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               Row(
                 children: [
                   if (attendance.checkInTime != null) ...[
-                    Icon(Icons.login, color: Colors.green, size: 16),
+                    Icon(Icons.login, color: AppTheme.skyBlue, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       DateFormat('h:mm a').format(attendance.checkInTime!),

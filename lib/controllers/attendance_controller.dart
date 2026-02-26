@@ -13,6 +13,7 @@ class AttendanceController {
     String? location,
     double? latitude,
     double? longitude,
+    String? shiftType,
   }) async {
     try {
       final token = await _getAuthToken();
@@ -24,6 +25,15 @@ class AttendanceController {
       if (location != null) requestBody['location'] = location;
       if (latitude != null) requestBody['latitude'] = latitude;
       if (longitude != null) requestBody['longitude'] = longitude;
+      if (shiftType != null) requestBody['shift_type'] = shiftType;
+
+      // Debug logging
+      print('DEBUG: AttendanceController.checkIn called with:');
+      print('  location: $location');
+      print('  latitude: $latitude');
+      print('  longitude: $longitude');
+      print('  shiftType: $shiftType');
+      print('  requestBody: $requestBody');
 
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/attendance/check-in'),
@@ -60,6 +70,13 @@ class AttendanceController {
       if (location != null) requestBody['location'] = location;
       if (latitude != null) requestBody['latitude'] = latitude;
       if (longitude != null) requestBody['longitude'] = longitude;
+
+      // Debug logging
+      print('DEBUG: AttendanceController.checkOut called with:');
+      print('  location: $location');
+      print('  latitude: $latitude');
+      print('  longitude: $longitude');
+      print('  requestBody: $requestBody');
 
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/attendance/check-out'),
