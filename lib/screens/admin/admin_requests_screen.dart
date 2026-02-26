@@ -199,7 +199,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +241,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.bug_report, color: AppTheme.primaryBlue),
+                                  icon: const Icon(Icons.bug_report, color: AppTheme.skyBlue),
                                   onPressed: _debugRequests,
                                   tooltip: 'Debug Requests',
                                 ),
@@ -270,11 +270,11 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   Widget _buildAddButton() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -458,7 +458,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             ? null
                             : handleSubmit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
+                          backgroundColor: AppTheme.skyBlue,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -519,7 +519,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             Text(
               '${_myRequests.length} Total',
               style: const TextStyle(
-                color: AppTheme.primaryBlue,
+                color: AppTheme.skyBlue,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -560,7 +560,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+          color: AppTheme.skyBlue.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
@@ -576,10 +576,10 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
                 child: Text(
                   req.userName.isNotEmpty ? req.userName[0] : '?',
-                  style: const TextStyle(color: AppTheme.primaryBlue),
+                  style: const TextStyle(color: AppTheme.skyBlue),
                 ),
               ),
               const SizedBox(width: 16),
@@ -597,13 +597,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                            color: AppTheme.skyBlue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             '',
                             style: TextStyle(
-                              color: AppTheme.primaryBlue,
+                              color: AppTheme.skyBlue,
                               fontSize: 8,
                               fontWeight: FontWeight.bold,
                             ),
@@ -615,7 +615,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       req.type,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppTheme.primaryBlue,
+                        color: AppTheme.skyBlue,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -655,8 +655,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             child: OutlinedButton(
               onPressed: () => _handleWithdraw(req),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.orange,
-                side: const BorderSide(color: Colors.orange),
+                foregroundColor: AppTheme.lightGold,
+                side: const BorderSide(color: AppTheme.lightGold),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -683,7 +683,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             Text(
               '${_teamRequests.length} Total',
               style: const TextStyle(
-                color: AppTheme.primaryBlue,
+                color: AppTheme.skyBlue,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -727,7 +727,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: isOwnRequest
             ? Border.all(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                color: AppTheme.skyBlue.withValues(alpha: 0.3),
                 width: 1,
               )
             : null,
@@ -745,12 +745,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             children: [
               CircleAvatar(
                 backgroundColor: isOwnRequest
-                    ? Colors.orange.withValues(alpha: 0.1)
-                    : AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    ? AppTheme.lightGold.withValues(alpha: 0.1)
+                    : AppTheme.skyBlue.withValues(alpha: 0.1),
                 child: Text(
                   req.userName.isNotEmpty ? req.userName[0] : '?',
                   style: TextStyle(
-                    color: isOwnRequest ? Colors.orange : AppTheme.primaryBlue,
+                    color: isOwnRequest ? AppTheme.lightGold : AppTheme.skyBlue,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -774,13 +774,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: AppTheme.lightGold.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               'MY REQUEST',
                               style: TextStyle(
-                                color: Colors.orange,
+                                color: AppTheme.lightGold,
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -793,7 +793,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       req.type,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppTheme.primaryBlue,
+                        color: AppTheme.skyBlue,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -840,12 +840,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.hourglass_empty, size: 16, color: Colors.orange),
+                  Icon(Icons.hourglass_empty, size: 16, color: AppTheme.lightGold),
                   SizedBox(width: 8),
                   Text(
                     'Pending Self-Approval',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: AppTheme.lightGold,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -860,8 +860,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   child: OutlinedButton(
                     onPressed: () => _handleDeny(req),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: AppTheme.paleRed,
+                      side: const BorderSide(color: AppTheme.paleRed),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -898,7 +898,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           padding: EdgeInsets.symmetric(vertical: 16),
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            color: AppTheme.primaryBlue,
+            color: AppTheme.skyBlue,
           ),
         ),
       );
@@ -935,7 +935,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             Text(
               '${_requests.length} Total',
               style: const TextStyle(
-                color: AppTheme.primaryBlue,
+                color: AppTheme.skyBlue,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -962,7 +962,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: isOwnRequest
             ? Border.all(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                color: AppTheme.skyBlue.withValues(alpha: 0.3),
                 width: 1,
               )
             : null,
@@ -980,12 +980,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             children: [
               CircleAvatar(
                 backgroundColor: isOwnRequest
-                    ? Colors.orange.withValues(alpha: 0.1)
-                    : AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    ? AppTheme.lightGold.withValues(alpha: 0.1)
+                    : AppTheme.skyBlue.withValues(alpha: 0.1),
                 child: Text(
                   req.userName.isNotEmpty ? req.userName[0] : '?',
                   style: TextStyle(
-                    color: isOwnRequest ? Colors.orange : AppTheme.primaryBlue,
+                    color: isOwnRequest ? AppTheme.lightGold : AppTheme.skyBlue,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1009,13 +1009,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: AppTheme.lightGold.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               'MY REQUEST',
                               style: TextStyle(
-                                color: Colors.orange,
+                                color: AppTheme.lightGold,
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1028,7 +1028,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       req.type,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppTheme.primaryBlue,
+                        color: AppTheme.skyBlue,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1075,12 +1075,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.hourglass_empty, size: 16, color: Colors.orange),
+                  Icon(Icons.hourglass_empty, size: 16, color: AppTheme.lightGold),
                   SizedBox(width: 8),
                   Text(
                     'Pending Superior Approval',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: AppTheme.lightGold,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -1095,8 +1095,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                   child: OutlinedButton(
                     onPressed: () => _handleDeny(req),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: AppTheme.paleRed,
+                      side: const BorderSide(color: AppTheme.paleRed),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

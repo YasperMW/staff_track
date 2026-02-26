@@ -113,11 +113,11 @@ class _SplashScreenState extends State<SplashScreen>
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue,
+                            color: AppTheme.skyBlue,
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                                color: AppTheme.skyBlue.withValues(alpha: 0.3),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
@@ -136,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen>
                           'Staff Track',
                           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryBlue,
+                            color: AppTheme.skyBlue,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -160,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppTheme.primaryBlue,
+                                    AppTheme.skyBlue,
                                   ),
                                 ),
                               ),

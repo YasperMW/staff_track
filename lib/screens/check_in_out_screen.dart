@@ -175,7 +175,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: AppTheme.skyBlue,
       ),
     );
   }
@@ -184,7 +184,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.paleRed,
       ),
     );
   }
@@ -200,7 +200,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadTodayAttendance,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -243,14 +243,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppTheme.primaryBlue,
+                              AppTheme.skyBlue,
                               Color(0xFF5D8BF4),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.25),
+                              color: AppTheme.skyBlue.withValues(alpha: 0.25),
                               blurRadius: 18,
                               offset: const Offset(0, 10),
                             ),
@@ -293,9 +293,9 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                   size: 10,
                                   color: todayAttendance == null ||
                                           !todayAttendance!.isCheckedIn
-                                      ? Colors.orangeAccent
+                                      ? AppTheme.lightGoldAccent
                                       : todayAttendance!.isCheckedOut
-                                          ? Colors.greenAccent
+                                          ? AppTheme.skyBlue.withValues(alpha: 0.8)
                                           : Colors.yellowAccent,
                                 ),
                                 const SizedBox(width: 8),
@@ -404,7 +404,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primaryBlue
+                                      color: AppTheme.skyBlue
                                           .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -413,14 +413,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                         Icon(
                                           Icons.location_on_outlined,
                                           size: 16,
-                                          color: AppTheme.primaryBlue,
+                                          color: AppTheme.skyBlue,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           'Captured',
                                           style: const TextStyle(
                                             fontSize: 12,
-                                            color: AppTheme.primaryBlue,
+                                            color: AppTheme.skyBlue,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -478,7 +478,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                                   height: 40,
                                                   child: const Icon(
                                                     Icons.location_on,
-                                                    color: Colors.redAccent,
+                                                    color: AppTheme.paleRedAccent,
                                                     size: 40,
                                                   ),
                                                 ),
@@ -585,7 +585,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                 onPressed:
                                     isLoading || !hasLocation ? null : _checkOut,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: AppTheme.paleRed,
                                   foregroundColor: Colors.white,
                                 ),
                                 icon: const Icon(Icons.logout),
@@ -596,7 +596,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.accentTeal,
+                                  color: AppTheme.lightGold,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Row(
@@ -604,7 +604,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                   children: [
                                     Icon(
                                       Icons.check_circle,
-                                      color: Colors.green[700],
+                                      color: AppTheme.skyBlue,
                                       size: 32,
                                     ),
                                     const SizedBox(width: 12),
@@ -682,10 +682,10 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue.withValues(alpha: 0.04),
+        color: AppTheme.skyBlue.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+          color: AppTheme.skyBlue.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -693,12 +693,12 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+              color: AppTheme.skyBlue.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.info_outline,
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               size: 20,
             ),
           ),
@@ -747,7 +747,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             'Check In',
             DateFormat('h:mm a').format(attendance.checkInTime!),
             Icons.login,
-            Colors.green,
+            AppTheme.skyBlue,
           ),
           if (attendance.location != null) ...[
             const SizedBox(height: 4),
@@ -763,7 +763,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             'Check Out',
             DateFormat('h:mm a').format(attendance.checkOutTime!),
             Icons.logout,
-            Colors.red,
+            AppTheme.paleRed,
           ),
           if (attendance.location != null) ...[
             const SizedBox(height: 4),
@@ -779,7 +779,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             'Work Hours',
             '${attendance.workHours!.toStringAsFixed(2)} hours',
             Icons.schedule,
-            Colors.blue,
+            AppTheme.lightGold,
           ),
         ],
       ],
@@ -809,13 +809,13 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'present':
-        return Colors.green;
+        return AppTheme.skyBlue;
       case 'late':
-        return Colors.orange;
+        return AppTheme.lightGold;
       case 'absent':
-        return Colors.red;
+        return AppTheme.paleRed;
       case 'half_day':
-        return Colors.blue;
+        return AppTheme.lightGold;
       default:
         return Colors.grey;
     }
@@ -865,7 +865,7 @@ class _CheckInOutBottomNavigation extends StatelessWidget {
             (route) => false,
           );
         },
-        selectedItemColor: AppTheme.primaryBlue,
+        selectedItemColor: AppTheme.skyBlue,
         unselectedItemColor: Theme.of(context)
             .colorScheme
             .onSurface
@@ -941,7 +941,7 @@ class _CheckInOutBottomNavigation extends StatelessWidget {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

@@ -42,7 +42,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading notifications: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.paleRed,
         ),
       );
     }
@@ -72,7 +72,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error marking notification as read: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.paleRed,
         ),
       );
     }
@@ -101,7 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error marking all notifications as read: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.paleRed,
         ),
       );
     }
@@ -120,7 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: Column(
             children: [
               const AppHeader(
@@ -132,10 +132,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    color: AppTheme.skyBlue.withValues(alpha: 0.1),
                     border: Border(
                       bottom: BorderSide(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                        color: AppTheme.skyBlue.withValues(alpha: 0.2),
                         width: 1,
                       ),
                     ),
@@ -144,14 +144,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     children: [
                       Icon(
                         Icons.mark_email_read_outlined,
-                        color: AppTheme.primaryBlue,
+                        color: AppTheme.skyBlue,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
                         style: TextStyle(
-                          color: AppTheme.primaryBlue,
+                          color: AppTheme.skyBlue,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -161,7 +161,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Text(
                           'Mark all as read',
                           style: TextStyle(
-                            color: AppTheme.primaryBlue,
+                            color: AppTheme.skyBlue,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -244,7 +244,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: !notification.isRead
-                ? AppTheme.primaryBlue.withValues(alpha: 0.3)
+                ? AppTheme.skyBlue.withValues(alpha: 0.3)
                 : Colors.grey.withValues(alpha: 0.1),
             width: !notification.isRead ? 2 : 1,
           ),
@@ -296,7 +296,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               width: 8,
                               height: 8,
                               decoration: const BoxDecoration(
-                                color: AppTheme.primaryBlue,
+                                color: AppTheme.skyBlue,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -342,7 +342,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _getNotificationColor(String type) {
     switch (type) {
       case 'attendance':
-        return Colors.orange;
+        return AppTheme.lightGold;
       case 'request':
         return Colors.green;
       case 'system':
@@ -418,7 +418,7 @@ class _NotificationsBottomNavigation extends StatelessWidget {
             (route) => false,
           );
         },
-        selectedItemColor: AppTheme.primaryBlue,
+        selectedItemColor: AppTheme.skyBlue,
         unselectedItemColor: Theme.of(context)
             .colorScheme
             .onSurface
@@ -494,7 +494,7 @@ class _NotificationsBottomNavigation extends StatelessWidget {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

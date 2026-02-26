@@ -153,7 +153,7 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
             ),
           ),
           const SizedBox(height: 4),
@@ -231,14 +231,14 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha:0.1),
+                  color: AppTheme.skyBlue.withValues(alpha:0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
                     employee.fullName.isNotEmpty ? employee.fullName[0].toUpperCase() : '?',
                     style: const TextStyle(
-                      color: AppTheme.primaryBlue,
+                      color: AppTheme.skyBlue,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),

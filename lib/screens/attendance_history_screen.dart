@@ -87,7 +87,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.paleRed,
       ),
     );
   }
@@ -180,7 +180,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                     'Late',
                     '${summary!['late_days']}',
                     Icons.access_time,
-                    Colors.orange,
+                    AppTheme.lightGold,
                   ),
                 ),
                 Expanded(
@@ -199,7 +199,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 'Total Overtime',
                 '${summary!['total_overtime_hours'].toStringAsFixed(1)} hours',
                 Icons.access_time,
-                Colors.red,
+                AppTheme.paleRed,
               ),
             ],
           ],
@@ -369,7 +369,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   ],
                   const SizedBox(width: 16),
                   if (attendance.checkOutTime != null) ...[
-                    Icon(Icons.logout, color: Colors.red, size: 16),
+                    Icon(Icons.logout, color: AppTheme.paleRed, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       DateFormat('h:mm a').format(attendance.checkOutTime!),
@@ -448,7 +448,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 _buildDetailRow(
                   'Check Out',
                   DateFormat('h:mm a').format(attendance.checkOutTime!),
-                  Colors.red,
+                  AppTheme.paleRed,
                 ),
                 if (attendance.location != null) ...[
                   const SizedBox(height: 4),
@@ -479,7 +479,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 _buildDetailRow(
                   'GPS Accuracy',
                   '${attendance.accuracy!.toStringAsFixed(1)}m',
-                  Colors.orange,
+                  AppTheme.lightGold,
                 ),
               ],
             ],
@@ -523,10 +523,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         return Colors.green;
       case 'late':
       case 'checked in':
-        return Colors.orange;
+        return AppTheme.lightGold;
       case 'absent':
       case 'not checked in':
-        return Colors.red;
+        return AppTheme.paleRed;
       case 'half_day':
         return Colors.blue;
       default:
@@ -578,7 +578,7 @@ class _AttendanceHistoryBottomNavigation extends StatelessWidget {
             (route) => false,
           );
         },
-        selectedItemColor: AppTheme.primaryBlue,
+        selectedItemColor: AppTheme.skyBlue,
         unselectedItemColor: Theme.of(context)
             .colorScheme
             .onSurface
@@ -654,7 +654,7 @@ class _AttendanceHistoryBottomNavigation extends StatelessWidget {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

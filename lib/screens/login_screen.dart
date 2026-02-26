@@ -88,8 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),

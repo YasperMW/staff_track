@@ -125,12 +125,12 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+          colors: [AppTheme.skyBlue, Color(0xFF5D8BF4)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -327,12 +327,12 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    color: AppTheme.skyBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.skyBlue,
                     size: 20,
                   ),
                 ),
@@ -342,7 +342,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.skyBlue,
                   ),
                 ),
               ],
@@ -424,7 +424,7 @@ class _ProfileBottomNavigation extends StatelessWidget {
             (route) => false,
           );
         },
-        selectedItemColor: AppTheme.primaryBlue,
+        selectedItemColor: AppTheme.skyBlue,
         unselectedItemColor: Theme.of(context)
             .colorScheme
             .onSurface
@@ -500,7 +500,7 @@ class _ProfileBottomNavigation extends StatelessWidget {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

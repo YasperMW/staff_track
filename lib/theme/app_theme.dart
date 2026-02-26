@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryBlue = Color(0xFF3B71E3);
-  static const Color secondaryBlue = Color(0xFF2E5BBA);
-  static const Color accentTeal = Color(0xFFE8F5E9);
+  // Organization Colors
+  static const Color skyBlue = Color(0xFF0284C7);
+  static const Color darkSkyBlue = Color(0xFF0369A1);
+  static const Color lightGold = Color(0xFFF59E0B);
+  static const Color lightGoldAccent = Color(0xFFFCD34D);
+  static const Color paleRed = Color(0xFFEF4444);
+  static const Color paleRedAccent = Color(0xFFF87171);
+
+  // Theme Colors
   static const Color backgroundWhite = Color(0xFFF8FAFC);
   static const Color surfaceWhite = Colors.white;
-  static const Color errorRed = Color(0xFFD32F2F);
-  static const Color textDark = Color(0xFF1E293B);
+  static const Color textDark = Color(0xFF0F172A);
   static const Color textGrey = Color(0xFF64748B);
   static const Color textLightBlue = Color(0xFF94A3B8);
 
@@ -16,17 +21,20 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       textTheme: GoogleFonts.poppinsTextTheme(),
-      primaryColor: primaryBlue,
+      primaryColor: skyBlue,
       scaffoldBackgroundColor: backgroundWhite,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryBlue,
-        primary: primaryBlue,
-        secondary: accentTeal,
+        seedColor: skyBlue,
+        primary: skyBlue,
+        secondary: lightGold,
+        tertiary: paleRed,
         surface: surfaceWhite,
-        error: errorRed,
+        error: paleRed,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: primaryBlue,
+        backgroundColor: skyBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -38,7 +46,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: skyBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(
@@ -55,15 +63,15 @@ class AppTheme {
         fillColor: surfaceWhite,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryBlue, width: 2),
+          borderSide: const BorderSide(color: skyBlue, width: 2),
         ),
         contentPadding: const EdgeInsets.all(16),
         labelStyle: GoogleFonts.poppins(color: textGrey),
@@ -76,6 +84,32 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: skyBlue,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: skyBlue.withValues(alpha: 0.1),
+        labelStyle: GoogleFonts.poppins(color: skyBlue, fontWeight: FontWeight.w500),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        side: BorderSide.none,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: textDark,
+        contentTextStyle: GoogleFonts.poppins(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: textDark,
+        ),
+      ),
     );
   }
 
@@ -83,15 +117,18 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-      primaryColor: primaryBlue,
+      primaryColor: skyBlue,
       scaffoldBackgroundColor: const Color(0xFF0F172A),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryBlue,
-        primary: primaryBlue,
-        secondary: const Color(0xFF1E293B),
+        seedColor: skyBlue,
+        primary: skyBlue,
+        secondary: lightGold,
+        tertiary: paleRed,
         surface: const Color(0xFF1E293B),
-        error: errorRed,
+        error: paleRed,
         brightness: Brightness.dark,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: const Color(0xFF1E293B),
@@ -106,7 +143,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: skyBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(
@@ -131,7 +168,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryBlue, width: 2),
+          borderSide: const BorderSide(color: skyBlue, width: 2),
         ),
         contentPadding: const EdgeInsets.all(16),
         labelStyle: GoogleFonts.poppins(color: textGrey),
@@ -142,6 +179,32 @@ class AppTheme {
         shadowColor: Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: skyBlue,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: skyBlue.withValues(alpha: 0.2),
+        labelStyle: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        side: BorderSide.none,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: Colors.white,
+        contentTextStyle: GoogleFonts.poppins(color: textDark),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
         ),
       ),
     );

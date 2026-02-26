@@ -146,7 +146,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppTheme.primaryBlue,
+                  color: AppTheme.skyBlue,
                 ),
               ),
             ),
@@ -173,7 +173,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           'Total OT Hours',
           '${totalOt.toStringAsFixed(1)}h',
           Icons.timer_outlined,
-          Colors.orange,
+          AppTheme.lightGold,
         ),
       ],
     );
@@ -250,7 +250,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: AppTheme.primaryBlue,
+                      color: AppTheme.skyBlue,
                     ),
                   )
                 : Row(
@@ -286,7 +286,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           width: 12,
           height: height,
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.8),
+            color: AppTheme.skyBlue.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(6),
           ),
         ),
@@ -311,7 +311,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: AppTheme.primaryBlue,
+                color: AppTheme.skyBlue,
               ),
             ),
           )

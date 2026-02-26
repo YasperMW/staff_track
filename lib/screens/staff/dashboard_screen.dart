@@ -191,12 +191,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+          colors: [AppTheme.skyBlue, AppTheme.lightGold],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha:0.3),
+            color: AppTheme.skyBlue.withValues(alpha:0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -282,7 +282,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primaryBlue,
+                      foregroundColor: AppTheme.skyBlue,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -309,11 +309,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatsRow(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _buildStatCard(context, Icons.access_time, '38h 20m', 'This Week', Colors.blue)),
+        Expanded(child: _buildStatCard(context, Icons.access_time, '38h 20m', 'This Week', AppTheme.skyBlue)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.trending_up, '96%', 'On Time', Colors.green)),
+        Expanded(child: _buildStatCard(context, Icons.trending_up, '96%', 'On Time', AppTheme.lightGold)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.calendar_today, '12 days', 'Leave Left', Colors.orange)),
+        Expanded(child: _buildStatCard(context, Icons.calendar_today, '12 days', 'Leave Left', AppTheme.lightGold)),
       ],
     );
   }
@@ -380,8 +380,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
           child: const Row(
             children: [
-              Text('View all', style: TextStyle(color: AppTheme.primaryBlue)),
-              Icon(Icons.chevron_right, size: 18, color: AppTheme.primaryBlue),
+              Text('View all', style: TextStyle(color: AppTheme.skyBlue)),
+              Icon(Icons.chevron_right, size: 18, color: AppTheme.skyBlue),
             ],
           ),
         ),
@@ -467,7 +467,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: attendance.isCheckedOut ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
+              color: attendance.isCheckedOut ? AppTheme.skyBlue.withValues(alpha: 0.1) : AppTheme.paleRed.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -475,7 +475,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: attendance.isCheckedOut ? const Color(0xFF2E7D32) : const Color(0xFF64748B),
+                color: attendance.isCheckedOut ? AppTheme.skyBlue : AppTheme.paleRed,
               ),
             ),
           ),
