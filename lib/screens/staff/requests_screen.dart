@@ -65,7 +65,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             elevation: 0,
             flexibleSpace: const SafeArea(
               child: AppHeader(
-                subtitle: 'HR Portal',
+                subtitle: 'Requests',
               ),
             ),
           ),
@@ -84,25 +84,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Requests',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                'Leave & WFH requests',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Leave & WFH requests',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
+                            ),
                           ),
                           _buildAddButton(),
                         ],

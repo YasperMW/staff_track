@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/floating_navigation.dart';
+import '../../widgets/app_header.dart';
 import '../../services/admin_reports_service.dart';
-import '../home_screen.dart';
 
 class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
@@ -89,59 +88,45 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingNavigation(
-      currentIndex: 3, // Analytics/Reports is index 3 for admin
-      onTap: (index) {
-        if (index == 3) {
-          // Already on analytics screen, do nothing
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(initialIndex: index),
-          ),
-        );
-      },
-      child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      'Department Analytics',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      'Monthly staff performance',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildOverviewCards(context),
-                    const SizedBox(height: 24),
-                    _buildDepartmentChart(context),
-                    const SizedBox(height: 24),
-                    _buildTopPerformers(context),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: false,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 0,
+            flexibleSpace: const SafeArea(
+              child: AppHeader(
+                subtitle: 'Analytics',
               ),
-            ],
+            ),
           ),
-        ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 16),
+                Text(
+                  'Monthly staff performance',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildOverviewCards(context),
+                const SizedBox(height: 24),
+                _buildDepartmentChart(context),
+                const SizedBox(height: 24),
+                _buildTopPerformers(context),
+                const SizedBox(height: 24),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -278,7 +263,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
                                 WeeklyAttendancePoint(label: 'Sun', percentage: 0),
                               ])
                         .map((p) {
-                      final height = (p.percentage.clamp(0, 100) / 100) * 140;
+                      final height = (p.percentage.clamp(0, 100) / 100) * 120;
                       return _buildBar(height, p.label);
                     }).toList(),
                   ),

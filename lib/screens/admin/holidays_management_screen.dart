@@ -159,7 +159,6 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                _buildHeader(),
                 const SizedBox(height: 16),
                 _buildFilters(),
                 const SizedBox(height: 16),

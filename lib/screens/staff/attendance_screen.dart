@@ -64,7 +64,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             elevation: 0,
             flexibleSpace: const SafeArea(
               child: AppHeader(
-                subtitle: 'HR Portal',
+                subtitle: 'Attendance',
               ),
             ),
           ),
