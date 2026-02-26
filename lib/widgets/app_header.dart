@@ -42,7 +42,7 @@ class AppHeader extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.skyBlue,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.apartment, color: Colors.white, size: 24),
@@ -148,11 +148,11 @@ class AppHeader extends StatelessWidget {
           : null,
       child: CircleAvatar(
         radius: 18,
-        backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+        backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
         child: Text(
           initials,
           style: const TextStyle(
-            color: AppTheme.primaryBlue,
+            color: AppTheme.skyBlue,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -57,7 +57,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -159,11 +159,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget _buildCheckInButton(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -207,7 +207,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -308,7 +308,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isOnTime ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+                  color: isOnTime ? AppTheme.skyBlue.withValues(alpha: 0.1) : AppTheme.lightGold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -316,7 +316,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isOnTime ? const Color(0xFF2E7D32) : const Color(0xFFEF6C00),
+                    color: isOnTime ? AppTheme.skyBlue : AppTheme.lightGold,
                   ),
                 ),
               ),
@@ -344,7 +344,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           Text(
             attendance.workHours != null ? '${attendance.workHours!.toStringAsFixed(1)}h total' : '--:-- total',
             style: const TextStyle(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               fontWeight: FontWeight.w600,
             ),
           ),

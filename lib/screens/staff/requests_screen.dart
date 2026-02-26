@@ -57,7 +57,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -117,11 +117,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
   Widget _buildAddButton() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha:0.3),
+            color: AppTheme.skyBlue.withValues(alpha:0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -161,7 +161,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
             ),
           ),
           const SizedBox(height: 4),
@@ -490,7 +490,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             ? null
                             : handleSubmit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
+                          backgroundColor: AppTheme.skyBlue,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(

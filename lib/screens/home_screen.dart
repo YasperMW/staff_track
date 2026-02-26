@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _currentIndex = index;
             });
           },
-          selectedItemColor: AppTheme.primaryBlue,
+          selectedItemColor: AppTheme.skyBlue,
           unselectedItemColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
           selectedFontSize: 12,
           unselectedFontSize: 12,

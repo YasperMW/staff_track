@@ -78,7 +78,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _onRefresh,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -153,11 +153,11 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   Widget _buildCheckInButton(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -206,9 +206,9 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       children: [
         _buildStatCard(context, 'Present', '$present', Colors.green),
         const SizedBox(width: 12),
-        _buildStatCard(context, 'Absent', '$absent', Colors.red),
+        _buildStatCard(context, 'Absent', '$absent', AppTheme.paleRed),
         const SizedBox(width: 12),
-        _buildStatCard(context, 'Late', '$late', Colors.orange),
+        _buildStatCard(context, 'Late', '$late', AppTheme.lightGold),
       ],
     );
   }
@@ -252,7 +252,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           padding: EdgeInsets.symmetric(vertical: 16),
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            color: AppTheme.primaryBlue,
+            color: AppTheme.skyBlue,
           ),
         ),
       );
@@ -291,7 +291,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     bool isPresent = member.status == 'Present';
     Color statusColor = member.status == 'Present'
         ? Colors.green
-        : (member.status == 'Absent' ? Colors.red : Colors.orange);
+        : (member.status == 'Absent' ? AppTheme.paleRed : AppTheme.lightGold);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -310,10 +310,10 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+            backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
             child: Text(
               member.name.isNotEmpty ? member.name[0] : '?',
-              style: const TextStyle(color: AppTheme.primaryBlue),
+              style: const TextStyle(color: AppTheme.skyBlue),
             ),
           ),
           const SizedBox(width: 16),

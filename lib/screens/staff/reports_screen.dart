@@ -219,7 +219,7 @@ class ReportsScreen extends StatelessWidget {
           '${heightFactor}h',
           style: TextStyle(
             fontSize: 12, 
-            color: isToday ? AppTheme.primaryBlue : AppTheme.textLightBlue,
+            color: isToday ? AppTheme.skyBlue : AppTheme.textLightBlue,
             fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -232,20 +232,20 @@ class ReportsScreen extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+                  colors: [AppTheme.skyBlue, Color(0xFF5D8BF4)],
                 )
               : LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppTheme.primaryBlue.withValues(alpha:0.2),
-                    AppTheme.primaryBlue.withValues(alpha:0.1),
+                    AppTheme.skyBlue.withValues(alpha:0.2),
+                    AppTheme.skyBlue.withValues(alpha:0.1),
                   ],
                 ),
             borderRadius: BorderRadius.circular(8),
             boxShadow: isToday ? [
               BoxShadow(
-                color: AppTheme.primaryBlue.withValues(alpha:0.3),
+                color: AppTheme.skyBlue.withValues(alpha:0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               )
@@ -258,7 +258,7 @@ class ReportsScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
-            color: isToday ? AppTheme.primaryBlue : Theme.of(context).colorScheme.onSurface,
+            color: isToday ? AppTheme.skyBlue : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -323,7 +323,7 @@ class ReportsScreen extends StatelessWidget {
         LinearProgressIndicator(
           value: progress,
           backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.05),
-          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.skyBlue),
           borderRadius: BorderRadius.circular(4),
           minHeight: 8,
       ),

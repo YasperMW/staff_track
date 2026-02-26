@@ -37,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             const SnackBar(
               content: Text('Failed to send reset code. Please try again.'),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
+              backgroundColor: AppTheme.paleRed,
             ),
           );
         }
@@ -49,7 +49,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SnackBar(
             content: Text('Network error. Please check your connection.'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.paleRed,
           ),
         );
       }
@@ -74,8 +74,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),
@@ -112,13 +112,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                              color: AppTheme.skyBlue.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.lock_reset_rounded,
                               size: 64,
-                              color: AppTheme.primaryBlue,
+                              color: AppTheme.skyBlue,
                             ),
                           ),
                           const SizedBox(height: 32),
@@ -147,7 +147,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                                borderSide: const BorderSide(color: AppTheme.skyBlue, width: 1.5),
                               ),
                             ),
                             validator: (value) {
@@ -160,7 +160,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ElevatedButton(
                             onPressed: _isLoading ? null : _sendOTP,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
+                              backgroundColor: AppTheme.skyBlue,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -229,7 +229,7 @@ class _OTPScreenState extends State<OTPScreen> {
             const SnackBar(
               content: Text('Invalid or expired code. Please try again.'),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
+              backgroundColor: AppTheme.paleRed,
             ),
           );
         }
@@ -241,7 +241,7 @@ class _OTPScreenState extends State<OTPScreen> {
           const SnackBar(
             content: Text('Network error. Please check your connection.'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.paleRed,
           ),
         );
       }
@@ -266,8 +266,8 @@ class _OTPScreenState extends State<OTPScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),
@@ -324,7 +324,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                  borderSide: const BorderSide(color: AppTheme.skyBlue, width: 2),
                                 ),
                               ),
                               onChanged: (value) {
@@ -345,7 +345,7 @@ class _OTPScreenState extends State<OTPScreen> {
                         ElevatedButton(
                           onPressed: _isLoading ? null : _verifyOTP,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundColor: AppTheme.skyBlue,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 56),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -379,7 +379,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                     const SnackBar(
                                       content: Text('Failed to resend code. Please try again.'),
                                       behavior: SnackBarBehavior.floating,
-                                      backgroundColor: Colors.red,
+                                      backgroundColor: AppTheme.paleRed,
                                     ),
                                   );
                                 }
@@ -391,7 +391,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                   const SnackBar(
                                     content: Text('Network error. Please check your connection.'),
                                     behavior: SnackBarBehavior.floating,
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: AppTheme.paleRed,
                                   ),
                                 );
                               }
@@ -401,11 +401,11 @@ class _OTPScreenState extends State<OTPScreen> {
                             ? const SizedBox(
                                 height: 16,
                                 width: 16,
-                                child: CircularProgressIndicator(color: AppTheme.primaryBlue, strokeWidth: 2),
+                                child: CircularProgressIndicator(color: AppTheme.skyBlue, strokeWidth: 2),
                               )
                             : const Text(
                                 'Didn\'t receive code? Resend',
-                                style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: AppTheme.skyBlue, fontWeight: FontWeight.bold),
                               ),
                         ),
                       ],
@@ -466,7 +466,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             const SnackBar(
               content: Text('Failed to reset password. Please try again.'),
               behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
+              backgroundColor: AppTheme.paleRed,
             ),
           );
         }
@@ -478,7 +478,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           const SnackBar(
             content: Text('Network error. Please check your connection.'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.paleRed,
           ),
         );
       }
@@ -503,8 +503,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),
@@ -531,7 +531,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 20),
-                          const Icon(Icons.security_rounded, size: 64, color: AppTheme.primaryBlue),
+                          const Icon(Icons.security_rounded, size: 64, color: AppTheme.skyBlue),
                           const SizedBox(height: 32),
                           TextFormField(
                             controller: _passController,
@@ -566,7 +566,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           ElevatedButton(
                             onPressed: _isLoading ? null : _resetPassword,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
+                              backgroundColor: AppTheme.skyBlue,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

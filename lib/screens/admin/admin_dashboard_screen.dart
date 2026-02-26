@@ -215,12 +215,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.primaryBlue, Color(0xFF5D8BF4)],
+          colors: [AppTheme.skyBlue, AppTheme.lightGold],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            color: AppTheme.skyBlue.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -288,7 +288,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primaryBlue,
+                      foregroundColor: AppTheme.skyBlue,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -350,12 +350,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+          colors: [AppTheme.lightGold, AppTheme.paleRed],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+            color: AppTheme.lightGold.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -410,7 +410,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: AppTheme.lightGold,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -467,7 +467,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Icons.group,
             '$_teamPresentCount/$_teamTotalStaff',
             'Staff Present',
-            Colors.blue,
+            AppTheme.skyBlue,
           ),
         ),
         const SizedBox(width: 12),
@@ -477,7 +477,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Icons.warning_amber_rounded,
             '$_teamLateCount',
             'Late Arrivals',
-            Colors.orange,
+            AppTheme.paleRed,
           ),
         ),
         const SizedBox(width: 12),
@@ -487,7 +487,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Icons.person_off,
             '$_teamAbsentCount',
             'Absent',
-            Colors.red,
+            AppTheme.paleRed,
           ),
         ),
       ],
@@ -553,8 +553,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onPressed: () {},
               child: const Row(
                 children: [
-                  Text('Live View', style: TextStyle(color: AppTheme.primaryBlue)),
-                  Icon(Icons.chevron_right, size: 18, color: AppTheme.primaryBlue),
+                  Text('Live View', style: TextStyle(color: AppTheme.skyBlue)),
+                  Icon(Icons.chevron_right, size: 18, color: AppTheme.skyBlue),
                 ],
               ),
             ),
@@ -571,7 +571,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           padding: EdgeInsets.symmetric(vertical: 16),
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            color: AppTheme.primaryBlue,
+            color: AppTheme.skyBlue,
           ),
         ),
       );
@@ -609,7 +609,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildTeamAttendanceItem(BuildContext context, TeamAttendanceMember member) {
     final Color statusColor = member.status == 'Present'
         ? Colors.green
-        : (member.status == 'Absent' ? Colors.red : Colors.orange);
+        : (member.status == 'Absent' ? AppTheme.paleRed : AppTheme.lightGold);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -628,10 +628,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+            backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
             child: Text(
               member.name.isNotEmpty ? member.name[0] : '?',
-              style: const TextStyle(color: AppTheme.primaryBlue),
+              style: const TextStyle(color: AppTheme.skyBlue),
             ),
           ),
           const SizedBox(width: 16),

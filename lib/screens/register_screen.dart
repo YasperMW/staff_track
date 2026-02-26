@@ -261,8 +261,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),
@@ -343,7 +343,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.9),
+              color: AppTheme.skyBlue.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -414,7 +414,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
               color: isActive
-                  ? AppTheme.primaryBlue
+                  ? AppTheme.skyBlue
                   : Colors.grey.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
@@ -780,8 +780,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       if (_profilePhotoUrl != null)
                         ListTile(
-                          leading: const Icon(Icons.delete, color: Colors.red),
-                          title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                          leading: const Icon(Icons.delete, color: AppTheme.paleRed),
+                          title: const Text('Remove Photo', style: TextStyle(color: AppTheme.paleRed)),
                           onTap: () {
                             Navigator.of(context).pop();
                             setState(() {
@@ -807,7 +807,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.skyBlue,
                     width: 2,
                   ),
                 ),
@@ -821,14 +821,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return const Center(
-                              child: CircularProgressIndicator(color: AppTheme.primaryBlue),
+                              child: CircularProgressIndicator(color: AppTheme.skyBlue),
                             );
                           },
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.person_outline,
                               size: 80,
-                              color: AppTheme.primaryBlue,
+                              color: AppTheme.skyBlue,
                             );
                           },
                         ),
@@ -836,7 +836,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     : const Icon(
                         Icons.person_outline,
                         size: 80,
-                        color: AppTheme.primaryBlue,
+                        color: AppTheme.skyBlue,
                       ),
               ),
               Positioned(
@@ -845,7 +845,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: const BoxDecoration(
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.skyBlue,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -947,7 +947,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+          borderSide: const BorderSide(color: AppTheme.skyBlue, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
@@ -1017,7 +1017,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                backgroundColor: AppTheme.skyBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

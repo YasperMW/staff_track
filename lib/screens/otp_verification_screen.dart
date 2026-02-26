@@ -227,8 +227,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     theme.colorScheme.surface.withValues(alpha: 0.8),
                   ]
                 : [
-                    AppTheme.primaryBlue,
-                    AppTheme.secondaryBlue,
+                    AppTheme.skyBlue,
+                    AppTheme.darkSkyBlue,
                   ],
           ),
         ),
@@ -326,7 +326,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         Icon(
           Icons.verified_user_outlined,
           size: 48,
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
         ),
         const SizedBox(height: 12),
         Text(
@@ -366,13 +366,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isFocused 
-                      ? AppTheme.primaryBlue 
+                      ? AppTheme.skyBlue 
                       : theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   width: isFocused ? 2 : 1,
                 ),
                 boxShadow: isFocused ? [
                   BoxShadow(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                    color: AppTheme.skyBlue.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -427,7 +427,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _verifyOTP,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryBlue,
+          backgroundColor: AppTheme.skyBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -473,7 +473,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           Text(
             'Resend available in $_resendCooldown seconds',
             style: TextStyle(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -490,7 +490,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.skyBlue),
                         ),
                       ),
                       SizedBox(width: 8),
@@ -500,7 +500,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 : Text(
                     'Resend Code',
                     style: TextStyle(
-                      color: AppTheme.primaryBlue,
+                      color: AppTheme.skyBlue,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),

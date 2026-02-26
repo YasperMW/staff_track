@@ -124,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 100,
             height: 100,
             decoration: const BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
             ),
           ),
           const SizedBox(height: 4),
@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailingWidget: Switch(
                   value: themeProvider.isDarkMode,
                   onChanged: (value) => themeProvider.toggleTheme(),
-                  activeThumbColor: AppTheme.primaryBlue,
+                  activeThumbColor: AppTheme.skyBlue,
                 ),
                 showChevron: false,
               );
@@ -343,18 +343,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.primaryBlue),
+      leading: Icon(icon, color: AppTheme.skyBlue),
       title: Text(
         title,
         style: TextStyle(
-          color: AppTheme.primaryBlue,
+          color: AppTheme.skyBlue,
           fontWeight: FontWeight.w600,
         ),
       ),
       trailing: Icon(
         Icons.chevron_right,
         size: 20,
-        color: AppTheme.primaryBlue,
+        color: AppTheme.skyBlue,
       ),
       onTap: onTap,
     );
@@ -407,11 +407,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
         },
-        icon: const Icon(Icons.logout, color: AppTheme.errorRed),
+        icon: const Icon(Icons.logout, color: AppTheme.paleRed),
         label: const Text(
           'Sign Out',
           style: TextStyle(
-            color: AppTheme.errorRed,
+            color: AppTheme.paleRed,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -452,7 +452,7 @@ class _ProfileBottomNavigation extends StatelessWidget {
             (route) => false,
           );
         },
-        selectedItemColor: AppTheme.primaryBlue,
+        selectedItemColor: AppTheme.skyBlue,
         unselectedItemColor: Theme.of(context)
             .colorScheme
             .onSurface
@@ -528,7 +528,7 @@ class _ProfileBottomNavigation extends StatelessWidget {
             width: 24,
             height: 2,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: AppTheme.skyBlue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
