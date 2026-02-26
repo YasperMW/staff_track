@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_header.dart';
 import '../../controllers/auth_provider.dart';
-import '../../controllers/attendance_controller.dart';
+
 import '../../models/models.dart';
 import '../../services/requests_service.dart';
 import '../../services/holidays_service.dart';
 import '../../services/announcements_service.dart';
-import '../../widgets/floating_navigation.dart';
+import 'package:intl/intl.dart';
+import '../../controllers/attendance_controller.dart';
 import '../check_in_out_screen.dart';
-import '../home_screen.dart';
 import 'holidays_management_screen.dart';
 import 'announcements_management_screen.dart';
 
@@ -221,32 +221,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingNavigation(
-      currentIndex: 0, // Dashboard is index 0 for admin
-      onTap: (index) {
-        if (index == 0) {
-          // Already on dashboard screen, do nothing
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(initialIndex: index),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: false,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 0,
+            flexibleSpace: const SafeArea(
+              child: AppHeader(
+                subtitle: 'Dashboard',
+              ),
+            ),
           ),
-        );
-      },
-      child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildGreeting(context),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 16),
+                _buildGreeting(context),
                     const SizedBox(height: 24),
                     _buildClockInCard(),
                     const SizedBox(height: 24),
@@ -262,12 +258,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 16),
                     _buildTeamAttendanceList(context),
                     const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
+              ]),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

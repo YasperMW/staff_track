@@ -14,7 +14,7 @@ class AppHeader extends StatelessWidget {
 
   const AppHeader({
     super.key,
-    this.subtitle = 'HR Portal',
+    required this.subtitle,
     this.showNotifications = true,
     this.enableProfileNavigation = true,
   });

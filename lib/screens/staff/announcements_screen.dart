@@ -85,7 +85,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             elevation: 0,
             flexibleSpace: const SafeArea(
               child: AppHeader(
-                subtitle: 'HR Portal',
+                subtitle: 'Announcements',
               ),
             ),
           ),

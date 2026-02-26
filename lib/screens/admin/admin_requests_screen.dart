@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/floating_navigation.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/tile_date_picker.dart';
 import '../../services/requests_service.dart';
 import '../../services/auth_storage.dart';
-import '../home_screen.dart';
 
 class AdminRequestsScreen extends StatefulWidget {
   const AdminRequestsScreen({super.key});
@@ -196,74 +195,53 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingNavigation(
-      currentIndex: 2, // Requests is index 2 for admin
-      onTap: (index) {
-        if (index == 2) {
-          // Already on requests screen, do nothing
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(initialIndex: index),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: false,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 0,
+            flexibleSpace: const SafeArea(
+              child: AppHeader(
+                subtitle: 'Requests',
+              ),
+            ),
           ),
-        );
-      },
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _onRefresh,
-          color: AppTheme.skyBlue,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
+          SliverToBoxAdapter(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppTheme.skyBlue,
+              child: SingleChildScrollView(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 16),
-                      Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Staff Requests',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                Text(
-                                  'Manage leave and WFH requests',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.bug_report, color: AppTheme.skyBlue),
-                                  onPressed: _debugRequests,
-                                  tooltip: 'Debug Requests',
-                                ),
-                                const SizedBox(width: 8),
-                                _buildAddButton(),
-                              ],
-                            ),
-                          ],
+                      Text(
+                        'Manage leave and WFH requests',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.bug_report, color: AppTheme.skyBlue),
+                            onPressed: _debugRequests,
+                            tooltip: 'Debug Requests',
+                          ),
+                          const SizedBox(width: 8),
+                          _buildAddButton(),
+                        ],
+                      ),
                       const SizedBox(height: 24),
                       _buildMyRequestsSection(context),
                       const SizedBox(height: 32),
@@ -272,10 +250,10 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -78,17 +78,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  Text(
-                    'Profile',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _buildProfileCard(context, user),
-                    const SizedBox(height: 24),
+                  _buildProfileCard(context, user),
+                  const SizedBox(height: 24),
                     _buildStatsRow(context),
                     const SizedBox(height: 24),
                     _buildOptionsList(context),

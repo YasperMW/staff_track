@@ -126,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             elevation: 0,
             flexibleSpace: const SafeArea(
               child: AppHeader(
-                subtitle: 'HR Portal',
+                subtitle: 'Dashboard',
               ),
             ),
           ),

@@ -74,15 +74,6 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  Text(
-                    'All Employees',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   _buildSearchBar(),
                   const SizedBox(height: 16),
                   _buildStatsRow(),
