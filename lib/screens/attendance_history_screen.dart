@@ -5,6 +5,7 @@ import '../controllers/attendance_controller.dart';
 import '../controllers/auth_provider.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/tile_date_picker.dart';
 import 'home_screen.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
@@ -57,13 +58,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   Future<void> _selectDateRange() async {
-    final DateTimeRange? picked = await showDateRangePicker(
+    final DateTimeRange? picked = await showTileDateRangePicker(
       context: context,
+      initialStartDate: startDate,
+      initialEndDate: endDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: startDate != null && endDate != null
-          ? DateTimeRange(start: startDate!, end: endDate!)
-          : null,
+      title: 'Filter Attendance History',
     );
 
     if (picked != null) {

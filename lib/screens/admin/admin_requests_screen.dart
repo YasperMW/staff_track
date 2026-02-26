@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/tile_date_picker.dart';
 import '../../services/requests_service.dart';
 import '../../services/auth_storage.dart';
 
@@ -311,12 +312,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             builder: (ctx, setSheetState) {
               Future<void> pickDateRange() async {
                 final now = DateTime.now();
-                final range = await showDateRangePicker(
+                final range = await showTileDateRangePicker(
                   context: ctx,
+                  initialStartDate: selectedRange?.start,
+                  initialEndDate: selectedRange?.end,
                   firstDate: DateTime(now.year - 1),
                   lastDate: DateTime(now.year + 1),
-                  initialDateRange:
-                      selectedRange ?? DateTimeRange(start: now, end: now),
+                  title: 'Select Request Dates',
                 );
                 if (range != null) {
                   setSheetState(() {
