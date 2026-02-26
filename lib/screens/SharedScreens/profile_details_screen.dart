@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_header.dart';
-import '../../services/complete_user_profile_service.dart';
 import '../../controllers/auth_provider.dart';
+import '../../widgets/simple_header.dart';
 import '../home_screen.dart';
+import '../../services/complete_user_profile_service.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -63,57 +63,53 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const AppHeader(
-                subtitle: 'Complete Profile',
-              ),
-              if (isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (completeProfile != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildProfileHeader(context, user),
-                      const SizedBox(height: 32),
-                      _buildPersonalInfoSection(context, user),
-                      const SizedBox(height: 24),
-                      _buildWorkInfoSection(context),
-                      const SizedBox(height: 24),
-                      _buildContactInfoSection(context),
-                      const SizedBox(height: 24),
-                      _buildFamilyInfoSection(context),
-                      const SizedBox(height: 24),
-                      _buildLocationInfoSection(context),
-                      const SizedBox(height: 24),
-                      _buildSystemInfoSection(context),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                )
-              else
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Text('Failed to load profile data'),
-                  ),
+      appBar: const SimpleHeader(
+        title: 'Complete Profile',
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: CircularProgressIndicator(),
                 ),
-            ],
-          ),
+              )
+            else if (completeProfile != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildProfileHeader(context, user),
+                    const SizedBox(height: 32),
+                    _buildPersonalInfoSection(context, user),
+                    const SizedBox(height: 24),
+                    _buildWorkInfoSection(context),
+                    const SizedBox(height: 24),
+                    _buildContactInfoSection(context),
+                    const SizedBox(height: 24),
+                    _buildFamilyInfoSection(context),
+                    const SizedBox(height: 24),
+                    _buildLocationInfoSection(context),
+                    const SizedBox(height: 24),
+                    _buildSystemInfoSection(context),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              )
+            else
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: Text('Failed to load profile data'),
+                ),
+              ),
+          ],
         ),
       ),
-      bottomNavigationBar: _ProfileBottomNavigation(),
     );
   }
 

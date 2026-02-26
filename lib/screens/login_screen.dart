@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../controllers/auth_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../controllers/auth_provider.dart';
 import '../services/otp_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';

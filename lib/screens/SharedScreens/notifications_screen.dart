@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_header.dart';
-import '../../services/notifications_service.dart';
 import '../../controllers/auth_provider.dart';
+import '../../widgets/simple_header.dart';
 import '../home_screen.dart';
+import '../../services/notifications_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -116,71 +116,66 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unreadCount = notifications.where((n) => !n.isRead).length;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _onRefresh,
-          color: AppTheme.skyBlue,
-          child: Column(
-            children: [
-              const AppHeader(
-                subtitle: 'Notifications',
-                showNotifications: false, // Hide bell icon in notifications screen
-              ),
-              if (unreadCount > 0)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.skyBlue.withValues(alpha: 0.1),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: AppTheme.skyBlue.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
+      appBar: const SimpleHeader(
+        title: 'Notifications',
+      ),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: Column(
+          children: [
+            if (unreadCount > 0)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AppTheme.skyBlue.withValues(alpha: 0.2),
+                      width: 1,
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.mark_email_read_outlined,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.mark_email_read_outlined,
+                      color: AppTheme.skyBlue,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
+                      style: TextStyle(
                         color: AppTheme.skyBlue,
-                        size: 20,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _markAllAsRead,
+                      child: Text(
+                        'Mark all as read',
                         style: TextStyle(
                           color: AppTheme.skyBlue,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _markAllAsRead,
-                        child: Text(
-                          'Mark all as read',
-                          style: TextStyle(
-                            color: AppTheme.skyBlue,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              Expanded(
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : notifications.isEmpty
-                        ? _buildEmptyState(context)
-                        : _buildNotificationsList(context),
               ),
-            ],
-          ),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : notifications.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildNotificationsList(context),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: const _NotificationsBottomNavigation(),
     );
   }
 

@@ -6,11 +6,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlng;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../controllers/attendance_controller.dart';
-import '../controllers/auth_provider.dart';
-import '../models/models.dart';
-import '../widgets/app_header.dart';
+import '../../theme/app_theme.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../controllers/auth_provider.dart';
+import '../../models/models.dart';
+import '../../widgets/floating_navigation.dart';
 import '../services/permission_service.dart';
 import 'attendance_history_screen.dart';
 import 'home_screen.dart';
@@ -240,40 +240,48 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     final formattedDate = DateFormat('EEEE, MMMM d, y').format(now);
     final formattedTime = DateFormat('hh:mm:ss a').format(now);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadTodayAttendance,
-          color: AppTheme.skyBlue,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppHeader(
-                  subtitle: 'Attendance',
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        'Check in & out',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+    return FloatingNavigation(
+      currentIndex: 1, // Attendance is index 1
+      onTap: (index) {
+        if (index == 1) {
+          // Already on attendance screen, do nothing
+          return;
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(initialIndex: index),
+          ),
+        );
+      },
+      child: RefreshIndicator(
+        onRefresh: _loadTodayAttendance,
+        color: AppTheme.skyBlue,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      'Check in & out',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Manage today\'s time and location in one place.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context)
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage today\'s time and location in one place.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.6),
@@ -817,8 +825,6 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: const _CheckInOutBottomNavigation(),
     );
   }
 

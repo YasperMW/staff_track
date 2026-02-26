@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
+import '../services/holidays_service.dart';
+import '../models/models.dart';
 
 class TileDatePicker extends StatefulWidget {
   final DateTime? initialStartDate;
@@ -31,6 +33,8 @@ class _TileDatePickerState extends State<TileDatePicker> {
   late DateTime _firstDate;
   late DateTime _lastDate;
   String _selectionMode = 'start'; // 'start', 'end', or 'complete'
+  List<PublicHoliday> _holidays = [];
+  bool _isLoadingHolidays = false;
 
   @override
   void initState() {
@@ -48,6 +52,30 @@ class _TileDatePickerState extends State<TileDatePicker> {
       _selectionMode = 'end';
     } else {
       _selectionMode = 'start';
+    }
+    
+    _loadHolidays();
+  }
+
+  Future<void> _loadHolidays() async {
+    setState(() {
+      _isLoadingHolidays = true;
+    });
+
+    try {
+      final holidays = await HolidaysService.getHolidays(year: _currentMonth.year);
+      if (mounted) {
+        setState(() {
+          _holidays = holidays;
+          _isLoadingHolidays = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingHolidays = false;
+        });
+      }
     }
   }
 
@@ -92,6 +120,18 @@ class _TileDatePickerState extends State<TileDatePicker> {
     return _endDate != null && date.isAtSameMomentAs(_endDate!);
   }
 
+  bool _isHoliday(DateTime date) {
+    return _holidays.any((holiday) => holiday?.matchesDate(date) ?? false);
+  }
+
+  PublicHoliday? _getHolidayForDate(DateTime date) {
+    try {
+      return _holidays.firstWhere((holiday) => holiday?.matchesDate(date) ?? false);
+    } catch (e) {
+      return null;
+    }
+  }
+
   void _selectDate(DateTime date) {
     if (!_isDateSelectable(date)) return;
 
@@ -129,15 +169,25 @@ class _TileDatePickerState extends State<TileDatePicker> {
   }
 
   void _previousMonth() {
+    final newMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+    final yearChanged = newMonth.year != _currentMonth.year;
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+      _currentMonth = newMonth;
     });
+    if (yearChanged) {
+      _loadHolidays();
+    }
   }
 
   void _nextMonth() {
+    final newMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+    final yearChanged = newMonth.year != _currentMonth.year;
     setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+      _currentMonth = newMonth;
     });
+    if (yearChanged) {
+      _loadHolidays();
+    }
   }
 
   List<DateTime> _getDaysInMonth() {
@@ -413,6 +463,35 @@ class _TileDatePickerState extends State<TileDatePicker> {
             ),
           ),
 
+          // Holiday Legend
+          if (_holidays.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightGold.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(color: AppTheme.lightGold.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Public Holiday',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Date Tiles Grid
           Container(
             padding: const EdgeInsets.all(24),
@@ -481,6 +560,8 @@ class _TileDatePickerState extends State<TileDatePicker> {
     final isEndDate = _isEndDate(date);
     final isCurrentMonth = date.month == _currentMonth.month;
     final isToday = date.isAtSameMomentAs(DateTime.now());
+    final isHoliday = _isHoliday(date);
+    final holiday = _getHolidayForDate(date);
 
     Color backgroundColor;
     Color textColor;
@@ -497,6 +578,11 @@ class _TileDatePickerState extends State<TileDatePicker> {
       textColor = Colors.white;
       fontWeight = FontWeight.bold;
       border = Border.all(color: Colors.white, width: 2);
+    } else if (isHoliday && !isSelected) {
+      backgroundColor = AppTheme.lightGold.withValues(alpha: 0.2);
+      textColor = AppTheme.paleRed;
+      fontWeight = FontWeight.w600;
+      border = Border.all(color: AppTheme.lightGold.withValues(alpha: 0.5), width: 1);
     } else if (isSelected) {
       backgroundColor = AppTheme.skyBlue.withValues(alpha: 0.1);
       textColor = AppTheme.skyBlue;
@@ -515,9 +601,9 @@ class _TileDatePickerState extends State<TileDatePicker> {
     }
 
     // Add visual feedback for selection mode
-    if (_selectionMode == 'start' && isSelectable && !isSelected) {
+    if (_selectionMode == 'start' && isSelectable && !isSelected && !isHoliday) {
       border = Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3), width: 1);
-    } else if (_selectionMode == 'end' && isSelectable && !isSelected) {
+    } else if (_selectionMode == 'end' && isSelectable && !isSelected && !isHoliday) {
       border = Border.all(color: AppTheme.paleRed.withValues(alpha: 0.3), width: 1);
     }
 
@@ -531,42 +617,59 @@ class _TileDatePickerState extends State<TileDatePicker> {
           borderRadius: BorderRadius.circular(8),
           border: border,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Text(
-              _formatDay(date),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: fontWeight,
-                color: textColor,
-              ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _formatDay(date),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: fontWeight,
+                    color: textColor,
+                  ),
+                ),
+                if (isToday && !isSelected && !isHoliday)
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.lightGold,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                if (isStartDate)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                if (isEndDate)
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+              ],
             ),
-            if (isToday && !isSelected)
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.lightGold,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            if (isStartDate)
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-            if (isEndDate)
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(3),
+            if (isHoliday)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppTheme.paleRed,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
               ),
           ],

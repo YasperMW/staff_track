@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import '../config/app_config.dart';
+import '../models/models.dart';
 import 'auth_storage.dart';
+import 'holidays_service.dart';
 
 class NotificationItem {
   final String id;
@@ -209,6 +212,113 @@ class NotificationsService {
       }
     } catch (e) {
       throw Exception('Error deleting notification: $e');
+    }
+  }
+
+  // Holiday-specific notification methods
+  static Future<void> sendHolidayNotificationToAll(PublicHoliday holiday) async {
+    try {
+      await createNotification(
+        title: '🎉 Public Holiday: ${holiday.name}',
+        message: 'Reminder: ${holiday.name} will be observed on ${DateFormat('MMMM d, yyyy').format(holiday.date)}. Please plan accordingly.',
+        type: 'holiday',
+      );
+    } catch (e) {
+      throw Exception('Error sending holiday notification: $e');
+    }
+  }
+
+  static Future<void> sendUpcomingHolidayNotifications() async {
+    try {
+      final upcomingHolidays = await HolidaysService.getUpcomingHolidays(monthsAhead: 1);
+      
+      for (final holiday in upcomingHolidays) {
+        final daysUntil = holiday.date.difference(DateTime.now()).inDays;
+        
+        if (daysUntil <= 7 && daysUntil > 0) {
+          String message;
+          if (daysUntil == 1) {
+            message = 'Tomorrow is ${holiday.name}! Please make necessary arrangements.';
+          } else if (daysUntil <= 3) {
+            message = '${holiday.name} is coming up in $daysUntil days! Please plan accordingly.';
+          } else {
+            message = '${holiday.name} will be observed in $daysUntil days on ${DateFormat('EEEE, MMMM d').format(holiday.date)}.';
+          }
+          
+          await createNotification(
+            title: '📅 Upcoming Holiday: ${holiday.name}',
+            message: message,
+            type: 'holiday_reminder',
+          );
+        }
+      }
+    } catch (e) {
+      throw Exception('Error sending upcoming holiday notifications: $e');
+    }
+  }
+
+  static Future<void> sendHolidayScheduleChangeNotification(PublicHoliday holiday) async {
+    try {
+      await createNotification(
+        title: '📝 Holiday Schedule Update',
+        message: 'Holiday schedule updated: ${holiday.name} on ${DateFormat('MMMM d, yyyy').format(holiday.date)}. Please check your work schedule.',
+        type: 'holiday_update',
+      );
+    } catch (e) {
+      throw Exception('Error sending holiday schedule change notification: $e');
+    }
+  }
+
+  // Announcement-specific notification methods
+  static Future<void> sendAnnouncementNotificationToTarget(Announcement announcement) async {
+    try {
+      await createNotification(
+        title: announcement.typeDisplay,
+        message: announcement.message,
+        type: 'announcement',
+        recipientUserId: null, // Will be handled by backend to send to target audience
+      );
+    } catch (e) {
+      throw Exception('Error sending announcement notification: $e');
+    }
+  }
+
+  static Future<void> sendAnnouncementNotificationToAll(Announcement announcement) async {
+    try {
+      await createNotification(
+        title: '${announcement.typeDisplay} - ${announcement.targetAudience}',
+        message: announcement.message,
+        type: 'announcement',
+        recipientUserId: null, // Will be handled by backend to send to all
+      );
+    } catch (e) {
+      throw Exception('Error sending announcement notification to all: $e');
+    }
+  }
+
+  static Future<void> sendAnnouncementNotificationToDepartment(Announcement announcement, String department) async {
+    try {
+      await createNotification(
+        title: '${announcement.typeDisplay} - $department',
+        message: announcement.message,
+        type: 'announcement',
+        recipientUserId: null, // Will be handled by backend to send to department
+      );
+    } catch (e) {
+      throw Exception('Error sending announcement notification to department: $e');
+    }
+  }
+
+  static Future<void> sendAnnouncementNotificationToRole(Announcement announcement, String department, String role) async {
+    try {
+      await createNotification(
+        title: '${announcement.typeDisplay} - $department - $role',
+        message: announcement.message,
+        type: 'announcement',
+        recipientUserId: null, // Will be handled by backend to send to role
+      );
+    } catch (e) {
+      throw Exception('Error sending announcement notification to role: $e');
     }
   }
 }

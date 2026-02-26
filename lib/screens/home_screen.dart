@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
-import '../controllers/auth_provider.dart';
-import '../controllers/attendance_controller.dart';
-import '../models/models.dart';
+import '../../theme/app_theme.dart';
+import '../../controllers/auth_provider.dart';
+import '../../controllers/attendance_controller.dart';
+import '../../models/models.dart';
+import '../../widgets/floating_navigation.dart';
 import 'staff/dashboard_screen.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'admin/admin_attendance_screen.dart';
@@ -12,6 +13,7 @@ import 'admin/admin_requests_screen.dart';
 import 'staff/attendance_screen.dart';
 import 'staff/reports_screen.dart';
 import 'staff/requests_screen.dart';
+import 'staff/announcements_screen.dart';
 import 'check_in_out_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -92,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return [
       const DashboardScreen(),
       const AttendanceScreen(),
-      const ReportsScreen(),
+      const AnnouncementsScreen(),
       const RequestsScreen(),
     ];
   }
@@ -115,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
         label: 'Attendance',
       ),
       BottomNavigationBarItem(
-        icon: _buildNavIcon(2, isAdmin ? Icons.assignment_turned_in : Icons.bar_chart, isAdmin ? Icons.assignment_turned_in_outlined : Icons.bar_chart_outlined),
-        label: isAdmin ? 'Requests' : 'Reports',
+        icon: _buildNavIcon(2, isAdmin ? Icons.assignment_turned_in : Icons.announcement, isAdmin ? Icons.assignment_turned_in_outlined : Icons.announcement_outlined),
+        label: isAdmin ? 'Requests' : 'Announcements',
       ),
       BottomNavigationBarItem(
         icon: _buildNavIcon(3, isAdmin ? Icons.analytics : Icons.description, isAdmin ? Icons.analytics_outlined : Icons.description_outlined),
@@ -147,34 +149,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = _getScreens();
-    return Scaffold(
-      body: IndexedStack(
+    return FloatingNavigation(
+      currentIndex: _currentIndex,
+      onTap: (index) {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      child: IndexedStack(
         index: _currentIndex,
         children: screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.withValues(alpha: 0.2), width: 0.5),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          selectedItemColor: AppTheme.skyBlue,
-          unselectedItemColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          items: _getNavItems(),
-        ),
       ),
     );
   }

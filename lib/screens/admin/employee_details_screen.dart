@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_header.dart';
+import '../../widgets/simple_header.dart';
 import '../../services/employees_service.dart';
 
 class EmployeeDetailsScreen extends StatefulWidget {
@@ -62,13 +62,12 @@ class _EmployeeDetailsScreenState extends State<EmployeeDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: const SimpleHeader(
+        title: 'Employee Details',
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(
-              subtitle: 'Employee Directory',
-            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
