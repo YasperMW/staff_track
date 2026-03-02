@@ -57,7 +57,9 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
     setState(() {
       _filteredAnnouncements = _announcements.where((announcement) {
         final matchesSearch = announcement.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            announcement.message.toLowerCase().contains(_searchQuery.toLowerCase());
+            announcement.message.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            announcement.targetAudience.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            (announcement.createdBy?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
         
         final matchesFilter = _selectedFilter == 'all' ||
             (_selectedFilter == 'active' && announcement.isValid) ||

@@ -60,7 +60,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     setState(() {
       _filteredAnnouncements = _announcements.where((announcement) {
         final matchesSearch = announcement.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            announcement.message.toLowerCase().contains(_searchQuery.toLowerCase());
+            announcement.message.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            announcement.targetAudience.toLowerCase().contains(_searchQuery.toLowerCase());
         
         final matchesFilter = _selectedFilter == 'all' || announcement.type == _selectedFilter;
         
@@ -103,11 +104,15 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
             ),
           ),
           SliverFillRemaining(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppTheme.skyBlue),
-                  )
-                : _buildAnnouncementsList(),
+            child: RefreshIndicator(
+              onRefresh: _loadAnnouncements,
+              color: AppTheme.skyBlue,
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppTheme.skyBlue),
+                    )
+                  : _buildAnnouncementsList(),
+            ),
           ),
         ],
       ),
@@ -265,12 +270,14 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   Widget _buildAnnouncementCard(Announcement announcement) {
     final typeColor = Color(int.parse(announcement.typeColor.replaceFirst('#', '0xFF')));
+    final isNew = DateTime.now().difference(announcement.createdAt).inHours < 24;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: isNew ? Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3), width: 1) : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -303,12 +310,34 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        announcement.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              announcement.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (isNew)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.skyBlue,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'NEW',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(

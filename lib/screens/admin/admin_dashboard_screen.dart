@@ -165,6 +165,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    await Future.wait([
+      _loadTodayAttendance(),
+      _loadRequestsSummary(),
+      _loadTeamTodaySummary(),
+      _loadTeamTodayList(),
+      _loadRecentAnnouncements(),
+    ]);
+  }
+
   String _getAttendanceStatusText() {
     if (todayAttendance == null) {
       return 'Ready to check in';
@@ -197,44 +207,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Dashboard',
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Dashboard',
+                ),
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 16),
-                _buildGreeting(context),
-                    const SizedBox(height: 24),
-                    _buildClockInCard(),
-                    const SizedBox(height: 24),
-                    _buildQuickAnalyticsSnapshot(context),
-                    const SizedBox(height: 32),
-                    _buildRecentAnnouncementsCard(context),
-                    const SizedBox(height: 32),
-                    // Holidays card removed; holidays now appear within announcements
-                    _buildRequestsSummaryCard(context),
-                    const SizedBox(height: 32),
-                    _buildTeamAttendanceHeader(context),
-                    const SizedBox(height: 16),
-                    _buildTeamAttendanceList(context),
-                    const SizedBox(height: 24),
-              ]),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 16),
+                  _buildGreeting(context),
+                      const SizedBox(height: 24),
+                      _buildClockInCard(),
+                      const SizedBox(height: 24),
+                      _buildQuickAnalyticsSnapshot(context),
+                      const SizedBox(height: 32),
+                      _buildRecentAnnouncementsCard(context),
+                      const SizedBox(height: 32),
+                      // Holidays card removed; holidays now appear within announcements
+                      _buildRequestsSummaryCard(context),
+                      const SizedBox(height: 32),
+                      _buildTeamAttendanceHeader(context),
+                      const SizedBox(height: 16),
+                      _buildTeamAttendanceList(context),
+                      const SizedBox(height: 24),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
