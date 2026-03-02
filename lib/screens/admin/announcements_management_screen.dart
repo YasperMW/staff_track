@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
 import '../../services/announcements_service.dart';
+import '../../services/holidays_service.dart';
 import '../../services/notifications_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
+import '../../widgets/single_date_picker.dart';
+import 'holidays_management_screen.dart';
 
 class AnnouncementsManagementScreen extends StatefulWidget {
   const AnnouncementsManagementScreen({super.key});
@@ -170,6 +173,86 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send notifications: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _editHolidayViaAnnouncements(Announcement announcement) async {
+    try {
+      final holidays = await HolidaysService.getHolidays();
+      final match = holidays.firstWhere((h) => h.id == announcement.id, orElse: () => throw Exception('Holiday not found'));
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => EditHolidaySheet(
+          holiday: match,
+          onHolidayUpdated: () {
+            _loadAnnouncements();
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load holiday: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteHolidayFromAnnouncement(Announcement announcement) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Holiday'),
+        content: Text('Are you sure you want to delete "${announcement.title}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete', style: TextStyle(color: AppTheme.paleRed))),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        await HolidaysService.deleteHoliday(announcement.id);
+        setState(() {
+          _announcements.removeWhere((a) => a.id == announcement.id);
+          _filterAnnouncements();
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Holiday deleted successfully')),
+          );
+        }
+      } catch (e) {
+        _loadAnnouncements();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete holiday: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _sendHolidayNotification(Announcement announcement) async {
+    try {
+      final holidays = await HolidaysService.getHolidays();
+      final match = holidays.firstWhere((h) => h.id == announcement.id, orElse: () => throw Exception('Holiday not found'));
+      await HolidaysService.sendHolidayNotifications(match);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Holiday notification sent')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send holiday notification: $e')),
         );
       }
     }
@@ -401,16 +484,30 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
                   onSelected: (action) {
                     switch (action) {
                       case 'edit':
-                        _showEditAnnouncementSheet(announcement);
+                        if (announcement.type == 'holiday') {
+                          _editHolidayViaAnnouncements(announcement);
+                        } else {
+                          _showEditAnnouncementSheet(announcement);
+                        }
                         break;
                       case 'notify':
-                        _sendNotifications(announcement);
+                        if (announcement.type == 'holiday') {
+                          _sendHolidayNotification(announcement);
+                        } else {
+                          _sendNotifications(announcement);
+                        }
                         break;
                       case 'toggle':
-                        _toggleAnnouncementStatus(announcement);
+                        if (announcement.type != 'holiday') {
+                          _toggleAnnouncementStatus(announcement);
+                        }
                         break;
                       case 'delete':
-                        _deleteAnnouncement(announcement);
+                        if (announcement.type == 'holiday') {
+                          _deleteHolidayFromAnnouncement(announcement);
+                        } else {
+                          _deleteAnnouncement(announcement);
+                        }
                         break;
                     }
                   },
@@ -435,19 +532,20 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
                         ],
                       ),
                     ),
-                    PopupMenuItem(
-                      value: 'toggle',
-                      child: Row(
-                        children: [
-                          Icon(
-                            announcement.isActive ? Icons.visibility_off : Icons.visibility,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(announcement.isActive ? 'Deactivate' : 'Activate'),
-                        ],
+                    if (announcement.type != 'holiday')
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Row(
+                          children: [
+                            Icon(
+                              announcement.isActive ? Icons.visibility_off : Icons.visibility,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(announcement.isActive ? 'Deactivate' : 'Activate'),
+                          ],
+                        ),
                       ),
-                    ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -562,6 +660,8 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
 
   IconData _getAnnouncementTypeIcon(String type) {
     switch (type) {
+      case 'holiday':
+        return Icons.celebration;
       case 'urgent':
         return Icons.warning;
       case 'policy':
@@ -615,6 +715,9 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
   String _selectedType = 'general';
+  DateTime? _holidayDate;
+  String _holidayKind = 'Institutional Holiday';
+  bool _holidayRecurring = false;
   List<String> _selectedDepartments = [];  // Changed to support multiple departments
   String? _selectedRole;
   bool _isActive = true;
@@ -629,11 +732,12 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
   }
 
   Future<void> _selectExpirationDate() async {
-    final date = await showDatePicker(
+    final date = await showSingleDatePicker(
       context: context,
-      initialDate: _expiresAt ?? DateTime.now().add(const Duration(days: 7)),
+      initialDate: _expiresAt,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      title: 'Select Expiration Date',
     );
 
     if (date != null) {
@@ -651,22 +755,52 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
     });
 
     try {
-      final announcement = await AnnouncementsService.createAnnouncement(
-        title: _titleController.text.trim(),
-        message: _messageController.text.trim(),
-        type: _selectedType,
-        targetDepartments: _selectedDepartments.isNotEmpty ? _selectedDepartments : null,
-        targetRole: _selectedRole,
-        isActive: _isActive,
-        expiresAt: _expiresAt,
-      );
-
-      if (mounted) {
-        Navigator.of(context).pop();
-        widget.onAnnouncementCreated(announcement);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Announcement created successfully')),
+      if (_selectedType == 'holiday') {
+        if (_holidayDate == null) {
+          throw Exception('Please select a holiday date');
+        }
+        final holiday = await HolidaysService.createHoliday(
+          name: _titleController.text.trim(),
+          date: _holidayDate!,
+          description: _messageController.text.trim().isEmpty ? null : _messageController.text.trim(),
+          type: _holidayKind,
+          category: 'institutional',
+          isRecurring: _holidayRecurring,
         );
+        if (mounted) {
+          Navigator.of(context).pop();
+          final pseudoAnnouncement = Announcement(
+            id: holiday.id,
+            title: holiday.name,
+            message: 'Holiday on ${DateFormat('yyyy-MM-dd').format(holiday.date)}'
+                '${holiday.description != null && holiday.description!.isNotEmpty ? ' • ${holiday.description}' : ''}',
+            type: 'holiday',
+            isActive: true,
+            createdAt: DateTime.now(),
+          );
+          widget.onAnnouncementCreated(pseudoAnnouncement);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Holiday created and listed in announcements')),
+          );
+        }
+      } else {
+        final announcement = await AnnouncementsService.createAnnouncement(
+          title: _titleController.text.trim(),
+          message: _messageController.text.trim(),
+          type: _selectedType,
+          targetDepartments: _selectedDepartments.isNotEmpty ? _selectedDepartments : null,
+          targetRole: _selectedRole,
+          isActive: _isActive,
+          expiresAt: _expiresAt,
+        );
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          widget.onAnnouncementCreated(announcement);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Announcement created successfully')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -754,6 +888,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                   DropdownMenuItem(value: 'urgent', child: Text('🚨 Urgent')),
                   DropdownMenuItem(value: 'policy', child: Text('📋 Policy Update')),
                   DropdownMenuItem(value: 'event', child: Text('🎉 Event')),
+                  DropdownMenuItem(value: 'holiday', child: Text('🎉 Holiday')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -764,7 +899,87 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                 },
               ),
               const SizedBox(height: 16),
-              // Multi-department selection for CreateAnnouncementSheet
+              if (_selectedType == 'holiday') ...[
+                const Text(
+                  'Holiday Date',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showSingleDatePicker(
+                      context: context,
+                      initialDate: _holidayDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      title: 'Select Holiday Date',
+                    );
+                    if (date != null) {
+                      setState(() => _holidayDate = date);
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today),
+                        const SizedBox(width: 12),
+                        Text(
+                          _holidayDate != null
+                              ? DateFormat('MMMM d, yyyy').format(_holidayDate!)
+                              : 'Select Holiday Date',
+                          style: TextStyle(
+                            color: _holidayDate != null ? null : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _holidayKind,
+                  decoration: const InputDecoration(
+                    labelText: 'Holiday Type',
+                    border: OutlineInputBorder(),
+                    helperText: 'Label used for categorizing this holiday',
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Institutional Holiday', child: Text('Institutional Holiday')),
+                    DropdownMenuItem(value: 'Custom', child: Text('Custom')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _holidayKind = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Recurring Yearly'),
+                  subtitle: const Text('This holiday will repeat every year'),
+                  value: _holidayRecurring,
+                  onChanged: (value) {
+                    setState(() {
+                      _holidayRecurring = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 16),
+              ],
+              const Text(
+                'Audience',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -821,6 +1036,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                   decoration: const InputDecoration(
                     labelText: 'Target Role (Optional)',
                     border: OutlineInputBorder(),
+                    helperText: 'Choose a role if you need to narrow down',
                   ),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Roles')),
@@ -836,6 +1052,13 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                 ),
               ],
               const SizedBox(height: 16),
+              const Divider(height: 32),
+              const Text(
+                'Scheduling & Visibility',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              if (_selectedType != 'holiday')
               GestureDetector(
                 onTap: _selectExpirationDate,
                 child: Container(
@@ -864,6 +1087,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (_selectedType != 'holiday')
               CheckboxListTile(
                 title: const Text('Active Immediately'),
                 subtitle: const Text('Announcement will be visible to target audience'),
@@ -887,7 +1111,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                   ),
                   child: _isSubmitting
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Create Announcement'),
+                      : Text(_selectedType == 'holiday' ? 'Create Holiday' : 'Create Announcement'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -976,11 +1200,12 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
   }
 
   Future<void> _selectExpirationDate() async {
-    final date = await showDatePicker(
+    final date = await showSingleDatePicker(
       context: context,
-      initialDate: _expiresAt ?? DateTime.now().add(const Duration(days: 7)),
+      initialDate: _expiresAt,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      title: 'Select Expiration Date',
     );
 
     if (date != null) {

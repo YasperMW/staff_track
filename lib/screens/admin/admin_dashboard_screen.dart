@@ -6,12 +6,10 @@ import '../../widgets/app_header.dart';
 import '../../controllers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../services/requests_service.dart';
-import '../../services/holidays_service.dart';
 import '../../services/announcements_service.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/attendance_controller.dart';
 import '../check_in_out_screen.dart';
-import 'holidays_management_screen.dart';
 import 'announcements_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -35,8 +33,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _teamAbsentCount = 0;
   bool _isLoadingTeamAttendance = false;
   List<TeamAttendanceMember> _teamAttendance = [];
-  List<PublicHoliday> _upcomingHolidays = [];
-  bool _isLoadingHolidays = false;
   List<Announcement> _recentAnnouncements = [];
   bool _isLoadingAnnouncements = false;
 
@@ -49,7 +45,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadRequestsSummary();
     _loadTeamTodaySummary();
     _loadTeamTodayList();
-    _loadUpcomingHolidays();
     _loadRecentAnnouncements();
   }
 
@@ -150,26 +145,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _loadUpcomingHolidays() async {
-    setState(() {
-      _isLoadingHolidays = true;
-    });
-
-    try {
-      final holidays = await HolidaysService.getUpcomingHolidays(monthsAhead: 3);
-      if (!mounted) return;
-      setState(() {
-        _upcomingHolidays = holidays.take(3).toList(); // Show only next 3 holidays
-        _isLoadingHolidays = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoadingHolidays = false;
-      });
-    }
-  }
-
   Future<void> _loadRecentAnnouncements() async {
     setState(() {
       _isLoadingAnnouncements = true;
@@ -249,8 +224,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 32),
                     _buildRecentAnnouncementsCard(context),
                     const SizedBox(height: 32),
-                    _buildUpcomingHolidaysCard(context),
-                    const SizedBox(height: 32),
+                    // Holidays card removed; holidays now appear within announcements
                     _buildRequestsSummaryCard(context),
                     const SizedBox(height: 32),
                     _buildTeamAttendanceHeader(context),
@@ -404,15 +378,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.lightGold, AppTheme.paleRed],
-        ),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.lightGold.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -422,13 +392,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
+            Container(
+              height: 6,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [AppTheme.lightGold, AppTheme.paleRed],
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+            ),
+            const SizedBox(height: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Pending Team Requests',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -440,12 +422,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: AppTheme.paleRed.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         'Action Required',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppTheme.paleRed, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -466,8 +448,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.lightGold,
+                  backgroundColor: AppTheme.paleRed,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -493,8 +475,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           fit: BoxFit.scaleDown,
           child: Text(
             '$count',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -504,7 +486,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             fontSize: 11,
           ),
           textAlign: TextAlign.center,
@@ -595,15 +577,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.lightGold, AppTheme.paleRed],
-        ),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.lightGold.withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -613,13 +591,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
+            Container(
+              height: 6,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [AppTheme.skyBlue, AppTheme.lightGold],
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+            ),
+            const SizedBox(height: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Recent Announcements',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -631,12 +621,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: AppTheme.skyBlue.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
                         'Latest 3',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppTheme.skyBlue, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -648,7 +638,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.skyBlue),
                 ),
               )
             else if (_recentAnnouncements.isEmpty)
@@ -657,13 +647,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Icon(
                     Icons.announcement_outlined,
                     size: 48,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'No announcements yet',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -680,7 +670,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -688,12 +678,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: typeColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Icon(
                               _getAnnouncementTypeIcon(announcement.type),
-                              color: Colors.white,
+                              color: typeColor,
                               size: 14,
                             ),
                           ),
@@ -704,8 +694,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               children: [
                                 Text(
                                   announcement.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),
@@ -716,7 +706,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 Text(
                                   announcement.targetAudience,
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                     fontSize: 10,
                                   ),
                                 ),
@@ -726,14 +716,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             decoration: BoxDecoration(
-                              color: typeColor.withValues(alpha: 0.3),
+                              color: typeColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              announcement.typeDisplay.split(' ')[1], // Get just the type name
-                              style: const TextStyle(
+                              announcement.typeDisplay.split(' ')[1],
+                              style: TextStyle(
                                 fontSize: 8,
-                                color: Colors.white,
+                                color: typeColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -757,8 +747,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ).then((_) => _loadRecentAnnouncements());
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.lightGold,
+                  backgroundColor: AppTheme.skyBlue,
+                  foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -790,188 +780,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Widget _buildUpcomingHolidaysCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.skyBlue, AppTheme.lightGold],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.skyBlue.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Upcoming Public Holidays',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'Next 3 months',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_isLoadingHolidays)
-              const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            else if (_upcomingHolidays.isEmpty)
-              Column(
-                children: [
-                  Icon(
-                    Icons.event_busy,
-                    size: 48,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No upcoming holidays',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Column(
-                children: _upcomingHolidays.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final holiday = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: index < _upcomingHolidays.length - 1 ? 16.0 : 0.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              _getHolidayTypeIcon(holiday.type),
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  holiday.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat('MMM d, yyyy').format(holiday.date),
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (holiday.isRecurring)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Yearly',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HolidaysManagementScreen(),
-                    ),
-                  ).then((_) => _loadUpcomingHolidays());
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.skyBlue,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  'Manage Holidays',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Holidays card removed
 
   Color _getHolidayTypeColor(String? type) {
     switch (type) {
