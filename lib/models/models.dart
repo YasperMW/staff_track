@@ -198,6 +198,26 @@ class AppUser {
     required this.profileImage,
   });
 
+  AppUser copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? phone,
+    String? role,
+    String? department,
+    String? profileImage,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      department: department ?? this.department,
+      profileImage: profileImage ?? this.profileImage,
+    );
+  }
+
   bool get isApprover {
     final approverRoles = [
       'HR Admin',

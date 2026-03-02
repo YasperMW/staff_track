@@ -36,7 +36,7 @@ AppUser appUserFromMap(Map<String, dynamic> map) {
     phone: map['phone'] as String? ?? map['phone_number'] as String? ?? '',
     role: map['role'] as String? ?? '',
     department: map['department'] as String? ?? '',
-    profileImage: '',
+    profileImage: map['profile_photo_url'] as String? ?? '',
   );
 }
 
@@ -130,5 +130,21 @@ class AuthProvider extends ChangeNotifier {
     _user = appUserFromMap(userMap);
     await AuthStorage.saveUser(userMap);
     notifyListeners();
+  }
+
+  /// Update just the profile photo locally.
+  Future<void> updateProfilePhotoLocally(String photoUrl) async {
+    if (_user != null) {
+      _user = _user!.copyWith(profileImage: photoUrl);
+      
+      // Also update in storage
+      final userMap = await AuthStorage.getUser();
+      if (userMap != null) {
+        userMap['profile_photo_url'] = photoUrl;
+        await AuthStorage.saveUser(userMap);
+      }
+      
+      notifyListeners();
+    }
   }
 }

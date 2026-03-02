@@ -286,7 +286,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        String selectedType = 'Leave';
+        String selectedType = 'Annual Leave';
         DateTimeRange? selectedRange;
         bool isSubmitting = false;
 
@@ -377,19 +377,40 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       style: TextStyle(fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         ChoiceChip(
-                          label: const Text('Leave'),
-                          selected: selectedType == 'Leave',
+                          label: const Text('Annual Leave'),
+                          selected: selectedType == 'Annual Leave',
                           onSelected: (v) {
                             if (!v) return;
                             setSheetState(() {
-                              selectedType = 'Leave';
+                              selectedType = 'Annual Leave';
                             });
                           },
                         ),
-                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Sick Leave'),
+                          selected: selectedType == 'Sick Leave',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Sick Leave';
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: const Text('Personal Leave'),
+                          selected: selectedType == 'Personal Leave',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Personal Leave';
+                            });
+                          },
+                        ),
                         ChoiceChip(
                           label: const Text('Work From Home'),
                           selected: selectedType == 'Work From Home',

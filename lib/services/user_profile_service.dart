@@ -83,6 +83,26 @@ class UserProfile {
 }
 
 class UserProfileService {
+  static Future<UserMetrics?> getUserMetrics(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/attendance/my-profile-metrics'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return UserMetrics.fromJson(data);
+      } else {
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<UserProfile?> getUserProfile(String token) async {
     try {
       final response = await http.get(
@@ -105,5 +125,54 @@ class UserProfileService {
       print('Error fetching user profile: $e');
       return null;
     }
+  }
+
+  static Future<bool> updateProfilePhoto(String token, String photoUrl) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/profile/update-photo'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'profile_photo_url': photoUrl,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      } else {
+        print('Failed to update profile photo: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error updating profile photo: $e');
+      return false;
+    }
+  }
+}
+
+class UserMetrics {
+  final int workingDays;
+  final double onTimeRate;
+  final int leaveUsed;
+  final int year;
+
+  UserMetrics({
+    required this.workingDays,
+    required this.onTimeRate,
+    required this.leaveUsed,
+    required this.year,
+  });
+
+  factory UserMetrics.fromJson(Map<String, dynamic> json) {
+    return UserMetrics(
+      workingDays: (json['working_days'] as num?)?.toInt() ?? 0,
+      onTimeRate: (json['on_time_rate'] as num?)?.toDouble() ?? 0.0,
+      leaveUsed: (json['leave_used'] as num?)?.toInt() ?? 0,
+      year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
+    );
   }
 }

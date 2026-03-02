@@ -51,6 +51,46 @@ class _RequestsScreenState extends State<RequestsScreen> {
     await _loadRequests();
   }
 
+  int _parseDuration(String? duration) {
+    if (duration == null) return 0;
+    final match = RegExp(r'(\d+)').firstMatch(duration);
+    if (match != null) {
+      return int.parse(match.group(1)!);
+    }
+    return 0;
+  }
+
+  Map<String, int> _calculateStats() {
+    int annualUsed = 0;
+    int sickUsed = 0;
+    int personalUsed = 0;
+
+    for (var request in requestsHistory) {
+      // The status from API is capitalized in get_my_requests
+      if (request['status'] == 'Approved') {
+        int days = _parseDuration(request['duration']);
+        String type = (request['type'] as String).toLowerCase();
+
+        if (type.contains('annual')) {
+          annualUsed += days;
+        } else if (type.contains('sick')) {
+          sickUsed += days;
+        } else if (type.contains('personal')) {
+          personalUsed += days;
+        } else if (type == 'leave') {
+          // Default 'Leave' to Annual if no specific type
+          annualUsed += days;
+        }
+      }
+    }
+
+    return {
+      'annual': annualUsed,
+      'sick': sickUsed,
+      'personal': personalUsed,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,13 +171,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Widget _buildSummaryGrid(BuildContext context) {
+    final stats = _calculateStats();
     return Row(
       children: [
-        Expanded(child: _buildSummaryCard(context, '12', '/ 21 Annual')),
+        Expanded(child: _buildSummaryCard(context, '${stats['annual']}', '/ 21 Annual')),
         const SizedBox(width: 12),
-        Expanded(child: _buildSummaryCard(context, '8', '/ 10 Sick')),
+        Expanded(child: _buildSummaryCard(context, '${stats['sick']}', '/ 10 Sick')),
         const SizedBox(width: 12),
-        Expanded(child: _buildSummaryCard(context, '3', '/ 5 Personal')),
+        Expanded(child: _buildSummaryCard(context, '${stats['personal']}', '/ 5 Personal')),
       ],
     );
   }
@@ -323,7 +364,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        String selectedType = 'Leave';
+        String selectedType = 'Annual Leave';
         DateTimeRange? selectedRange;
         bool isSubmitting = false;
 
@@ -414,19 +455,40 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       style: TextStyle(fontWeight: FontWeight.w500),
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         ChoiceChip(
-                          label: const Text('Leave'),
-                          selected: selectedType == 'Leave',
+                          label: const Text('Annual Leave'),
+                          selected: selectedType == 'Annual Leave',
                           onSelected: (v) {
                             if (!v) return;
                             setSheetState(() {
-                              selectedType = 'Leave';
+                              selectedType = 'Annual Leave';
                             });
                           },
                         ),
-                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Sick Leave'),
+                          selected: selectedType == 'Sick Leave',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Sick Leave';
+                            });
+                          },
+                        ),
+                        ChoiceChip(
+                          label: const Text('Personal Leave'),
+                          selected: selectedType == 'Personal Leave',
+                          onSelected: (v) {
+                            if (!v) return;
+                            setSheetState(() {
+                              selectedType = 'Personal Leave';
+                            });
+                          },
+                        ),
                         ChoiceChip(
                           label: const Text('Work From Home'),
                           selected: selectedType == 'Work From Home',
