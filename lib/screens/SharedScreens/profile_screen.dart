@@ -7,6 +7,7 @@ import '../../widgets/simple_header.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
+import '../../services/image_service.dart';
 import 'profile_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -19,6 +20,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? userProfile;
   bool isLoadingProfile = false;
+  bool isLoadingMetrics = false;
+  int workingDays = 0;
+  double onTimeRate = 0.0;
+  int leaveUsed = 0;
 
   @override
   void initState() {
@@ -38,11 +43,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final profile = await UserProfileService.getUserProfile(token);
+      setState(() {
+        isLoadingMetrics = true;
+      });
+      final metrics = await UserProfileService.getUserMetrics(token);
       if (mounted) {
         print('Profile data received: ${profile?.toJson()}');
         setState(() {
           userProfile = profile;
           isLoadingProfile = false;
+          if (metrics != null) {
+            workingDays = metrics.workingDays;
+            onTimeRate = metrics.onTimeRate;
+            leaveUsed = metrics.leaveUsed;
+          }
+          isLoadingMetrics = false;
         });
       }
     } catch (e) {
@@ -50,6 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         setState(() {
           isLoadingProfile = false;
+          isLoadingMetrics = false;
         });
       }
     }
@@ -96,6 +112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileCard(BuildContext context, user) {
+    final authProvider = context.read<AuthProvider>();
+    final ImageService imageService = ImageService();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -106,18 +125,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: const BoxDecoration(
-              color: AppTheme.skyBlue,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 50,
-            ),
+          Stack(
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppTheme.skyBlue,
+                    width: 2,
+                  ),
+                ),
+                child: user.profileImage.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          user.profileImage,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: AppTheme.skyBlue,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person_outline,
+                              color: AppTheme.skyBlue,
+                              size: 60,
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_outline,
+                        color: AppTheme.skyBlue,
+                        size: 60,
+                      ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () async {
+                    // Show image source selection dialog
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return SafeArea(
+                          child: Wrap(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.camera_alt),
+                                title: const Text('Take Photo'),
+                                onTap: () async {
+                                  Navigator.of(context).pop();
+                                  final imagePath = await imageService.takePhoto();
+                                  if (imagePath != null) {
+                                    _uploadAndUpdatePhoto(imagePath);
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library),
+                                title: const Text('Choose from Gallery'),
+                                onTap: () async {
+                                  Navigator.of(context).pop();
+                                  final imagePath = await imageService.pickImage();
+                                  if (imagePath != null) {
+                                    _uploadAndUpdatePhoto(imagePath);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.skyBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Text(
@@ -170,14 +276,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _uploadAndUpdatePhoto(String imagePath) async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.token;
+    if (token == null) return;
+
+    final ImageService imageService = ImageService();
+
+    if (!mounted) return;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.skyBlue),
+              const SizedBox(height: 20),
+              Text(
+                'Updating profile photo...',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This may take a moment',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // 1. Upload the image to get a URL
+      final uploadedUrl = await imageService.uploadImage(imagePath);
+      if (uploadedUrl != null) {
+        // 2. Update the user profile in the backend
+        final success = await UserProfileService.updateProfilePhoto(token, uploadedUrl);
+        if (success) {
+          // 3. Update the local state in AuthProvider
+          await authProvider.updateProfilePhotoLocally(uploadedUrl);
+          
+          // 4. Reload the profile data to ensure everything is in sync
+          await _loadUserProfile();
+          
+          if (mounted) {
+            Navigator.of(context).pop(); // Close progress dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile photo updated successfully!')),
+            );
+          }
+        } else {
+          throw Exception('Failed to update profile photo in backend');
+        }
+      } else {
+        throw Exception('Failed to upload image');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   Widget _buildStatsRow(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _buildStatCard(context, '248', 'Working Days')),
+        Expanded(child: _buildStatCard(context, '$workingDays', 'Working Days')),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, '97%', 'On Time Rate')),
+        Expanded(child: _buildStatCard(context, '${onTimeRate.toStringAsFixed(1)}%', 'On Time Rate')),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, '9', 'Leave Used')),
+        Expanded(child: _buildStatCard(context, '$leaveUsed', 'Leave Used')),
       ],
     );
   }

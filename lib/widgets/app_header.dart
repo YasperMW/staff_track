@@ -153,13 +153,18 @@ class AppHeader extends StatelessWidget {
       child: CircleAvatar(
         radius: 18,
         backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
-        child: Text(
-          initials,
-          style: const TextStyle(
-            color: AppTheme.skyBlue,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        backgroundImage: user != null && user.profileImage.isNotEmpty
+            ? NetworkImage(user.profileImage)
+            : null,
+        child: user == null || user.profileImage.isEmpty
+            ? Text(
+                initials,
+                style: const TextStyle(
+                  color: AppTheme.skyBlue,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : null,
       ),
     );
   }

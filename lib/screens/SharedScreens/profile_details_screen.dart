@@ -5,6 +5,8 @@ import '../../controllers/auth_provider.dart';
 import '../../widgets/simple_header.dart';
 import '../home_screen.dart';
 import '../../services/complete_user_profile_service.dart';
+import '../../services/image_service.dart';
+import '../../services/user_profile_service.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -114,6 +116,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   }
 
   Widget _buildProfileHeader(BuildContext context, user) {
+    final authProvider = context.read<AuthProvider>();
+    final ImageService imageService = ImageService();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -134,19 +139,102 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-            ),
-            child: const Icon(
-              Icons.person_outline,
-              color: Colors.white,
-              size: 50,
-            ),
+          Stack(
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                ),
+                child: user.profileImage.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          user.profileImage,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person_outline,
+                              color: Colors.white,
+                              size: 60,
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                        size: 60,
+                      ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: () async {
+                    // Show image source selection dialog
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return SafeArea(
+                          child: Wrap(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.camera_alt),
+                                title: const Text('Take Photo'),
+                                onTap: () async {
+                                  Navigator.of(context).pop();
+                                  final imagePath = await imageService.takePhoto();
+                                  if (imagePath != null) {
+                                    _uploadAndUpdatePhoto(imagePath);
+                                  }
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library),
+                                title: const Text('Choose from Gallery'),
+                                onTap: () async {
+                                  Navigator.of(context).pop();
+                                  final imagePath = await imageService.pickImage();
+                                  if (imagePath != null) {
+                                    _uploadAndUpdatePhoto(imagePath);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: AppTheme.skyBlue,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Text(
@@ -195,6 +283,80 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _uploadAndUpdatePhoto(String imagePath) async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.token;
+    if (token == null) return;
+
+    final ImageService imageService = ImageService();
+
+    if (!mounted) return;
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.skyBlue),
+              const SizedBox(height: 20),
+              Text(
+                'Updating profile photo...',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This may take a moment',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // 1. Upload the image to get a URL
+      final uploadedUrl = await imageService.uploadImage(imagePath);
+      if (uploadedUrl != null) {
+        // 2. Update the user profile in the backend
+        final success = await UserProfileService.updateProfilePhoto(token, uploadedUrl);
+        if (success) {
+          // 3. Update the local state in AuthProvider
+          await authProvider.updateProfilePhotoLocally(uploadedUrl);
+          
+          // 4. Reload the complete profile to ensure this screen's data is fresh
+          await _loadUserProfile();
+          
+          if (mounted) {
+            Navigator.of(context).pop(); // Close progress dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile photo updated successfully!')),
+            );
+          }
+        } else {
+          throw Exception('Failed to update profile photo in backend');
+        }
+      } else {
+        throw Exception('Failed to upload image');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   Widget _buildPersonalInfoSection(BuildContext context, user) {
