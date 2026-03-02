@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../controllers/auth_provider.dart';
-
 import '../../models/models.dart';
 import '../../services/requests_service.dart';
 import '../../services/holidays_service.dart';

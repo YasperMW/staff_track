@@ -74,6 +74,13 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
       ),
       builder: (ctx) => CreateAnnouncementSheet(
         onAnnouncementCreated: (announcement) {
+          // Optimistic update - add new announcement immediately
+          setState(() {
+            _announcements.insert(0, announcement); // Add at the beginning for newest first
+            _filterAnnouncements(); // Reapply filters
+          });
+          
+          // Refresh in background to get latest data from server
           _loadAnnouncements();
         },
       ),
@@ -89,7 +96,17 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
       ),
       builder: (ctx) => EditAnnouncementSheet(
         announcement: announcement,
-        onAnnouncementUpdated: () {
+        onAnnouncementUpdated: (updatedAnnouncement) {
+          // Optimistic update - update the announcement in the list
+          setState(() {
+            final index = _announcements.indexWhere((a) => a.id == updatedAnnouncement.id);
+            if (index != -1) {
+              _announcements[index] = updatedAnnouncement;
+              _filterAnnouncements(); // Reapply filters
+            }
+          });
+          
+          // Refresh in background to get latest data from server
           _loadAnnouncements();
         },
       ),
@@ -116,15 +133,22 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
     );
 
     if (confirmed == true) {
+      // Optimistic update - remove announcement immediately
+      setState(() {
+        _announcements.removeWhere((a) => a.id == announcement.id);
+        _filterAnnouncements(); // Reapply filters
+      });
+      
       try {
         await AnnouncementsService.deleteAnnouncement(announcement.id);
-        _loadAnnouncements();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Announcement deleted successfully')),
           );
         }
       } catch (e) {
+        // If delete fails, refresh to restore the announcement
+        _loadAnnouncements();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to delete announcement: $e')),
@@ -591,7 +615,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
   String _selectedType = 'general';
-  String? _selectedDepartment;
+  List<String> _selectedDepartments = [];  // Changed to support multiple departments
   String? _selectedRole;
   bool _isActive = true;
   DateTime? _expiresAt;
@@ -631,7 +655,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
         title: _titleController.text.trim(),
         message: _messageController.text.trim(),
         type: _selectedType,
-        targetDepartment: _selectedDepartment,
+        targetDepartments: _selectedDepartments.isNotEmpty ? _selectedDepartments : null,
         targetRole: _selectedRole,
         isActive: _isActive,
         expiresAt: _expiresAt,
@@ -740,26 +764,58 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                 },
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedDepartment,
-                decoration: const InputDecoration(
-                  labelText: 'Target Department (Optional)',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('All Departments')),
-                  ...AnnouncementsService.getAvailableDepartments()
-                      .map((dept) => DropdownMenuItem(value: dept, child: Text(dept))),
+              // Multi-department selection for CreateAnnouncementSheet
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Target Departments (Optional)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: AnnouncementsService.getAvailableDepartments().map((dept) {
+                      final isSelected = _selectedDepartments.contains(dept);
+                      return FilterChip(
+                        label: Text(dept),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedDepartments.add(dept);
+                            } else {
+                              _selectedDepartments.remove(dept);
+                            }
+                            _selectedRole = null; // Reset role when departments change
+                          });
+                        },
+                        backgroundColor: Colors.grey[200],
+                        selectedColor: AppTheme.skyBlue.withOpacity(0.2),
+                        checkmarkColor: AppTheme.skyBlue,
+                      );
+                    }).toList(),
+                  ),
+                  if (_selectedDepartments.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'No departments selected - will send to all staff',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedDepartment = value;
-                    _selectedRole = null; // Reset role when department changes
-                  });
-                },
               ),
               const SizedBox(height: 16),
-              if (_selectedDepartment != null) ...[
+              if (_selectedDepartments.isNotEmpty) ...[
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
                   decoration: const InputDecoration(
@@ -769,7 +825,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Roles')),
                     ...AnnouncementsService.getAvailableRoles()
-                        .where((role) => _isRoleInDepartment(role, _selectedDepartment!))
+                        .where((role) => _selectedDepartments.any((dept) => _isRoleInDepartment(role, dept)))
                         .map((role) => DropdownMenuItem(value: role, child: Text(role))),
                   ],
                   onChanged: (value) {
@@ -778,8 +834,8 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                     });
                   },
                 ),
-                const SizedBox(height: 16),
               ],
+              const SizedBox(height: 16),
               GestureDetector(
                 onTap: _selectExpirationDate,
                 child: Container(
@@ -877,7 +933,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
 
 class EditAnnouncementSheet extends StatefulWidget {
   final Announcement announcement;
-  final Function() onAnnouncementUpdated;
+  final Function(Announcement) onAnnouncementUpdated;
 
   const EditAnnouncementSheet({
     super.key,
@@ -942,7 +998,7 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
     });
 
     try {
-      await AnnouncementsService.updateAnnouncement(
+      final updatedAnnouncement = await AnnouncementsService.updateAnnouncement(
         id: widget.announcement.id,
         title: _titleController.text.trim(),
         message: _messageController.text.trim(),
@@ -955,7 +1011,7 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        widget.onAnnouncementUpdated();
+        widget.onAnnouncementUpdated(updatedAnnouncement);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Announcement updated successfully')),
         );

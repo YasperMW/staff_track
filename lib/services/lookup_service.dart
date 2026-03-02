@@ -82,14 +82,12 @@ class LookupService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final rolesList = data['roles'] as List;
         return rolesList.map((role) => Role.fromJson(role)).toList();
       } else {
-        print('Failed to load roles: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        return [];
+        throw Exception('Failed to load roles: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching roles: $e');
@@ -104,14 +102,12 @@ class LookupService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final departmentsList = data['departments'] as List;
         return departmentsList.map((dept) => Department.fromJson(dept)).toList();
       } else {
-        print('Failed to load departments: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        return [];
+        throw Exception('Failed to load departments: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching departments: $e');
@@ -126,7 +122,7 @@ class LookupService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final designationsList = data['designations'] as List;
         return designationsList.map((designation) => Designation.fromJson(designation)).toList();
@@ -148,7 +144,7 @@ class LookupService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final designationsList = data['designations'] as List;
         return designationsList.map((designation) => Designation.fromJson(designation)).toList();
