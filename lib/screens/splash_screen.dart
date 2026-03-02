@@ -151,14 +151,14 @@ class _SplashScreenState extends State<SplashScreen>
                         const SizedBox(height: 48),
                         
                         // Loading indicator
-                        if (authProvider.isLoading)
+                        if (authProvider.isLoading || !_isInitialized)
                           Column(
                             children: [
-                              SizedBox(
-                                width: 40,
-                                height: 40,
+                              const SizedBox(
+                                width: 24,
+                                height: 24,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 3,
+                                  strokeWidth: 2,
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     AppTheme.skyBlue,
                                   ),
@@ -166,9 +166,10 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Verifying session...',
+                                'Connecting to server...',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                             ],

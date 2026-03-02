@@ -72,17 +72,27 @@ class AuthProvider extends ChangeNotifier {
 
   /// Optionally verify token with backend; if invalid, clear local auth.
   Future<void> verifyAndRestoreSession() async {
+    _isLoading = true;
+    notifyListeners();
+    
     if (_token == null) {
       _isLoading = false;
       notifyListeners();
       return;
     }
-    final valid = await _loginService.verifyToken(_token!);
-    if (!valid) {
-      await logout(skipApi: true);
+    
+    try {
+      final valid = await _loginService.verifyToken(_token!);
+      if (!valid) {
+        await logout(skipApi: true);
+      }
+    } catch (e) {
+      // On network error, we keep the session but might want to handle it
+      debugPrint('Session verification failed: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   /// Perform login; on success store token and user and notify.
