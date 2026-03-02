@@ -429,6 +429,8 @@ class Announcement {
   // Helper to get type display text
   String get typeDisplay {
     switch (type) {
+      case 'holiday':
+        return '🎉 Holiday';
       case 'urgent':
         return '🚨 Urgent';
       case 'policy':
@@ -443,6 +445,8 @@ class Announcement {
   // Helper to get type color
   String get typeColor {
     switch (type) {
+      case 'holiday':
+        return '#4CAF50'; // Green for holidays
       case 'urgent':
         return '#FF5252'; // Red
       case 'policy':

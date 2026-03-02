@@ -204,6 +204,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               DropdownMenuItem(value: 'urgent', child: Text('🚨 Urgent')),
               DropdownMenuItem(value: 'policy', child: Text('📋 Policy')),
               DropdownMenuItem(value: 'event', child: Text('🎉 Event')),
+              DropdownMenuItem(value: 'holiday', child: Text('🎉 Holiday')),
               DropdownMenuItem(value: 'general', child: Text('📢 General')),
             ],
             onChanged: (value) {
@@ -397,6 +398,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   IconData _getAnnouncementTypeIcon(String type) {
     switch (type) {
+      case 'holiday':
+        return Icons.celebration;
       case 'urgent':
         return Icons.warning;
       case 'policy':
