@@ -247,6 +247,8 @@ class PublicHoliday {
   final DateTime date;
   final String? description;
   final String? type; // 'national', 'religious', 'custom'
+  final String category; // 'public' or 'institutional'
+  final String? source; // Source for public holidays
   final bool isRecurring; // yearly recurring
   final DateTime? createdAt;
   final String? createdBy;
@@ -257,24 +259,47 @@ class PublicHoliday {
     required this.date,
     this.description,
     this.type,
+    this.category = 'institutional',
+    this.source,
     this.isRecurring = false,
     this.createdAt,
     this.createdBy,
   });
 
   factory PublicHoliday.fromJson(Map<String, dynamic> json) {
-    return PublicHoliday(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      date: DateTime.parse(json['date']),
-      description: json['description'] as String?,
-      type: json['type'] as String?,
-      isRecurring: json['is_recurring'] as bool? ?? false,
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at'])
-          : null,
-      createdBy: json['created_by'] as String?,
-    );
+    // Debug: Print the JSON being parsed
+    print('=== PUBLIC HOLIDAY FROM JSON DEBUG ===');
+    print('Incoming JSON: $json');
+    print('JSON keys: ${json.keys}');
+    
+    try {
+      final holiday = PublicHoliday(
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        date: DateTime.parse(json['date']),
+        description: json['description'] as String?,
+        type: json['type'] as String?,
+        category: json['category'] as String? ?? 'institutional',
+        source: json['source'] as String?,
+        isRecurring: json['isRecurring'] as bool? ?? json['is_recurring'] as bool? ?? false, // Try both field names
+        createdAt: json['created_at'] != null 
+            ? DateTime.parse(json['created_at'])
+            : null,
+        createdBy: json['created_by'] as String?,
+      );
+      print('Successfully parsed PublicHoliday: ${holiday.name}');
+      return holiday;
+    } catch (e) {
+      print('Error parsing PublicHoliday: $e');
+      print('Field values:');
+      print('  id: ${json['id']}');
+      print('  name: ${json['name']}');
+      print('  date: ${json['date']}');
+      print('  category: ${json['category']}');
+      print('  isRecurring: ${json['isRecurring']}');
+      print('  is_recurring: ${json['is_recurring']}');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -284,6 +309,8 @@ class PublicHoliday {
       'date': date.toIso8601String().split('T')[0],
       'description': description,
       'type': type,
+      'category': category,
+      'source': source,
       'is_recurring': isRecurring,
       'created_at': createdAt?.toIso8601String(),
       'created_by': createdBy,
@@ -331,24 +358,35 @@ class Announcement {
   });
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
-    return Announcement(
-      id: json['id'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      message: json['message'] as String? ?? '',
-      type: json['type'] as String? ?? 'general',
-      targetDepartment: json['target_department'] as String?,
-      targetRole: json['target_role'] as String?,
-      isActive: json['is_active'] as bool? ?? true,
-      expiresAt: json['expires_at'] != null 
-          ? DateTime.parse(json['expires_at'])
-          : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null 
-          ? DateTime.parse(json['updated_at'])
-          : null,
-      createdBy: json['created_by'] as String?,
-      attachmentUrl: json['attachment_url'] as String?,
-    );
+    try {
+      print('Parsing announcement JSON: $json'); // Debug print
+      
+      final announcement = Announcement(
+        id: json['id']?.toString() ?? '',
+        title: json['title']?.toString() ?? '',
+        message: json['message']?.toString() ?? '',
+        type: json['type']?.toString() ?? 'general',
+        targetDepartment: json['targetAudience']?.toString(), // Updated to match backend
+        targetRole: json['target_role']?.toString(),
+        isActive: json['isActive'] as bool? ?? true, // Updated to match backend
+        expiresAt: json['expires_at'] != null 
+            ? DateTime.parse(json['expires_at'].toString())
+            : null,
+        createdAt: DateTime.parse(json['createdAt']?.toString() ?? DateTime.now().toIso8601String()), // Updated to match backend
+        updatedAt: json['updatedAt'] != null 
+            ? DateTime.parse(json['updatedAt'].toString())
+            : null,
+        createdBy: json['authorName']?.toString(), // Updated to match backend
+        attachmentUrl: json['attachment_url']?.toString(),
+      );
+      
+      print('Successfully parsed announcement: ${announcement.id} - ${announcement.title}'); // Debug print
+      return announcement;
+    } catch (e) {
+      print('Error parsing announcement JSON: $e'); // Debug print
+      print('Problematic JSON: $json'); // Debug print
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {

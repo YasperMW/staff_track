@@ -5,7 +5,7 @@ import '../../services/holidays_service.dart';
 import '../../services/notifications_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
-import '../../widgets/tile_date_picker.dart';
+import '../../widgets/single_date_picker.dart';
 
 class HolidaysManagementScreen extends StatefulWidget {
   const HolidaysManagementScreen({super.key});
@@ -20,6 +20,7 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
   bool _isLoading = true;
   String _selectedYear = DateTime.now().year.toString();
   String _searchQuery = '';
+  String _selectedCategory = 'all'; // 'all', 'institutional', 'public'
 
   @override
   void initState() {
@@ -33,13 +34,35 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
     });
 
     try {
-      final holidays = await HolidaysService.getHolidays(year: int.parse(_selectedYear));
+      // Debug: Print loading details
+      print('=== LOAD HOLIDAYS DEBUG ===');
+      print('Selected year: ${_selectedYear}');
+      print('Selected category: ${_selectedCategory}');
+      print('Category filter: ${_selectedCategory == 'all' ? null : _selectedCategory}');
+      
+      final holidays = await HolidaysService.getHolidays(
+        year: int.parse(_selectedYear),
+        category: _selectedCategory == 'all' ? null : _selectedCategory,
+      );
+      
+      print('Total holidays returned: ${holidays.length}');
+      print('Holiday categories:');
+      for (var holiday in holidays) {
+        print('  - ${holiday.name}: ${holiday.category} (${holiday.source})');
+      }
+      
       setState(() {
         _holidays = holidays;
         _filteredHolidays = holidays;
         _isLoading = false;
       });
+      
+      print('Institutional holidays: ${holidays.where((h) => h.category == 'institutional').length}');
+      print('Public holidays: ${holidays.where((h) => h.category == 'public').length}');
+      print('Filtered holidays count: ${_filteredHolidays.length}');
+      
     } catch (e) {
+      print('Error loading holidays: $e');
       setState(() {
         _isLoading = false;
       });
@@ -113,19 +136,65 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
 
     if (confirmed == true) {
       try {
+        // Debug: Print delete attempt
+        print('=== DELETE HOLIDAY UI DEBUG ===');
+        print('Attempting to delete holiday: ${holiday.name}');
+        print('Holiday ID: ${holiday.id}');
+        
         await HolidaysService.deleteHoliday(holiday.id);
+        print('Delete service call completed successfully');
+        
         _loadHolidays();
+        print('Holidays reloaded after delete');
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Holiday deleted successfully')),
           );
         }
       } catch (e) {
+        // Debug: Print error details
+        print('=== DELETE HOLIDAY UI ERROR DEBUG ===');
+        print('Error: $e');
+        print('Error type: ${e.runtimeType}');
+        print('Error stack trace: ${StackTrace.current}');
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Failed to delete holiday: $e')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _fetchPublicHolidays() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final holidays = await HolidaysService.fetchPublicHolidays(
+        int.parse(_selectedYear),
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fetched ${holidays.length} public holidays')),
+        );
+        _loadHolidays(); // Reload to show the new holidays
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to fetch public holidays: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -150,8 +219,15 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const SimpleHeader(
-        title: 'Public Holidays Management',
+      appBar: SimpleHeader(
+        title: 'Holidays Management',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _fetchPublicHolidays,
+            tooltip: 'Fetch Public Holidays',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -173,6 +249,12 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
                 : _buildHolidaysList(),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddHolidaySheet,
+        backgroundColor: AppTheme.skyBlue,
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Holiday',
       ),
     );
   }
@@ -209,56 +291,98 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
   }
 
   Widget _buildFilters() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Search holidays...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.skyBlue),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search holidays...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.skyBlue),
+                  ),
+                ),
+                onChanged: (value) {
+                  _searchQuery = value;
+                  _filterHolidays();
+                },
               ),
             ),
-            onChanged: (value) {
-              _searchQuery = value;
-              _filterHolidays();
-            },
-          ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButton<String>(
+                value: _selectedYear,
+                underline: const SizedBox(),
+                items: List.generate(5, (index) {
+                  final year = DateTime.now().year - 2 + index;
+                  return DropdownMenuItem(
+                    value: year.toString(),
+                    child: Text(year.toString()),
+                  );
+                }),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedYear = value;
+                    });
+                    _loadHolidays();
+                  }
+                },
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButton<String>(
-            value: _selectedYear,
-            underline: const SizedBox(),
-            items: List.generate(5, (index) {
-              final year = DateTime.now().year - 2 + index;
-              return DropdownMenuItem(
-                value: year.toString(),
-                child: Text(year.toString()),
-              );
-            }),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedYear = value;
-                });
-                _loadHolidays();
-              }
-            },
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCategoryChip('all', 'All Holidays'),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('institutional', 'Institutional'),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('public', 'Public Holidays'),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildCategoryChip(String value, String label) {
+    final isSelected = _selectedCategory == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _selectedCategory = value;
+          });
+          _loadHolidays();
+        }
+      },
+      backgroundColor: Colors.grey.withValues(alpha: 0.2),
+      selectedColor: AppTheme.skyBlue.withValues(alpha: 0.3),
+      checkmarkColor: AppTheme.skyBlue,
     );
   }
 
@@ -305,6 +429,9 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
   }
 
   Widget _buildHolidayCard(PublicHoliday holiday) {
+    final isInstitutional = holiday.category == 'institutional';
+    final isFromAPI = holiday.source == 'government_api';
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -342,12 +469,37 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        holiday.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              holiday.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isInstitutional 
+                                  ? AppTheme.lightGold.withValues(alpha: 0.2)
+                                  : AppTheme.skyBlue.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isInstitutional ? 'Institutional' : 'Public',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isInstitutional 
+                                    ? AppTheme.lightGold 
+                                    : AppTheme.skyBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       if (holiday.description != null) ...[
                         const SizedBox(height: 2),
@@ -362,53 +514,54 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
                     ],
                   ),
                 ),
-                PopupMenuButton<String>(
-                  onSelected: (action) {
-                    switch (action) {
-                      case 'edit':
-                        _showEditHolidaySheet(holiday);
-                        break;
-                      case 'notify':
-                        _sendNotifications(holiday);
-                        break;
-                      case 'delete':
-                        _deleteHoliday(holiday);
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 16),
-                          SizedBox(width: 8),
-                          Text('Edit'),
-                        ],
+                if (isInstitutional) // Only show menu for institutional holidays
+                  PopupMenuButton<String>(
+                    onSelected: (action) {
+                      switch (action) {
+                        case 'edit':
+                          _showEditHolidaySheet(holiday);
+                          break;
+                        case 'notify':
+                          _sendNotifications(holiday);
+                          break;
+                        case 'delete':
+                          _deleteHoliday(holiday);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 16),
+                            SizedBox(width: 8),
+                            Text('Edit'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'notify',
-                      child: Row(
-                        children: [
-                          Icon(Icons.notifications, size: 16),
-                          SizedBox(width: 8),
-                          Text('Send Notifications'),
-                        ],
+                      const PopupMenuItem(
+                        value: 'notify',
+                        child: Row(
+                          children: [
+                            Icon(Icons.notifications, size: 16),
+                            SizedBox(width: 8),
+                            Text('Send Notifications'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 16, color: AppTheme.paleRed),
-                          SizedBox(width: 8),
-                          Text('Delete', style: TextStyle(color: AppTheme.paleRed)),
-                        ],
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 16, color: AppTheme.paleRed),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: AppTheme.paleRed)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -440,6 +593,24 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
                       style: TextStyle(
                         fontSize: 10,
                         color: AppTheme.lightGold,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+                if (isFromAPI) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'API',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -490,7 +661,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   DateTime? _selectedDate;
-  String _selectedType = 'national';
+  String _selectedType = 'Institutional Holiday';
   bool _isRecurring = false;
   bool _isSubmitting = false;
 
@@ -502,8 +673,9 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
   }
 
   Future<void> _selectDate() async {
-    final date = await showTileDateRangePicker(
+    final date = await showSingleDatePicker(
       context: context,
+      initialDate: _selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime(DateTime.now().year + 2),
       title: 'Select Holiday Date',
@@ -511,7 +683,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
 
     if (date != null) {
       setState(() {
-        _selectedDate = date.start;
+        _selectedDate = date;
       });
     }
   }
@@ -531,6 +703,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
             ? null 
             : _descriptionController.text.trim(),
         type: _selectedType,
+        category: 'institutional', // Always institutional for manual creation
         isRecurring: _isRecurring,
       );
 
@@ -542,6 +715,12 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
         );
       }
     } catch (e) {
+      // Debug: Print the error details
+      print('=== HOLIDAY CREATION ERROR DEBUG ===');
+      print('Error: $e');
+      print('Error type: ${e.runtimeType}');
+      print('Error stack trace: ${StackTrace.current}');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to add holiday: $e')),
@@ -574,7 +753,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Add Public Holiday',
+                    'Add Holiday',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -645,9 +824,8 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'national', child: Text('National')),
-                  DropdownMenuItem(value: 'religious', child: Text('Religious')),
-                  DropdownMenuItem(value: 'custom', child: Text('Custom')),
+                  DropdownMenuItem(value: 'Institutional Holiday', child: Text('Institutional Holiday')),
+                  DropdownMenuItem(value: 'Custom', child: Text('Custom')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -734,9 +912,9 @@ class _EditHolidaySheetState extends State<EditHolidaySheet> {
   }
 
   Future<void> _selectDate() async {
-    final date = await showTileDateRangePicker(
+    final date = await showSingleDatePicker(
       context: context,
-      initialStartDate: _selectedDate,
+      initialDate: _selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime(DateTime.now().year + 2),
       title: 'Select Holiday Date',
@@ -744,7 +922,7 @@ class _EditHolidaySheetState extends State<EditHolidaySheet> {
 
     if (date != null) {
       setState(() {
-        _selectedDate = date.start;
+        _selectedDate = date;
       });
     }
   }

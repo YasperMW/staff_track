@@ -222,9 +222,10 @@ class _TileDatePickerState extends State<TileDatePicker> {
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // Header
           Container(
             padding: const EdgeInsets.all(24),
@@ -549,6 +550,7 @@ class _TileDatePickerState extends State<TileDatePicker> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

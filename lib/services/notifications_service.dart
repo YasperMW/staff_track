@@ -27,13 +27,13 @@ class NotificationItem {
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      type: json['type'] as String,
-      isRead: json['is_read'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      isRead: json['is_read'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at']?.toString() ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updated_at']?.toString() ?? DateTime.now().toIso8601String()),
     );
   }
 }
@@ -67,9 +67,13 @@ class NotificationsService {
         },
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((item) => NotificationItem.fromJson(item)).toList();
+        print('Notifications data: $data'); // Debug print
+        return data.map((item) {
+          print('Processing notification item: $item'); // Debug print
+          return NotificationItem.fromJson(item);
+        }).toList();
       } else {
         throw Exception('Failed to load notifications: ${response.statusCode}');
       }
@@ -101,11 +105,11 @@ class NotificationsService {
           'title': title,
           'message': message,
           'type': type,
-          'recipient_user_id': ?recipientUserId,
+          'recipient_user_id': recipientUserId,
         }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         return NotificationItem.fromJson(data);
       } else {
@@ -132,7 +136,7 @@ class NotificationsService {
         },
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to mark notification as read: ${response.statusCode}');
       }
     } catch (e) {
@@ -156,7 +160,7 @@ class NotificationsService {
         },
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to mark all notifications as read: ${response.statusCode}');
       }
     } catch (e) {
@@ -180,7 +184,7 @@ class NotificationsService {
         },
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         return data['unread_count'] as int;
       } else {
@@ -207,7 +211,7 @@ class NotificationsService {
         },
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to delete notification: ${response.statusCode}');
       }
     } catch (e) {

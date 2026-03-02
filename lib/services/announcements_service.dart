@@ -37,13 +37,19 @@ class AnnouncementsService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => Announcement.fromJson(json)).toList();
+        print('Announcements data received: ${data.length} items'); // Debug print
+        return data.map((json) {
+          print('Processing announcement: ${json['id']} - ${json['title']}'); // Debug print
+          return Announcement.fromJson(json);
+        }).toList();
       } else {
-        throw Exception('Failed to load announcements');
+        print('Failed to load announcements - Status: ${response.statusCode}'); // Debug print
+        print('Response body: ${response.body}'); // Debug print
+        throw Exception('Failed to load announcements: ${response.statusCode}');
       }
     } catch (e) {
-      // Return mock data for development
-      return _getMockAnnouncements();
+      print('Error loading announcements: $e'); // Debug print
+      throw Exception('Error loading announcements: $e');
     }
   }
 
@@ -51,7 +57,7 @@ class AnnouncementsService {
     required String title,
     required String message,
     required String type,
-    String? targetDepartment,
+    List<String>? targetDepartments,  // Changed to support multiple departments
     String? targetRole,
     bool isActive = true,
     DateTime? expiresAt,
@@ -69,34 +75,22 @@ class AnnouncementsService {
           'title': title,
           'message': message,
           'type': type,
-          'target_department': targetDepartment,
+          'target_departments': targetDepartments,  // Send as array
           'target_role': targetRole,
           'is_active': isActive,
           'expires_at': expiresAt?.toIso8601String(),
           'attachment_url': attachmentUrl,
+          'send_notifications': true,
         }),
       );
 
       if (response.statusCode == 201) {
         return Announcement.fromJson(json.decode(response.body));
       } else {
-        throw Exception('Failed to create announcement');
+        throw Exception('Failed to create announcement: ${response.statusCode}');
       }
     } catch (e) {
-      // Return mock announcement for development
-      final mockAnnouncement = Announcement(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        message: message,
-        type: type,
-        targetDepartment: targetDepartment,
-        targetRole: targetRole,
-        isActive: isActive,
-        expiresAt: expiresAt,
-        createdAt: DateTime.now(),
-        attachmentUrl: attachmentUrl,
-      );
-      return mockAnnouncement;
+      throw Exception('Error creating announcement: $e');
     }
   }
 
@@ -209,76 +203,7 @@ class AnnouncementsService {
     }
   }
 
-  // Mock data for development
-  static List<Announcement> _getMockAnnouncements() {
-    final now = DateTime.now();
-    return [
-      Announcement(
-        id: '1',
-        title: 'Welcome to Staff Track System',
-        message: 'We are pleased to announce the launch of our new staff attendance and management system. Please familiarize yourself with the features and reach out to HR if you need assistance.',
-        type: 'general',
-        targetDepartment: null, // All staff
-        isActive: true,
-        createdAt: now.subtract(const Duration(days: 7)),
-        createdBy: 'HR Admin',
-      ),
-      Announcement(
-        id: '2',
-        title: 'New Attendance Policy Update',
-        message: 'Effective immediately, all staff must clock in within 15 minutes of their shift start time. Late arrivals will be recorded and may affect performance evaluations.',
-        type: 'policy',
-        targetDepartment: null, // All staff
-        isActive: true,
-        createdAt: now.subtract(const Duration(days: 3)),
-        createdBy: 'HR Admin',
-      ),
-      Announcement(
-        id: '3',
-        title: 'System Maintenance Scheduled',
-        message: 'The Staff Track system will undergo maintenance this weekend from Saturday 10 PM to Sunday 2 AM. Please plan your attendance accordingly.',
-        type: 'urgent',
-        targetDepartment: null, // All staff
-        isActive: true,
-        expiresAt: now.add(const Duration(days: 2)),
-        createdAt: now.subtract(const Duration(days: 1)),
-        createdBy: 'IT Department',
-      ),
-      Announcement(
-        id: '4',
-        title: 'Medical Department Meeting',
-        message: 'All medical staff are required to attend a mandatory meeting on Friday at 2 PM in Conference Room A. New patient care protocols will be discussed.',
-        type: 'event',
-        targetDepartment: 'Medical',
-        isActive: true,
-        createdAt: now.subtract(const Duration(hours: 6)),
-        createdBy: 'Medical Director',
-      ),
-      Announcement(
-        id: '5',
-        title: 'Nursing Shift Schedule Update',
-        message: 'Please note the updated nursing shift schedule for next month. Changes have been made to accommodate the new staff members. Check your personal schedules.',
-        type: 'general',
-        targetDepartment: 'Nursing',
-        targetRole: 'Nurse',
-        isActive: true,
-        createdAt: now.subtract(const Duration(hours: 12)),
-        createdBy: 'Head Nurse',
-      ),
-      Announcement(
-        id: '6',
-        title: 'Expired Announcement Example',
-        message: 'This announcement has expired and should not be shown.',
-        type: 'general',
-        targetDepartment: null,
-        isActive: true,
-        expiresAt: now.subtract(const Duration(days: 1)), // Expired
-        createdAt: now.subtract(const Duration(days: 5)),
-        createdBy: 'HR Admin',
-      ),
-    ];
-  }
-
+  
   // Helper to get available departments
   static List<String> getAvailableDepartments() {
     return [
