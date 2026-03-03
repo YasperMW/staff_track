@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import '../services/login_service.dart';
 import '../services/auth_storage.dart';
+import '../services/fcm_service.dart';
 
 /// Result of a login attempt: either success with token and user, or failure with message.
 class LoginResult {
@@ -61,6 +62,8 @@ class AuthProvider extends ChangeNotifier {
       final userMap = await AuthStorage.getUser();
       if (userMap != null) {
         _user = appUserFromMap(userMap);
+        // User is logged in, register FCM token
+        FCMService.updateToken();
       } else {
         _user = null;
       }
@@ -108,6 +111,10 @@ class AuthProvider extends ChangeNotifier {
     _user = appUserFromMap(result.user!);
     await AuthStorage.saveToken(result.token!);
     await AuthStorage.saveUser(result.user!);
+    
+    // Register FCM token after login
+    FCMService.updateToken();
+    
     notifyListeners();
     return LoginResult.success(token: result.token!, user: result.user!);
   }
