@@ -1,5 +1,5 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
+ import 'package:permission_handler/permission_handler.dart' as ph;
 
 class PermissionService {
   static Future<bool> requestLocationPermission() async {
@@ -29,10 +29,10 @@ class PermissionService {
 
   static Future<bool> requestCameraPermission() async {
     try {
-      var status = await Permission.camera.status;
+      var status = await ph.Permission.camera.status;
       
       if (status.isDenied) {
-        status = await Permission.camera.request();
+        status = await ph.Permission.camera.request();
       }
 
       return status.isGranted;
@@ -44,10 +44,10 @@ class PermissionService {
 
   static Future<bool> requestStoragePermission() async {
     try {
-      var status = await Permission.storage.status;
+      var status = await ph.Permission.storage.status;
       
       if (status.isDenied) {
-        status = await Permission.storage.request();
+        status = await ph.Permission.storage.request();
       }
 
       return status.isGranted;
@@ -66,27 +66,27 @@ class PermissionService {
     }
   }
 
-  static Future<PermissionStatus> checkCameraPermission() async {
+  static Future<ph.PermissionStatus> checkCameraPermission() async {
     try {
-      return await Permission.camera.status;
+      return await ph.Permission.camera.status;
     } catch (e) {
       print('Error checking camera permission: $e');
-      return PermissionStatus.denied;
+      return ph.PermissionStatus.denied;
     }
   }
 
-  static Future<PermissionStatus> checkStoragePermission() async {
+  static Future<ph.PermissionStatus> checkStoragePermission() async {
     try {
-      return await Permission.storage.status;
+      return await ph.Permission.storage.status;
     } catch (e) {
       print('Error checking storage permission: $e');
-      return PermissionStatus.denied;
+      return ph.PermissionStatus.denied;
     }
   }
 
   static Future<void> openAppSettings() async {
     try {
-      await openAppSettings();
+      await ph.openAppSettings();
     } catch (e) {
       print('Error opening app settings: $e');
     }
@@ -105,7 +105,7 @@ class PermissionService {
 
   static Future<bool> hasCameraPermission() async {
     try {
-      var status = await Permission.camera.status;
+      var status = await ph.Permission.camera.status;
       return status.isGranted;
     } catch (e) {
       print('Error checking camera permission: $e');
@@ -115,7 +115,7 @@ class PermissionService {
 
   static Future<bool> hasStoragePermission() async {
     try {
-      var status = await Permission.storage.status;
+      var status = await ph.Permission.storage.status;
       return status.isGranted;
     } catch (e) {
       print('Error checking storage permission: $e');

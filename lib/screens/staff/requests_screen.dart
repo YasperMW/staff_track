@@ -281,17 +281,19 @@ class _RequestsScreenState extends State<RequestsScreen> {
         bgColor = Colors.grey.shade100;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return InkWell(
+      onTap: () => _showApprovalHistory(context, request),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -351,11 +353,99 @@ class _RequestsScreenState extends State<RequestsScreen> {
             request['description'] ?? '',
             style: const TextStyle(color: AppTheme.textLightBlue),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  Future<void> _showApprovalHistory(BuildContext context, Map<String, dynamic> request) async {
+    final requestId = request['id']?.toString();
+    if (requestId == null || requestId.isEmpty) return;
+    List<Map<String, dynamic>> approvals = [];
+    bool loading = true;
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            Future<void> load() async {
+              try {
+                final data = await RequestsService.getRequestApprovals(requestId);
+                setState(() {
+                  approvals = data;
+                  loading = false;
+                });
+              } catch (_) {
+                setState(() {
+                  approvals = [];
+                  loading = false;
+                });
+              }
+            }
+            if (loading) {
+              load();
+            }
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Approval History',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (loading)
+                    const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                  else if (approvals.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text('No approval history', style: TextStyle(color: AppTheme.textLightBlue)),
+                    )
+                  else
+                    Column(
+                      children: approvals.map((a) {
+                        final action = a['action']?.toString() ?? '';
+                        final comment = a['comment']?.toString() ?? '';
+                        final ts = a['timestamp']?.toString() ?? '';
+                        return ListTile(
+                          leading: Icon(
+                            action == 'approved' ? Icons.check_circle : Icons.cancel,
+                            color: action == 'approved' ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
+                          ),
+                          title: Text(
+                            action[0].toUpperCase() + action.substring(1),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            comment.isNotEmpty ? '$comment\n$ts' : ts,
+                            style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 12),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
   Future<void> _openCreateRequestSheet() async {
     await showModalBottomSheet(
       context: context,

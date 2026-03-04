@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import '../../controllers/attendance_controller.dart';
 import '../check_in_out_screen.dart';
 import 'announcements_management_screen.dart';
+import 'admin_requests_screen.dart';
+import 'admin_leave_policies_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -461,7 +463,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminRequestsScreen()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.paleRed,
                   foregroundColor: Colors.white,
@@ -473,6 +480,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 child: const Text(
                   'Review All Requests',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AdminLeavePoliciesScreen()),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.skyBlue,
+                  side: const BorderSide(color: AppTheme.skyBlue),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Manage Leave Policies',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),

@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import 'auth_storage.dart';
 
@@ -12,6 +12,9 @@ class FCMService {
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
+    if (kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      return;
+    }
     // 1. Request permissions (iOS)
     await _firebaseMessaging.requestPermission(
       alert: true,
@@ -57,7 +60,9 @@ class FCMService {
         _sendTokenToBackend(newToken);
       });
     } catch (e) {
-      print('Error getting FCM token: $e');
+      if (!kReleaseMode) {
+        debugPrint('Error getting FCM token: $e');
+      }
     }
   }
 
@@ -76,12 +81,18 @@ class FCMService {
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        print('FCM token registered successfully');
+        if (!kReleaseMode) {
+          debugPrint('FCM token registered successfully');
+        }
       } else {
-        print('Failed to register FCM token: ${response.statusCode}');
+        if (!kReleaseMode) {
+          debugPrint('Failed to register FCM token: ${response.statusCode}');
+        }
       }
     } catch (e) {
-      print('Error sending FCM token to backend: $e');
+      if (!kReleaseMode) {
+        debugPrint('Error sending FCM token to backend: $e');
+      }
     }
   }
 

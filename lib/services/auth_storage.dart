@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 
 abstract class AuthStorage {
@@ -15,7 +16,9 @@ abstract class AuthStorage {
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_keyToken);
-    print('AuthStorage: Token ${token == null ? 'not found' : 'found (${token.length} chars)'}');
+    if (!kReleaseMode) {
+      debugPrint('AuthStorage: Token ${token == null ? 'not found' : 'found (${token.length} chars)'}');
+    }
     return token;
   }
 
@@ -38,30 +41,40 @@ abstract class AuthStorage {
   static Future<String?> getUserId() async {
     final user = await getUser();
     if (user == null) {
-      print('AuthStorage: No user data found');
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: No user data found');
+      }
       return null;
     }
     
-    print('AuthStorage: User data keys: ${user.keys.toList()}');
-    print('AuthStorage: Full user data: $user');
+    if (!kReleaseMode) {
+      debugPrint('AuthStorage: User data keys: ${user.keys.toList()}');
+      debugPrint('AuthStorage: Full user data: $user');
+    }
     
     // Try different possible ID field names
     final id = user['user_id'] ?? user['id'] ?? user['userId'];
     
     if (id != null) {
       final idString = id.toString();
-      print('AuthStorage: Found user ID: $idString');
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: Found user ID: $idString');
+      }
       return idString;
     }
     
     // Fallback to email if no ID field is found
     final email = user['email'];
     if (email != null) {
-      print('AuthStorage: Using email as user ID fallback: $email');
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: Using email as user ID fallback: $email');
+      }
       return email.toString();
     }
     
-    print('AuthStorage: No user ID or email found in user data');
+    if (!kReleaseMode) {
+      debugPrint('AuthStorage: No user ID or email found in user data');
+    }
     return null;
   }
 
@@ -69,7 +82,9 @@ abstract class AuthStorage {
     final token = await getToken();
     final userId = await getUserId();
     final isAuth = token != null && userId != null;
-    print('AuthStorage: Authentication status: $isAuth (token: ${token != null}, userId: ${userId != null})');
+    if (!kReleaseMode) {
+      debugPrint('AuthStorage: Authentication status: $isAuth (token: ${token != null}, userId: ${userId != null})');
+    }
     return isAuth;
   }
 
@@ -77,7 +92,9 @@ abstract class AuthStorage {
     try {
       final token = await getToken();
       if (token == null) {
-        print('AuthStorage: Cannot refresh user data - no token');
+        if (!kReleaseMode) {
+          debugPrint('AuthStorage: Cannot refresh user data - no token');
+        }
         return false;
       }
       
@@ -92,14 +109,20 @@ abstract class AuthStorage {
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body) as Map<String, dynamic>;
         await saveUser(userData);
-        print('AuthStorage: User data refreshed successfully');
+        if (!kReleaseMode) {
+          debugPrint('AuthStorage: User data refreshed successfully');
+        }
         return true;
       } else {
-        print('AuthStorage: Failed to refresh user data: ${response.statusCode}');
+        if (!kReleaseMode) {
+          debugPrint('AuthStorage: Failed to refresh user data: ${response.statusCode}');
+        }
         return false;
       }
     } catch (e) {
-      print('AuthStorage: Error refreshing user data: $e');
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: Error refreshing user data: $e');
+      }
       return false;
     }
   }
