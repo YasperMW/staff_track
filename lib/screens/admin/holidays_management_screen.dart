@@ -238,6 +238,7 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
                 const SizedBox(height: 16),
                 _buildFilters(),
                 const SizedBox(height: 16),
+                _buildUpcomingSection(),
               ],
             ),
           ),
@@ -259,6 +260,62 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
     );
   }
 
+  Widget _buildUpcomingSection() {
+    return FutureBuilder<List<PublicHoliday>>(
+      future: HolidaysService.getUpcomingHolidays(monthsAhead: 3),
+      builder: (ctx, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            height: 2,
+            child: LinearProgressIndicator(color: AppTheme.skyBlue),
+          );
+        }
+        final items = snap.data ?? [];
+        if (items.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Upcoming Holidays',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Column(
+                children: items.take(5).map((h) {
+                  final daysUntil = h.date.difference(DateTime.now()).inDays;
+                  return ListTile(
+                    leading: const Icon(Icons.event_available, color: AppTheme.skyBlue),
+                    title: Text(h.name),
+                    subtitle: Text(
+                      '${DateFormat('EEEE, MMM d').format(h.date)} • in $daysUntil day${daysUntil == 1 ? '' : 's'}',
+                      style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 12),
+                    ),
+                    trailing: TextButton(
+                      onPressed: () => _sendNotifications(h),
+                      child: const Text('Notify', style: TextStyle(color: AppTheme.skyBlue)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Widget _buildHeader() {
     return Row(
       children: [

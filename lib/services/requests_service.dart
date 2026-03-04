@@ -166,7 +166,15 @@ class RequestsService {
     }
   }
 
-  static Future<List<AdminTeamRequest>> getAdminPendingRequests() async {
+  static Future<List<AdminTeamRequest>> getAdminPendingRequests({
+    String? status,
+    String? type,
+    String? departmentId,
+    int page = 1,
+    int pageSize = 20,
+    String sortBy = 'created_at',
+    String sortOrder = 'desc',
+  }) async {
     final token = await AuthStorage.getToken();
     final userId = await AuthStorage.getUserId();
     print('Getting admin pending requests for user ID: $userId');
@@ -174,8 +182,17 @@ class RequestsService {
       throw Exception('No authentication context found');
     }
 
+    final qs = <String, String>{};
+    if (status != null) qs['status_filter'] = status;
+    if (type != null) qs['type_filter'] = type;
+    if (departmentId != null) qs['department_id'] = departmentId;
+    qs['page'] = page.toString();
+    qs['page_size'] = pageSize.toString();
+    qs['sort_by'] = sortBy;
+    qs['sort_order'] = sortOrder;
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/pending-list').replace(queryParameters: qs.isEmpty ? null : qs);
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/pending-list'),
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -303,6 +320,26 @@ class RequestsService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getRequestApprovals(String requestId) async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/$requestId/approvals'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } else {
+      throw Exception('Failed to load approval history: ${response.statusCode}');
+    }
+  }
+
   static Future<void> withdrawRequest(String requestId) async {
     final token = await AuthStorage.getToken();
     if (token == null) {
@@ -345,6 +382,23 @@ class RequestsService {
     }
   }
 
+  static Future<void> approveRequestWithComment(String requestId, String comment) async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/$requestId/approve?comment=${Uri.encodeComponent(comment)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to approve request: ${response.statusCode}');
+    }
+  }
+
   static Future<void> denyRequest(String requestId) async {
     final token = await AuthStorage.getToken();
     if (token == null) {
@@ -363,6 +417,23 @@ class RequestsService {
       throw Exception(
         'Failed to deny request: ${response.statusCode}',
       );
+    }
+  }
+
+  static Future<void> denyRequestWithComment(String requestId, String comment) async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/$requestId/deny?comment=${Uri.encodeComponent(comment)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to deny request: ${response.statusCode}');
     }
   }
 }

@@ -17,6 +17,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   List<AdminTeamRequest> _requests = [];
   List<AdminTeamRequest> _myRequests = [];
   List<AdminTeamRequest> _teamRequests = [];
+  String _filterStatus = 'pending';
+  String _filterType = 'all';
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -885,7 +888,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _handleApprove(req),
+                    onPressed: () => _showApprovalDetail(context, req),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -894,13 +897,158 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Approve'),
+                    child: const Text('Review'),
                   ),
                 ),
               ],
             ),
         ],
       ),
+    );
+  }
+
+  List<AdminTeamRequest> _applyFilters(List<AdminTeamRequest> list) {
+    return list.where((r) {
+      final statusMatch = _filterStatus == 'all' ? true : r.status.toLowerCase() == _filterStatus;
+      final typeMatch = _filterType == 'all' ? true : r.type.toLowerCase().contains(_filterType);
+      final searchMatch = _searchQuery.isEmpty
+          ? true
+          : r.userName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            r.type.toLowerCase().contains(_searchQuery.toLowerCase());
+      return statusMatch && typeMatch && searchMatch;
+    }).toList();
+  }
+
+  Future<void> _showApprovalDetail(BuildContext context, AdminTeamRequest req) async {
+    String comment = '';
+    List<Map<String, dynamic>> approvals = [];
+    bool loading = true;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            Future<void> load() async {
+              try {
+                final data = await RequestsService.getRequestApprovals(req.id);
+                setState(() {
+                  approvals = data;
+                  loading = false;
+                });
+              } catch (_) {
+                setState(() {
+                  approvals = [];
+                  loading = false;
+                });
+              }
+            }
+            if (loading) {
+              load();
+            }
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Request Review', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${req.type} • ${req.dateRange} • ${req.duration}', style: const TextStyle(color: AppTheme.textLightBlue)),
+                  const SizedBox(height: 12),
+                  if (loading)
+                    const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                  else
+                    Column(
+                      children: approvals.map((a) {
+                        final action = a['action']?.toString() ?? '';
+                        final c = a['comment']?.toString() ?? '';
+                        final ts = a['timestamp']?.toString() ?? '';
+                        return ListTile(
+                          leading: Icon(action == 'approved' ? Icons.check_circle : Icons.cancel,
+                              color: action == 'approved' ? Colors.green : AppTheme.paleRed),
+                          title: Text(action.isNotEmpty ? (action[0].toUpperCase() + action.substring(1)) : ''),
+                          subtitle: Text(c.isNotEmpty ? '$c\n$ts' : ts),
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Comment (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => comment = v,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            try {
+                              if (comment.isNotEmpty) {
+                                await RequestsService.denyRequestWithComment(req.id, comment);
+                              } else {
+                                await RequestsService.denyRequest(req.id);
+                              }
+                              if (mounted) Navigator.of(ctx).pop();
+                              await _loadRequests();
+                            } catch (_) {}
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.paleRed,
+                            side: const BorderSide(color: AppTheme.paleRed),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Decline'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              if (comment.isNotEmpty) {
+                                await RequestsService.approveRequestWithComment(req.id, comment);
+                              } else {
+                                await RequestsService.approveRequest(req.id);
+                              }
+                              if (mounted) Navigator.of(ctx).pop();
+                              await _loadRequests();
+                            } catch (_) {}
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Approve'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1120,7 +1268,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _handleApprove(req),
+                    onPressed: () => _showApprovalDetail(context, req),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -1129,7 +1277,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Approve'),
+                    child: const Text('Review'),
                   ),
                 ),
               ],

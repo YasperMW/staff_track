@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'controllers/auth_provider.dart';
@@ -11,8 +12,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    await Firebase.initializeApp();
-    await FCMService.initialize();
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+         defaultTargetPlatform == TargetPlatform.iOS)) {
+      await Firebase.initializeApp();
+      await FCMService.initialize();
+    }
   } catch (e) {
     print('Error initializing Firebase: $e');
   }
