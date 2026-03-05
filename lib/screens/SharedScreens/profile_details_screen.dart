@@ -7,6 +7,8 @@ import '../home_screen.dart';
 import '../../services/complete_user_profile_service.dart';
 import '../../services/image_service.dart';
 import '../../services/user_profile_service.dart';
+import '../../services/leave_service.dart';
+import '../../services/employee_files_service.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -18,6 +20,10 @@ class ProfileDetailsScreen extends StatefulWidget {
 class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   CompleteUserProfile? completeProfile;
   bool isLoading = false;
+  List<LeaveBalanceItem> _leaveBalances = [];
+  List<EmployeeFileItem> _myFiles = [];
+  bool isLoadingLeaveBalances = false;
+  bool isLoadingFiles = false;
 
   @override
   void initState() {
@@ -33,20 +39,31 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     
     setState(() {
       isLoading = true;
+      isLoadingLeaveBalances = true;
+      isLoadingFiles = true;
     });
 
     try {
       final profile = await CompleteUserProfileService.getCompleteUserProfile();
+      final balances = await LeaveService.getBalances();
+      final files = await EmployeeFilesService.listMyFiles();
+      
       if (mounted) {
         setState(() {
           completeProfile = profile;
+          _leaveBalances = balances;
+          _myFiles = files;
           isLoading = false;
+          isLoadingLeaveBalances = false;
+          isLoadingFiles = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           isLoading = false;
+          isLoadingLeaveBalances = false;
+          isLoadingFiles = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load profile details')),
@@ -96,6 +113,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                     _buildFamilyInfoSection(context),
                     const SizedBox(height: 24),
                     _buildLocationInfoSection(context),
+                    const SizedBox(height: 24),
+                    _buildLeaveBalancesSection(context),
+                    const SizedBox(height: 24),
+                    _buildFilesSection(context),
                     const SizedBox(height: 24),
                     _buildSystemInfoSection(context),
                     const SizedBox(height: 40),
@@ -451,6 +472,246 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         _buildDetailRow('Last Login', completeProfile?.lastLoginAt ?? 'Never'),
         _buildDetailRow('Profile Status', completeProfile?.status ?? 'Unknown'),
         _buildDetailRow('Selfie Verified', completeProfile?.selfieVerified == true ? 'Yes' : 'No'),
+      ],
+    );
+  }
+
+  Widget _buildLeaveBalancesSection(BuildContext context) {
+    if (isLoadingLeaveBalances) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.05)),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_leaveBalances.isEmpty) {
+      return _buildSectionCard(
+        context,
+        title: 'Leave Balances',
+        icon: Icons.beach_access_outlined,
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No leave balances available',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _buildSectionCard(
+      context,
+      title: 'Leave Balances',
+      icon: Icons.beach_access_outlined,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _leaveBalances.map((b) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.leaveType,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textLightBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${b.remainingDays}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.skyBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '/ ${b.allocatedDays + b.bonusDays}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilesSection(BuildContext context) {
+    if (isLoadingFiles) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.05)),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return _buildSectionCard(
+      context,
+      title: 'My Files',
+      icon: Icons.folder_outlined,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Documents',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                String selectedType = 'payslip';
+                await showModalBottomSheet(
+                  context: context,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (ctx) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Select Document Type', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('Payslip'),
+                                selected: selectedType == 'payslip',
+                                onSelected: (v) { if (!v) return; selectedType = 'payslip'; },
+                              ),
+                              ChoiceChip(
+                                label: const Text('Offer Letter'),
+                                selected: selectedType == 'offer_letter',
+                                onSelected: (v) { if (!v) return; selectedType = 'offer_letter'; },
+                              ),
+                              ChoiceChip(
+                                label: const Text('Job Description'),
+                                selected: selectedType == 'job_description',
+                                onSelected: (v) { if (!v) return; selectedType = 'job_description'; },
+                              ),
+                              ChoiceChip(
+                                label: const Text('Other'),
+                                selected: selectedType == 'other',
+                                onSelected: (v) { if (!v) return; selectedType = 'other'; },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.skyBlue,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('Continue'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+                final url = await EmployeeFilesService.uploadFile(fileType: selectedType);
+                if (url != null) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('File uploaded')),
+                  );
+                  await _loadUserProfile();
+                } else {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Upload failed')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.upload_file, color: AppTheme.skyBlue, size: 16),
+              label: const Text('Upload', style: TextStyle(color: AppTheme.skyBlue, fontSize: 12)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_myFiles.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No files available',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+            ),
+          )
+        else
+          Column(
+            children: _myFiles.map((f) {
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.description_outlined, color: AppTheme.textLightBlue),
+                title: Text(
+                  f.fileType,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  f.uploadDate ?? '',
+                  style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 12),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.open_in_new, color: AppTheme.skyBlue),
+                  onPressed: () {
+                    // For now, rely on system to open URL if supported
+                  },
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }

@@ -74,38 +74,56 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
+    print('DEBUG: Starting location capture...');
     setState(() {
       isGettingLocation = true;
     });
 
     try {
       // Check if location services are enabled
+      print('DEBUG: Checking if location services are enabled...');
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      print('DEBUG: Location services enabled: $serviceEnabled');
+      
       if (!serviceEnabled) {
         throw Exception('Location services are disabled');
       }
 
       // Check location permissions using permission service
+      print('DEBUG: Checking location permissions...');
       bool hasPermission = await PermissionService.requestLocationPermission();
+      print('DEBUG: Location permission granted: $hasPermission');
+      
       if (!hasPermission) {
         throw Exception('Location permissions are required for check-in/out');
       }
 
       // Get current position
+      print('DEBUG: Getting current position...');
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      
+      print('DEBUG: Position obtained:');
+      print('  Latitude: ${position.latitude}');
+      print('  Longitude: ${position.longitude}');
+      print('  Accuracy: ${position.accuracy} meters');
 
       String locationText =
           'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
 
       try {
+        print('DEBUG: Getting address from coordinates...');
         final placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
         );
+        print('DEBUG: Found ${placemarks.length} placemarks');
+        
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
+          print('DEBUG: Primary placemark: ${place.name}, ${place.locality}, ${place.subAdministrativeArea}');
+          
           final parts = <String>[];
           if (place.name != null && place.name!.isNotEmpty) {
             parts.add(place.name!);
@@ -120,16 +138,26 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
           }
           if (parts.isNotEmpty) {
             locationText = parts.join(', ');
+            print('DEBUG: Formatted location text: $locationText');
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        print('DEBUG: Failed to get address: $e');
+      }
 
+      print('DEBUG: Setting location state...');
       setState(() {
         currentPosition = position;
         currentLocation = locationText;
         isGettingLocation = false;
       });
+      
+      print('DEBUG: Location capture completed successfully');
+      print('  Final currentLocation: $currentLocation');
+      print('  Final currentPosition: $currentPosition');
+      
     } catch (e) {
+      print('DEBUG: Location capture failed: $e');
       setState(() {
         isGettingLocation = false;
       });
@@ -142,19 +170,26 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       isLoading = true;
     });
 
+    // Debug logging before location check
+    print('DEBUG: Check-in initiated with current state:');
+    print('  currentLocation: $currentLocation');
+    print('  currentPosition: $currentPosition');
+    print('  currentPosition.latitude: ${currentPosition?.latitude}');
+    print('  currentPosition.longitude: ${currentPosition?.longitude}');
+
     // Ensure we have location data before proceeding
     if (currentLocation == null || currentPosition == null) {
       setState(() {
         isLoading = false;
       });
+      print('DEBUG: Location missing, attempting to refresh...');
       _showErrorSnackBar('Location is required for check-in. Please capture location first.');
       return;
     }
 
-    // Debug logging
-    print('DEBUG: Check-in called with:');
-    print('  currentLocation: $currentLocation');
-    print('  currentPosition: $currentPosition');
+    // Debug logging before API call
+    print('DEBUG: About to call AttendanceController.checkIn with:');
+    print('  location: $currentLocation');
     print('  latitude: ${currentPosition?.latitude}');
     print('  longitude: ${currentPosition?.longitude}');
     print('  currentShift: $currentShift');
@@ -177,7 +212,18 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       setState(() {
         isLoading = false;
       });
-      _showErrorSnackBar('Check-in failed: $e');
+      
+      // Provide user-friendly error messages
+      String errorMessage = e.toString();
+      print('DEBUG: Check-in error: $errorMessage');
+      
+      if (errorMessage.contains('Location data is required')) {
+        _showErrorSnackBar('Location is required for check-in. Please ensure location services are enabled and try again.');
+      } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
+        _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
+      } else {
+        _showErrorSnackBar('Check-in failed: $e');
+      }
     }
   }
 
@@ -186,14 +232,28 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       isLoading = true;
     });
 
+    // Debug logging before location check
+    print('DEBUG: Check-out initiated with current state:');
+    print('  currentLocation: $currentLocation');
+    print('  currentPosition: $currentPosition');
+    print('  currentPosition.latitude: ${currentPosition?.latitude}');
+    print('  currentPosition.longitude: ${currentPosition?.longitude}');
+
     // Ensure we have location data before proceeding
     if (currentLocation == null || currentPosition == null) {
       setState(() {
         isLoading = false;
       });
+      print('DEBUG: Location missing, attempting to refresh...');
       _showErrorSnackBar('Location is required for check-out. Please capture location first.');
       return;
     }
+
+    // Debug logging before API call
+    print('DEBUG: About to call AttendanceController.checkOut with:');
+    print('  location: $currentLocation');
+    print('  latitude: ${currentPosition?.latitude}');
+    print('  longitude: ${currentPosition?.longitude}');
 
     try {
       final result = await AttendanceController.checkOut(
@@ -212,7 +272,18 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       setState(() {
         isLoading = false;
       });
-      _showErrorSnackBar('Check-out failed: $e');
+      
+      // Provide user-friendly error messages
+      String errorMessage = e.toString();
+      print('DEBUG: Check-out error: $errorMessage');
+      
+      if (errorMessage.contains('Location data is required')) {
+        _showErrorSnackBar('Location is required for check-out. Please ensure location services are enabled and try again.');
+      } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
+        _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
+      } else {
+        _showErrorSnackBar('Check-out failed: $e');
+      }
     }
   }
 
