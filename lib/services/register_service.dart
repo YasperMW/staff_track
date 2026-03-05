@@ -52,6 +52,7 @@ class RegisterService {
     required String department,
     required bool isHeadOfDepartment,
     required String password,
+    String? gradeId,
     String? profilePhotoUrl,
   }) async {
     try {
@@ -82,6 +83,7 @@ class RegisterService {
           'department': department,
           'is_head_of_department': isHeadOfDepartment,
           'password': password,
+          'grade_id': gradeId,
           'profile_photo_url': profilePhotoUrl,
         }),
       );

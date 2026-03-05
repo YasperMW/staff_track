@@ -26,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // API data
   List<String> _roles = [];
   List<Department> _departments = [];
+  List<Grade> _grades = [];
 
   List<String> _designationNames = [];
   bool _isLoadingLookupData = true;
@@ -41,12 +42,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final roles = await LookupService.getRoles();
       final departments = await LookupService.getDepartments();
+      final grades = await LookupService.getGrades();
       
       setState(() {
         _roles = roles.map((role) => role.name).toList();
         _departments = departments;
+        _grades = grades;
         _selectedRole = _roles.isNotEmpty ? _roles.first : null;
         _selectedDepartment = _departments.isNotEmpty ? _departments.first.name : null;
+        _selectedGrade = _grades.isNotEmpty ? _grades.first.id : null;
         _isLoadingLookupData = false;
       });
     } catch (e) {
@@ -104,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _selectedRole;
   String? _selectedDepartment;
+  String? _selectedGrade;
   String? _selectedGender;
   String? _selectedMaritalStatus;
   final bool _isHeadOfDepartment = false;
@@ -205,6 +210,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       role: _selectedRole!,
       department: _selectedDepartment!,
       isHeadOfDepartment: _isHeadOfDepartment,
+      gradeId: _selectedGrade,
       password: _passwordController.text,
       profilePhotoUrl: _profilePhotoUrl,
     );
@@ -673,9 +679,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onChanged: (val) => setState(() => _selectedRole = val),
             theme: theme,
           ),
+          const SizedBox(height: 16),
+          _buildGradeDropdown(theme),
           const SizedBox(height: 20),
         ],
       ),
+    );
+  }
+
+  Widget _buildGradeDropdown(ThemeData theme) {
+    return DropdownButtonFormField<String>(
+      value: _selectedGrade,
+      items: _grades.map((Grade g) {
+        return DropdownMenuItem<String>(
+          value: g.id,
+          child: Text('${g.name} (${g.annualLeaveDays} days)', style: const TextStyle(fontSize: 14)),
+        );
+      }).toList(),
+      onChanged: (val) => setState(() => _selectedGrade = val),
+      decoration: InputDecoration(
+        labelText: 'Grade (Annual Leave Entitlement)',
+        prefixIcon: const Icon(Icons.grade_outlined, size: 20),
+        filled: true,
+        fillColor: theme.brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      validator: (val) => val == null ? 'Required' : null,
     );
   }
 
