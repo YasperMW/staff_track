@@ -8,8 +8,6 @@ import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/image_service.dart';
-import '../../services/leave_service.dart';
-import '../../services/employee_files_service.dart';
 import 'profile_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -26,8 +24,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int workingDays = 0;
   double onTimeRate = 0.0;
   int leaveUsed = 0;
-  List<LeaveBalanceItem> _leaveBalances = [];
-  List<EmployeeFileItem> _myFiles = [];
 
   @override
   void initState() {
@@ -51,8 +47,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isLoadingMetrics = true;
       });
       final metrics = await UserProfileService.getUserMetrics(token);
-      final balances = await LeaveService.getBalances();
-      final files = await EmployeeFilesService.listMyFiles();
       if (mounted) {
         print('Profile data received: ${profile?.toJson()}');
         setState(() {
@@ -63,8 +57,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTimeRate = metrics.onTimeRate;
             leaveUsed = metrics.leaveUsed;
           }
-          _leaveBalances = balances;
-          _myFiles = files;
           isLoadingMetrics = false;
         });
       }
@@ -105,10 +97,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildProfileCard(context, user),
                   const SizedBox(height: 24),
                     _buildStatsRow(context),
-                    const SizedBox(height: 24),
-                    _buildLeaveBalances(context),
-                    const SizedBox(height: 24),
-                    _buildFilesSection(context),
                     const SizedBox(height: 24),
                     _buildOptionsList(context),
                     const SizedBox(height: 32),
@@ -374,231 +362,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLeaveBalances(BuildContext context) {
-    if (_leaveBalances.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
-        ),
-        child: Text(
-          'No leave balances available',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
-        ),
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Leave Balances',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _leaveBalances.map((b) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withValues(alpha:0.2)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      b.leaveType,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textLightBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${b.remainingDays}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.skyBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '/ ${b.allocatedDays + b.bonusDays}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilesSection(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'My Files',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () async {
-                  String selectedType = 'payslip';
-                  await showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    builder: (ctx) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Select Document Type', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                ChoiceChip(
-                                  label: const Text('Payslip'),
-                                  selected: selectedType == 'payslip',
-                                  onSelected: (v) { if (!v) return; selectedType = 'payslip'; },
-                                ),
-                                ChoiceChip(
-                                  label: const Text('Offer Letter'),
-                                  selected: selectedType == 'offer_letter',
-                                  onSelected: (v) { if (!v) return; selectedType = 'offer_letter'; },
-                                ),
-                                ChoiceChip(
-                                  label: const Text('Job Description'),
-                                  selected: selectedType == 'job_description',
-                                  onSelected: (v) { if (!v) return; selectedType = 'job_description'; },
-                                ),
-                                ChoiceChip(
-                                  label: const Text('Other'),
-                                  selected: selectedType == 'other',
-                                  onSelected: (v) { if (!v) return; selectedType = 'other'; },
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.skyBlue,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                child: const Text('Continue'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                  final url = await EmployeeFilesService.uploadFile(fileType: selectedType);
-                  if (url != null) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('File uploaded')),
-                    );
-                    await _loadUserProfile();
-                  } else {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Upload failed')),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.upload_file, color: AppTheme.skyBlue, size: 18),
-                label: const Text('Upload', style: TextStyle(color: AppTheme.skyBlue)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_myFiles.isEmpty)
-            Text(
-              'No files available',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
-            )
-          else
-            Column(
-              children: _myFiles.map((f) {
-                return ListTile(
-                  leading: const Icon(Icons.description_outlined, color: AppTheme.textLightBlue),
-                  title: Text(
-                    f.fileType,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text(
-                    f.uploadDate ?? '',
-                    style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 12),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.open_in_new, color: AppTheme.skyBlue),
-                    onPressed: () {
-                      // For now, rely on system to open URL if supported
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-        ],
-      ),
-    );
-  }
   Widget _buildStatCard(BuildContext context, String value, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),

@@ -13,6 +13,7 @@ import '../check_in_out_screen.dart';
 import 'announcements_management_screen.dart';
 import 'admin_requests_screen.dart';
 import 'admin_leave_policies_screen.dart';
+import 'admin_attendance_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -866,7 +867,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const Spacer(),
             TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminAttendanceScreen(),
+                  ),
+                );
+              },
               child: const Row(
                 children: [
                   Text('Live View', style: TextStyle(color: AppTheme.skyBlue)),
