@@ -74,7 +74,46 @@ class Designation {
   }
 }
 
+class Grade {
+  final String id;
+  final String name;
+  final int annualLeaveDays;
+
+  Grade({
+    required this.id,
+    required this.name,
+    required this.annualLeaveDays,
+  });
+
+  factory Grade.fromJson(Map<String, dynamic> json) {
+    return Grade(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      annualLeaveDays: json['annual_leave_days'] as int,
+    );
+  }
+}
+
 class LookupService {
+  static Future<List<Grade>> getGrades() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/auth/grades'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((g) => Grade.fromJson(g)).toList();
+      } else {
+        throw Exception('Failed to load grades: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching grades: $e');
+      return [];
+    }
+  }
+
   static Future<List<Role>> getRoles() async {
     try {
       final response = await http.get(

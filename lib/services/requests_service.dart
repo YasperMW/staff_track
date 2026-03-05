@@ -50,6 +50,20 @@ class AdminTeamRequest {
   final String dateRange;
   final String duration;
   final bool isOwn;
+  final int approvalLevel;
+  final bool leaveGrantRequired;
+  final String? contactAddress;
+  // Trip fields
+  final String? reasonForLeaving;
+  final String? travelDate;
+  final String? travelPlace;
+  final double? costAccommodation;
+  final double? costBreakfast;
+  final double? costLunch;
+  final double? costSupper;
+  final double? costPublicTransport;
+  final double? costFuelLubricants;
+  final double? costTotal;
 
   AdminTeamRequest({
     required this.id,
@@ -60,6 +74,19 @@ class AdminTeamRequest {
     required this.dateRange,
     required this.duration,
     required this.isOwn,
+    this.approvalLevel = 1,
+    this.leaveGrantRequired = false,
+    this.contactAddress,
+    this.reasonForLeaving,
+    this.travelDate,
+    this.travelPlace,
+    this.costAccommodation,
+    this.costBreakfast,
+    this.costLunch,
+    this.costSupper,
+    this.costPublicTransport,
+    this.costFuelLubricants,
+    this.costTotal,
   });
 
   factory AdminTeamRequest.fromJson(Map<String, dynamic> json, String currentUserId) {
@@ -85,6 +112,19 @@ class AdminTeamRequest {
       dateRange: json['date_range'] as String? ?? '',
       duration: json['duration'] as String? ?? '',
       isOwn: isOwnRequest,
+      approvalLevel: (json['approval_level'] as num?)?.toInt() ?? 1,
+      leaveGrantRequired: json['leave_grant_required'] == true,
+      contactAddress: json['contact_address'] as String?,
+      reasonForLeaving: json['reason_for_leaving'] as String?,
+      travelDate: json['travel_date'] as String?,
+      travelPlace: json['travel_place'] as String?,
+      costAccommodation: (json['cost_accommodation'] as num?)?.toDouble(),
+      costBreakfast: (json['cost_breakfast'] as num?)?.toDouble(),
+      costLunch: (json['cost_lunch'] as num?)?.toDouble(),
+      costSupper: (json['cost_supper'] as num?)?.toDouble(),
+      costPublicTransport: (json['cost_public_transport'] as num?)?.toDouble(),
+      costFuelLubricants: (json['cost_fuel_lubricants'] as num?)?.toDouble(),
+      costTotal: (json['cost_total'] as num?)?.toDouble(),
     );
   }
 
@@ -140,6 +180,19 @@ class RequestsService {
     required String type,
     required String startDate,
     required String endDate,
+    bool leaveGrantRequired = false,
+    String? contactAddress,
+    // Trip fields
+    String? reasonForLeaving,
+    String? travelDate,
+    String? travelPlace,
+    double? costAccommodation,
+    double? costBreakfast,
+    double? costLunch,
+    double? costSupper,
+    double? costPublicTransport,
+    double? costFuelLubricants,
+    double? costTotal,
   }) async {
     final token = await AuthStorage.getToken();
     if (token == null) {
@@ -156,6 +209,18 @@ class RequestsService {
         'type': type,
         'start_date': startDate,
         'end_date': endDate,
+        'leave_grant_required': leaveGrantRequired,
+        'contact_address': contactAddress,
+        'reason_for_leaving': reasonForLeaving,
+        'travel_date': travelDate,
+        'travel_place': travelPlace,
+        'cost_accommodation': costAccommodation,
+        'cost_breakfast': costBreakfast,
+        'cost_lunch': costLunch,
+        'cost_supper': costSupper,
+        'cost_public_transport': costPublicTransport,
+        'cost_fuel_lubricants': costFuelLubricants,
+        'cost_total': costTotal,
       }),
     );
 
@@ -361,7 +426,7 @@ class RequestsService {
     }
   }
 
-  static Future<void> approveRequest(String requestId) async {
+  static Future<void> approveRequest(String requestId, {Map<String, dynamic>? extraFields}) async {
     final token = await AuthStorage.getToken();
     if (token == null) {
       throw Exception('No authentication token found');
@@ -373,11 +438,12 @@ class RequestsService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
+      body: jsonEncode(extraFields ?? {}),
     );
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Failed to approve request: ${response.statusCode}',
+        'Failed to approve request: ${response.statusCode} - ${response.body}',
       );
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/tile_date_picker.dart';
+import '../../widgets/single_date_picker.dart';
 import '../../services/requests_service.dart';
 
 class RequestsScreen extends StatefulWidget {
@@ -349,9 +350,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            request['description'] ?? '',
-            style: const TextStyle(color: AppTheme.textLightBlue),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  request['description'] ?? '',
+                  style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 13),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppTheme.skyBlue, size: 20),
+            ],
           ),
           ],
         ),
@@ -364,8 +373,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     if (requestId == null || requestId.isEmpty) return;
     List<Map<String, dynamic>> approvals = [];
     bool loading = true;
+    
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -389,56 +400,146 @@ class _RequestsScreenState extends State<RequestsScreen> {
             if (loading) {
               load();
             }
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Approval History',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(ctx).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (loading)
-                    const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
-                  else if (approvals.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Text('No approval history', style: TextStyle(color: AppTheme.textLightBlue)),
-                    )
-                  else
-                    Column(
-                      children: approvals.map((a) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Approval Details',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Text('Request Type: ${request['type']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Current Status: ${request['status']}', style: const TextStyle(color: AppTheme.skyBlue)),
+                    const SizedBox(height: 16),
+                    
+                    if (loading)
+                      const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                    else if (approvals.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text('Waiting for initial review...', style: TextStyle(color: AppTheme.textLightBlue)),
+                        ),
+                      )
+                    else
+                      ...approvals.map((a) {
                         final action = a['action']?.toString() ?? '';
                         final comment = a['comment']?.toString() ?? '';
                         final ts = a['timestamp']?.toString() ?? '';
-                        return ListTile(
-                          leading: Icon(
-                            action == 'approved' ? Icons.check_circle : Icons.cancel,
-                            color: action == 'approved' ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
+                        final name = a['approver_name']?.toString() ?? 'Approver';
+                        final level = (a['level'] as num?)?.toInt() ?? 0;
+                        
+                        List<Widget> detailWidgets = [];
+                        final type = (request['type'] as String).toLowerCase();
+
+                        if (type.contains('duty station')) {
+                          if (level == 1 && a['accountant_funds_available'] != null) {
+                            detailWidgets.add(Text('Funds Available: ${a['accountant_funds_available'] == true ? "Yes" : "No"}'));
+                          } else if (level == 2 && a['hod_trip_recommendation'] != null) {
+                            detailWidgets.add(Text('Recommendation: ${a['hod_trip_recommendation']}'));
+                          } else if (level == 3 && a['admin_trip_approval_details'] != null) {
+                            detailWidgets.add(Text('Approval Details: ${a['admin_trip_approval_details']}'));
+                          }
+                        } else {
+                          if (level == 1) {
+                            if (a['hod_recommended_from'] != null) {
+                              detailWidgets.add(Text('Recommended: ${a['hod_recommended_from']} to ${a['hod_recommended_to']}'));
+                            }
+                            if (a['hod_not_recommended_reason'] != null && a['hod_not_recommended_reason'].toString().isNotEmpty) {
+                              detailWidgets.add(Text('Reason: ${a['hod_not_recommended_reason']}'));
+                            }
+                          } else if (level == 2) {
+                            if (a['hr_annual_entitlement'] != null) {
+                              detailWidgets.add(Text('Entitlement: ${a['hr_annual_entitlement']} days'));
+                            }
+                            if (a['hr_balance_if_approved'] != null) {
+                              detailWidgets.add(Text('Balance: ${a['hr_balance_if_approved']} days'));
+                            }
+                            if (a['hr_leave_grant_status'] != null) {
+                              detailWidgets.add(Text('Leave Grant: ${a['hr_leave_grant_status']}'));
+                            }
+                          } else if (level == 3) {
+                            if (a['admin_granted_from'] != null) {
+                              detailWidgets.add(Text('Granted: ${a['admin_granted_from']} to ${a['admin_granted_to']}'));
+                            }
+                            if (a['admin_total_days_approved'] != null) {
+                              detailWidgets.add(Text('Total Days: ${a['admin_total_days_approved']}'));
+                            }
+                          }
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                           ),
-                          title: Text(
-                            action[0].toUpperCase() + action.substring(1),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(
-                            comment.isNotEmpty ? '$comment\n$ts' : ts,
-                            style: const TextStyle(color: AppTheme.textLightBlue, fontSize: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    action == 'approved' ? Icons.check_circle : Icons.cancel,
+                                    size: 18,
+                                    color: action == 'approved' ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    '$name - ${action.toUpperCase()}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    ts.split('T')[0],
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              if (comment.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Comment: $comment',
+                                  style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                                ),
+                              ],
+                              if (detailWidgets.isNotEmpty) ...[
+                                const Divider(height: 16),
+                                ...detailWidgets.map((w) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: DefaultTextStyle(
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textLightBlue),
+                                    child: w,
+                                  ),
+                                )),
+                              ],
+                            ],
                           ),
                         );
                       }).toList(),
-                    ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -446,6 +547,27 @@ class _RequestsScreenState extends State<RequestsScreen> {
       },
     );
   }
+  Widget _buildCostField(String label, TextEditingController controller, StateSetter setState) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text(label)),
+          const Text('K '),
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openCreateRequestSheet() async {
     await showModalBottomSheet(
       context: context,
@@ -456,10 +578,35 @@ class _RequestsScreenState extends State<RequestsScreen> {
       builder: (ctx) {
         String selectedType = 'Annual Leave';
         DateTimeRange? selectedRange;
+        bool leaveGrantRequired = false;
+        final contactAddressController = TextEditingController();
+        
+        // Trip fields
+        final reasonForLeavingController = TextEditingController();
+        DateTime? travelDate;
+        final travelPlaceController = TextEditingController();
+        final accCostController = TextEditingController();
+        final bfCostController = TextEditingController();
+        final lunchCostController = TextEditingController();
+        final supperCostController = TextEditingController();
+        final transportCostController = TextEditingController();
+        final fuelCostController = TextEditingController();
+        
         bool isSubmitting = false;
 
         String formatDate(DateTime d) {
           return d.toIso8601String().split('T').first;
+        }
+
+        double? parseDouble(String val) => double.tryParse(val);
+
+        double calculateTotal() {
+          return (parseDouble(accCostController.text) ?? 0) +
+                 (parseDouble(bfCostController.text) ?? 0) +
+                 (parseDouble(lunchCostController.text) ?? 0) +
+                 (parseDouble(supperCostController.text) ?? 0) +
+                 (parseDouble(transportCostController.text) ?? 0) +
+                 (parseDouble(fuelCostController.text) ?? 0);
         }
 
         return Padding(
@@ -497,6 +644,19 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     type: selectedType,
                     startDate: start,
                     endDate: end,
+                    leaveGrantRequired: leaveGrantRequired,
+                    contactAddress: contactAddressController.text,
+                    // Trip fields
+                    reasonForLeaving: reasonForLeavingController.text,
+                    travelDate: travelDate != null ? formatDate(travelDate!) : null,
+                    travelPlace: travelPlaceController.text,
+                    costAccommodation: parseDouble(accCostController.text),
+                    costBreakfast: parseDouble(bfCostController.text),
+                    costLunch: parseDouble(lunchCostController.text),
+                    costSupper: parseDouble(supperCostController.text),
+                    costPublicTransport: parseDouble(transportCostController.text),
+                    costFuelLubricants: parseDouble(fuelCostController.text),
+                    costTotal: calculateTotal(),
                   );
                   if (!mounted) return;
                   Navigator.of(ctx).pop();
@@ -519,144 +679,276 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
               return Padding(
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Submit Request',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Request type',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Annual Leave'),
-                          selected: selectedType == 'Annual Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Annual Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Sick Leave'),
-                          selected: selectedType == 'Sick Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Sick Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Personal Leave'),
-                          selected: selectedType == 'Personal Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Personal Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Work From Home'),
-                          selected: selectedType == 'Work From Home',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Work From Home';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Date range',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: pickDateRange,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.grey.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              size: 18,
-                              color: AppTheme.textLightBlue,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Submit Request',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              selectedRange == null
-                                  ? 'Select dates'
-                                  : selectedRange!.start == selectedRange!.end
-                                  ? formatDate(selectedRange!.start)
-                                  : '${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Request type',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Annual Leave'),
+                            selected: selectedType == 'Annual Leave',
+                            onSelected: (v) {
+                              if (!v) return;
+                              setSheetState(() {
+                                selectedType = 'Annual Leave';
+                              });
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Sick Leave'),
+                            selected: selectedType == 'Sick Leave',
+                            onSelected: (v) {
+                              if (!v) return;
+                              setSheetState(() {
+                                selectedType = 'Sick Leave';
+                              });
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Personal Leave'),
+                            selected: selectedType == 'Personal Leave',
+                            onSelected: (v) {
+                              if (!v) return;
+                              setSheetState(() {
+                                selectedType = 'Personal Leave';
+                              });
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Work From Home'),
+                            selected: selectedType == 'Work From Home',
+                            onSelected: (v) {
+                              if (!v) return;
+                              setSheetState(() {
+                                selectedType = 'Work From Home';
+                              });
+                            },
+                          ),
+                          ChoiceChip(
+                            label: const Text('Leave Duty Station'),
+                            selected: selectedType == 'Leave Duty Station',
+                            onSelected: (v) {
+                              if (!v) return;
+                              setSheetState(() {
+                                selectedType = 'Leave Duty Station';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (selectedType == 'Leave Duty Station') ...[
+                        const Text(
+                          'Section A: Reason for leaving station',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: reasonForLeavingController,
+                          maxLines: 2,
+                          decoration: const InputDecoration(hintText: 'Reason(s)', border: OutlineInputBorder()),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Travel Date',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showSingleDatePicker(
+                              context: ctx,
+                              initialDate: travelDate ?? DateTime.now(),
+                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                              title: 'Select Travel Date',
+                            );
+                            if (picked != null) {
+                              setSheetState(() {
+                                travelDate = picked;
+                              });
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(travelDate == null ? 'Select Date' : formatDate(travelDate!)),
+                                const Icon(Icons.calendar_today, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Place where traveling to',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: travelPlaceController,
+                          decoration: const InputDecoration(hintText: 'Place', border: OutlineInputBorder()),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Section B: Cost of the trip (MK)',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildCostField('Accommodation', accCostController, setSheetState),
+                        _buildCostField('Breakfast', bfCostController, setSheetState),
+                        _buildCostField('Lunch', lunchCostController, setSheetState),
+                        _buildCostField('Supper', supperCostController, setSheetState),
+                        _buildCostField('Public transport', transportCostController, setSheetState),
+                        _buildCostField('Fuel & lubricants', fuelCostController, setSheetState),
+                        const Divider(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('MK ${calculateTotal().toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue)),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        const Text(
+                          'Date range',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: pickDateRange,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                  color: AppTheme.textLightBlue,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  selectedRange == null
+                                      ? 'Select dates'
+                                      : selectedRange!.start == selectedRange!.end
+                                      ? formatDate(selectedRange!.start)
+                                      : '${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            const Text(
+                              'Leave Grant Required',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Switch(
+                              value: leaveGrantRequired,
+                              activeColor: AppTheme.skyBlue,
+                              onChanged: (v) {
+                                setSheetState(() {
+                                  leaveGrantRequired = v;
+                                });
+                              },
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: selectedRange == null || isSubmitting
-                            ? null
-                            : handleSubmit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.skyBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Contact Address while on Leave',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: contactAddressController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Enter address',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.withValues(alpha: 0.3),
+                              ),
+                            ),
                           ),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            isSubmitting
-                                ? 'Submitting...'
-                                : 'Submit for approval',
+                      ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: selectedRange == null || isSubmitting
+                              ? null
+                              : handleSubmit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.skyBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              isSubmitting
+                                  ? 'Submitting...'
+                                  : 'Submit for approval',
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },

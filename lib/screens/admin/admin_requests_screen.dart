@@ -34,6 +34,19 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     _loadRequests();
   }
 
+  Widget _buildCostRow(String label, double? value, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+          Text('MK ${value?.toStringAsFixed(2) ?? "0.00"}', style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadRequests() async {
     setState(() {
       _isLoading = true;
@@ -921,8 +934,40 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 
   Future<void> _showApprovalDetail(BuildContext context, AdminTeamRequest req) async {
     String comment = '';
+    
+    // HOD Fields
+    DateTime? hodFrom;
+    DateTime? hodTo;
+    final hodReasonController = TextEditingController();
+    
+    // HR Fields
+    final hrEntitlementController = TextEditingController();
+    DateTime? hrEntTakenFrom;
+    DateTime? hrEntTakenTo;
+    DateTime? hrLastLeaveFrom;
+    DateTime? hrLastLeaveTo;
+    final hrLastLeaveDaysController = TextEditingController();
+    final hrBalanceController = TextEditingController();
+    String hrLeaveGrantStatus = 'not_required';
+    
+    // Admin Fields
+    DateTime? adminFrom;
+    DateTime? adminTo;
+    final adminTotalDaysController = TextEditingController();
+    
+    // Trip Approval Fields
+    bool accountantFundsAvailable = true;
+    final hodTripRecommendationController = TextEditingController();
+    final adminTripDetailsController = TextEditingController();
+
     List<Map<String, dynamic>> approvals = [];
     bool loading = true;
+
+    String formatDate(DateTime? d) {
+      if (d == null) return 'Select date';
+      return d.toIso8601String().split('T').first;
+    }
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -931,24 +976,63 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       ),
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (ctx, setState) {
-            Future<void> load() async {
+          builder: (ctx, setModalState) {
+            Future<void> loadApprovals() async {
               try {
                 final data = await RequestsService.getRequestApprovals(req.id);
-                setState(() {
+                setModalState(() {
                   approvals = data;
                   loading = false;
                 });
               } catch (_) {
-                setState(() {
+                setModalState(() {
                   approvals = [];
                   loading = false;
                 });
               }
             }
+
             if (loading) {
-              load();
+              loadApprovals();
             }
+
+            Widget buildSectionHeader(String title) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.skyBlue),
+                ),
+              );
+            }
+
+            Widget buildDateField(String label, DateTime? value, VoidCallback onTap) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: onTap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(formatDate(value)),
+                          const Icon(Icons.calendar_today, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 24,
@@ -956,94 +1040,381 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                 top: 16,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Request Review', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Request Review', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
+                      ],
+                    ),
+                    const Divider(),
+                    
+                    // Section A Info
+                    buildSectionHeader('Section A: Applicant Info'),
+                    Text('Name: ${req.userName}'),
+                    Text('Type: ${req.type}'),
+                    if (req.type.toLowerCase() == 'leave duty station') ...[
+                      Text('Reason: ${req.reasonForLeaving ?? "N/A"}'),
+                      Text('Date: ${req.travelDate ?? "N/A"}'),
+                      Text('Destination: ${req.travelPlace ?? "N/A"}'),
+                      const SizedBox(height: 8),
+                      buildSectionHeader('Section B: Cost of the trip'),
+                      _buildCostRow('Accommodation', req.costAccommodation),
+                      _buildCostRow('Breakfast', req.costBreakfast),
+                      _buildCostRow('Lunch', req.costLunch),
+                      _buildCostRow('Supper', req.costSupper),
+                      _buildCostRow('Public Transport', req.costPublicTransport),
+                      _buildCostRow('Fuel & Lubricants', req.costFuelLubricants),
+                      const Divider(),
+                      _buildCostRow('TOTAL', req.costTotal, isBold: true),
+                    ] else ...[
+                      Text('Dates: ${req.dateRange} (${req.duration})'),
+                      Text('Leave Grant Required: ${req.leaveGrantRequired ? 'Yes' : 'No'}'),
+                      if (req.contactAddress != null && req.contactAddress!.isNotEmpty)
+                        Text('Contact Address: ${req.contactAddress}'),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('${req.type} • ${req.dateRange} • ${req.duration}', style: const TextStyle(color: AppTheme.textLightBlue)),
-                  const SizedBox(height: 12),
-                  if (loading)
-                    const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
-                  else
-                    Column(
-                      children: approvals.map((a) {
+                    const SizedBox(height: 16),
+
+                    if (loading)
+                      const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                    else if (approvals.isNotEmpty) ...[
+                      buildSectionHeader('Previous Approval History'),
+                      ...approvals.map((a) {
                         final action = a['action']?.toString() ?? '';
                         final c = a['comment']?.toString() ?? '';
                         final ts = a['timestamp']?.toString() ?? '';
-                        return ListTile(
-                          leading: Icon(action == 'approved' ? Icons.check_circle : Icons.cancel,
-                              color: action == 'approved' ? Colors.green : AppTheme.paleRed),
-                          title: Text(action.isNotEmpty ? (action[0].toUpperCase() + action.substring(1)) : ''),
-                          subtitle: Text(c.isNotEmpty ? '$c\n$ts' : ts),
+                        final name = a['approver_name']?.toString() ?? 'Approver';
+                        final level = (a['level'] as num?)?.toInt() ?? 0;
+                        
+                        List<Widget> detailWidgets = [];
+                        
+                        // Extract stage-specific data from the approval record
+                        if (req.type.toLowerCase() == 'leave duty station') {
+                          if (level == 1 && a['accountant_funds_available'] != null) {
+                            detailWidgets.add(Text('Funds Available: ${a['accountant_funds_available'] == true ? "Yes" : "No"}'));
+                          } else if (level == 2 && a['hod_trip_recommendation'] != null) {
+                            detailWidgets.add(Text('Recommendation: ${a['hod_trip_recommendation']}'));
+                          } else if (level == 3 && a['admin_trip_approval_details'] != null) {
+                            detailWidgets.add(Text('Approval Details: ${a['admin_trip_approval_details']}'));
+                          }
+                        } else {
+                          if (level == 1) {
+                            if (a['hod_recommended_from'] != null) {
+                              detailWidgets.add(Text('Recommended: ${a['hod_recommended_from']} to ${a['hod_recommended_to']}'));
+                            }
+                            if (a['hod_not_recommended_reason'] != null && a['hod_not_recommended_reason'].toString().isNotEmpty) {
+                              detailWidgets.add(Text('Reason: ${a['hod_not_recommended_reason']}'));
+                            }
+                          } else if (level == 2) {
+                            if (a['hr_annual_entitlement'] != null) {
+                              detailWidgets.add(Text('Entitlement: ${a['hr_annual_entitlement']} days'));
+                            }
+                            if (a['hr_balance_if_approved'] != null) {
+                              detailWidgets.add(Text('Balance: ${a['hr_balance_if_approved']} days'));
+                            }
+                            if (a['hr_leave_grant_status'] != null) {
+                              detailWidgets.add(Text('Leave Grant: ${a['hr_leave_grant_status']}'));
+                            }
+                          } else if (level == 3) {
+                            if (a['admin_granted_from'] != null) {
+                              detailWidgets.add(Text('Granted: ${a['admin_granted_from']} to ${a['admin_granted_to']}'));
+                            }
+                            if (a['admin_total_days_approved'] != null) {
+                              detailWidgets.add(Text('Total Days: ${a['admin_total_days_approved']}'));
+                            }
+                          }
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(action == 'approved' ? Icons.check_circle : Icons.cancel,
+                                      size: 16, color: action == 'approved' ? Colors.green : AppTheme.paleRed),
+                                  const SizedBox(width: 8),
+                                  Text('$name - ${action.toUpperCase()}', 
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const Spacer(),
+                                  Text(ts.split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
+                              if (c.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text('Comment: $c', style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                              ],
+                              if (detailWidgets.isNotEmpty) ...[
+                                const Divider(height: 12),
+                                ...detailWidgets.map((w) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: DefaultTextStyle(
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textLightBlue),
+                                    child: w,
+                                  ),
+                                )),
+                              ],
+                            ],
+                          ),
                         );
-                      }).toList(),
-                    ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Comment (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => comment = v,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            try {
-                              if (comment.isNotEmpty) {
-                                await RequestsService.denyRequestWithComment(req.id, comment);
-                              } else {
-                                await RequestsService.denyRequest(req.id);
-                              }
-                              if (mounted) Navigator.of(ctx).pop();
-                              await _loadRequests();
-                            } catch (_) {}
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.paleRed,
-                            side: const BorderSide(color: AppTheme.paleRed),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Decline'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              if (comment.isNotEmpty) {
-                                await RequestsService.approveRequestWithComment(req.id, comment);
-                              } else {
-                                await RequestsService.approveRequest(req.id);
-                              }
-                              if (mounted) Navigator.of(ctx).pop();
-                              await _loadRequests();
-                            } catch (_) {}
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Approve'),
-                        ),
-                      ),
+                      }),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                ],
+
+                    // Stage-specific Form
+                    if (req.type.toLowerCase() == 'leave duty station') ...[
+                      if (req.approvalLevel == 1) ...[
+                        buildSectionHeader('Section C: Certificate of Availability of Funds (Accountant)'),
+                        CheckboxListTile(
+                          title: const Text('I certify that funds are available to meet the total cost of the proposed trip'),
+                          value: accountantFundsAvailable,
+                          onChanged: (v) => setModalState(() => accountantFundsAvailable = v!),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ] else if (req.approvalLevel == 2) ...[
+                        buildSectionHeader('Section D: Recommendation from H.O.D'),
+                        TextField(
+                          controller: hodTripRecommendationController,
+                          decoration: const InputDecoration(labelText: 'Trip Recommendation', border: OutlineInputBorder()),
+                          maxLines: 2,
+                        ),
+                      ] else if (req.approvalLevel == 3) ...[
+                        buildSectionHeader('Section E: Approval (Principal Administrator)'),
+                        TextField(
+                          controller: adminTripDetailsController,
+                          decoration: const InputDecoration(labelText: 'Approval Details', border: OutlineInputBorder()),
+                          maxLines: 2,
+                        ),
+                      ],
+                    ] else ...[
+                      if (req.approvalLevel == 1) ...[
+                        buildSectionHeader('Section B: H.O.D / Unit Incharge'),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: buildDateField('Recommended From', hodFrom, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hodFrom = d);
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: buildDateField('Recommended To', hodTo, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hodTo = d);
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: hodReasonController,
+                          decoration: const InputDecoration(labelText: 'Reason if not recommended', border: OutlineInputBorder()),
+                          maxLines: 2,
+                        ),
+                      ] else if (req.approvalLevel == 2) ...[
+                        buildSectionHeader('Section C: Human Resources'),
+                        TextField(
+                          controller: hrEntitlementController,
+                          decoration: const InputDecoration(labelText: 'Annual Entitlement (days)', border: OutlineInputBorder()),
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: buildDateField('Entitlement Taken From', hrEntTakenFrom, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hrEntTakenFrom = d);
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: buildDateField('Entitlement Taken To', hrEntTakenTo, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hrEntTakenTo = d);
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: buildDateField('Last Leave From', hrLastLeaveFrom, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hrLastLeaveFrom = d);
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: buildDateField('Last Leave To', hrLastLeaveTo, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => hrLastLeaveTo = d);
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: hrLastLeaveDaysController,
+                                decoration: const InputDecoration(labelText: 'Last Leave Days', border: OutlineInputBorder()),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: hrBalanceController,
+                                decoration: const InputDecoration(labelText: 'Balance if approved', border: OutlineInputBorder()),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: hrLeaveGrantStatus,
+                          decoration: const InputDecoration(labelText: 'Leave Grant Status', border: OutlineInputBorder()),
+                          items: const [
+                            DropdownMenuItem(value: 'given', child: Text('Given')),
+                            DropdownMenuItem(value: 'already_taken', child: Text('Already Taken')),
+                            DropdownMenuItem(value: 'not_required', child: Text('Not Required')),
+                          ],
+                          onChanged: (v) => setModalState(() => hrLeaveGrantStatus = v!),
+                        ),
+                      ] else if (req.approvalLevel == 3) ...[
+                        buildSectionHeader('Section D: Hospital Administrator'),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: buildDateField('Granted From', adminFrom, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => adminFrom = d);
+                              }),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: buildDateField('Granted To', adminTo, () async {
+                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                if (d != null) setModalState(() => adminTo = d);
+                              }),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: adminTotalDaysController,
+                          decoration: const InputDecoration(labelText: 'Total Days Approved', border: OutlineInputBorder()),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                    ],
+
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'General Comment (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => comment = v,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              try {
+                                await RequestsService.denyRequest(req.id);
+                                if (mounted) Navigator.of(ctx).pop();
+                                await _loadRequests();
+                              } catch (_) {}
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.paleRed,
+                              side: const BorderSide(color: AppTheme.paleRed),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Decline'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                            try {
+                              Map<String, dynamic> extraFields = {'comment': comment};
+                              
+                              if (req.type.toLowerCase() == 'leave duty station') {
+                                if (req.approvalLevel == 1) {
+                                  extraFields.addAll({'accountant_funds_available': accountantFundsAvailable});
+                                } else if (req.approvalLevel == 2) {
+                                  extraFields.addAll({'hod_trip_recommendation': hodTripRecommendationController.text});
+                                } else if (req.approvalLevel == 3) {
+                                  extraFields.addAll({'admin_trip_approval_details': adminTripDetailsController.text});
+                                }
+                              } else {
+                                if (req.approvalLevel == 1) {
+                                  extraFields.addAll({
+                                    'hod_recommended_from': hodFrom?.toIso8601String().split('T').first,
+                                    'hod_recommended_to': hodTo?.toIso8601String().split('T').first,
+                                    'hod_not_recommended_reason': hodReasonController.text,
+                                  });
+                                } else if (req.approvalLevel == 2) {
+                                  extraFields.addAll({
+                                    'hr_annual_entitlement': double.tryParse(hrEntitlementController.text),
+                                    'hr_entitlement_taken_from': hrEntTakenFrom?.toIso8601String().split('T').first,
+                                    'hr_entitlement_taken_to': hrEntTakenTo?.toIso8601String().split('T').first,
+                                    'hr_last_leave_from': hrLastLeaveFrom?.toIso8601String().split('T').first,
+                                    'hr_last_leave_to': hrLastLeaveTo?.toIso8601String().split('T').first,
+                                    'hr_last_leave_days': double.tryParse(hrLastLeaveDaysController.text),
+                                    'hr_balance_if_approved': double.tryParse(hrBalanceController.text),
+                                    'hr_leave_grant_status': hrLeaveGrantStatus,
+                                  });
+                                } else if (req.approvalLevel == 3) {
+                                  extraFields.addAll({
+                                    'admin_granted_from': adminFrom?.toIso8601String().split('T').first,
+                                    'admin_granted_to': adminTo?.toIso8601String().split('T').first,
+                                    'admin_total_days_approved': double.tryParse(adminTotalDaysController.text),
+                                  });
+                                }
+                              }
+
+                              await RequestsService.approveRequest(req.id, extraFields: extraFields);
+                                if (mounted) Navigator.of(ctx).pop();
+                                await _loadRequests();
+                              } catch (_) {}
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('Submit Approval'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
