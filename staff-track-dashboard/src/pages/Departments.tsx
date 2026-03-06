@@ -22,7 +22,10 @@ const Departments: React.FC = () => {
     try {
       setLoading(true);
       const response = await departmentsApi.getAllDepartments();
-      setDepartments(response.items || []);
+      console.log('API Response:', response);
+      console.log('Response departments:', response.departments);
+      console.log('Response total:', response.total_count);
+      setDepartments(response.departments || []);
       setPagination(prev => ({ ...prev, total: response.total_count || 0 }));
     } catch (error) {
       console.error('Error loading departments:', error);

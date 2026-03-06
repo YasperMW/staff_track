@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import DataTable from '../components/DataTable';
 import type { Column, Action } from '../components/DataTable';
+import { requestsApi } from '../services/api';
 import { 
   Calendar, 
   Clock, 
@@ -36,7 +37,7 @@ interface Request {
 }
 
 const Requests: React.FC = () => {
-  const { success, error, warning, info } = useToast();
+  const { success, error: showError, warning, info } = useToast();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -57,93 +58,32 @@ const Requests: React.FC = () => {
     try {
       setLoading(true);
       
-      // Mock data for now - replace with actual API call
-      const mockData: Request[] = [
-        {
-          id: '1',
-          user_id: '1',
-          user_name: 'John Doe',
-          employee_number: 'EMP001',
-          department: 'Emergency Department',
-          type: 'leave',
-          status: 'pending',
-          title: 'Annual Leave Request',
-          description: 'Requesting annual leave for family vacation',
-          start_date: '2024-03-10',
-          end_date: '2024-03-15',
-          duration: 5,
-          reason: 'Family vacation planned months ago',
-          created_at: '2024-03-01T09:00:00',
-          updated_at: '2024-03-01T09:00:00'
-        },
-        {
-          id: '2',
-          user_id: '2',
-          user_name: 'Jane Smith',
-          employee_number: 'EMP002',
-          department: 'ICU',
-          type: 'wfh',
-          status: 'approved',
-          title: 'Work From Home',
-          description: 'Requesting to work from home due to health reasons',
-          start_date: '2024-03-06',
-          end_date: '2024-03-08',
-          duration: 3,
-          reason: 'Recovering from minor illness',
-          approver_name: 'Dr. Wilson',
-          approver_comment: 'Approved. Please maintain availability.',
-          created_at: '2024-03-04T14:30:00',
-          updated_at: '2024-03-05T10:15:00'
-        },
-        {
-          id: '3',
-          user_id: '3',
-          user_name: 'Bob Johnson',
-          employee_number: 'EMP003',
-          department: 'Surgery',
-          type: 'shift_change',
-          status: 'rejected',
-          title: 'Shift Change Request',
-          description: 'Request to change from night shift to day shift',
-          start_date: '2024-03-07',
-          reason: 'Family responsibilities',
-          approver_name: 'Dr. Wilson',
-          approver_comment: 'Cannot approve at this time due to staffing constraints.',
-          created_at: '2024-03-02T11:20:00',
-          updated_at: '2024-03-03T16:45:00'
-        },
-        {
-          id: '4',
-          user_id: '4',
-          user_name: 'Alice Brown',
-          employee_number: 'EMP004',
-          department: 'Pediatrics',
-          type: 'overtime',
-          status: 'pending',
-          title: 'Overtime Request',
-          description: 'Request overtime hours for weekend coverage',
-          start_date: '2024-03-09',
-          duration: 8,
-          reason: 'Weekend staff shortage',
-          created_at: '2024-03-05T08:45:00',
-          updated_at: '2024-03-05T08:45:00'
-        }
-      ];
+      // Get requests summary and all requests
+      const [summaryResponse, allRequestsResponse] = await Promise.all([
+        requestsApi.getRequestsSummary(),
+        requestsApi.getAllRequests()
+      ]);
+      
+      console.log('Requests Summary:', summaryResponse);
+      console.log('All Requests:', allRequestsResponse);
+      
+      // Process the requests data
+      const requestsData = allRequestsResponse?.requests || allRequestsResponse || [];
       
       // Filter requests based on selected filter
       const filteredRequests = selectedFilter === 'all' 
-        ? mockData 
-        : mockData.filter(req => req.status === selectedFilter);
+        ? requestsData 
+        : requestsData.filter((req: any) => req.status === selectedFilter);
       
       setRequests(filteredRequests);
       
-      // Calculate stats
-      const total = mockData.length;
-      const pending = mockData.filter(r => r.status === 'pending').length;
-      const approved = mockData.filter(r => r.status === 'approved').length;
-      const rejected = mockData.filter(r => r.status === 'rejected').length;
-      const leaveRequests = mockData.filter(r => r.type === 'leave').length;
-      const wfhRequests = mockData.filter(r => r.type === 'wfh').length;
+      // Calculate stats from actual data or use summary if available
+      const total = requestsData.length;
+      const pending = requestsData.filter((r: any) => r.status === 'pending').length;
+      const approved = requestsData.filter((r: any) => r.status === 'approved').length;
+      const rejected = requestsData.filter((r: any) => r.status === 'rejected').length;
+      const leaveRequests = requestsData.filter((r: any) => r.type === 'leave').length;
+      const wfhRequests = requestsData.filter((r: any) => r.type === 'wfh').length;
       
       setStats({
         total,
@@ -154,22 +94,34 @@ const Requests: React.FC = () => {
         wfhRequests
       });
       
-    } catch (error) {
-      console.error('Error loading requests:', error);
-      error('Failed to load requests data');
+    } catch (err) {
+      console.error('Error loading requests:', err);
+      showError('Failed to load requests data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = (request: Request) => {
-    success(`Request from ${request.user_name} approved`);
-    loadRequests();
+  const handleApprove = async (request: Request) => {
+    try {
+      await requestsApi.approveRequest(request.id);
+      success(`Request from ${request.user_name} approved`);
+      loadRequests();
+    } catch (err) {
+      console.error('Error approving request:', err);
+      showError('Failed to approve request');
+    }
   };
 
-  const handleReject = (request: Request) => {
-    warning(`Request from ${request.user_name} rejected`);
-    loadRequests();
+  const handleReject = async (request: Request) => {
+    try {
+      await requestsApi.rejectRequest(request.id, 'Rejected by administrator');
+      warning(`Request from ${request.user_name} rejected`);
+      loadRequests();
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+      showError('Failed to reject request');
+    }
   };
 
   const handleViewDetails = (request: Request) => {

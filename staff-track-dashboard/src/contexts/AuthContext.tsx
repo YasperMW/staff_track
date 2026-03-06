@@ -119,8 +119,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Verify token is still valid
           await authApi.verifyToken();
+          console.log('Token verification successful');
         } catch (error) {
           // Token is invalid, clear storage
+          console.error('Token verification failed:', error);
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user_data');
           dispatch({ type: 'LOGOUT' });

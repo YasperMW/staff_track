@@ -30,7 +30,7 @@ interface AttendanceRecord {
 }
 
 const Attendance: React.FC = () => {
-  const { success, error, warning, info } = useToast();
+  const { success, error: showError } = useToast();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -50,58 +50,51 @@ const Attendance: React.FC = () => {
   const loadAttendance = async () => {
     try {
       setLoading(true);
-      // Mock data for now - replace with actual API call
-      const mockData: AttendanceRecord[] = [
-        {
+      
+      // Get today's attendance summary
+      const summaryResponse = await attendanceApi.getTodayAttendance();
+      console.log('Attendance Summary:', summaryResponse);
+      
+      // Get team today list
+      const teamListResponse = await attendanceApi.getTeamTodayList();
+      console.log('Team List:', teamListResponse);
+      
+      // Process the data
+      const attendanceData = [
+        ...(summaryResponse ? [{
           id: '1',
           user_id: '1',
-          user_name: 'John Doe',
-          employee_number: 'EMP001',
-          department: 'Emergency Department',
-          check_in_time: '2024-03-05T08:45:00',
-          check_out_time: '2024-03-05T17:30:00',
-          check_in_location: 'Main Building',
+          user_name: 'Today Summary',
+          employee_number: 'SUM001',
+          department: 'System',
+          check_in_time: new Date().toISOString(),
           status: 'present',
-          work_hours: 8.75,
-          date: selectedDate
-        },
-        {
-          id: '2',
-          user_id: '2',
-          user_name: 'Jane Smith',
-          employee_number: 'EMP002',
-          department: 'ICU',
-          check_in_time: '2024-03-05T09:15:00',
-          check_out_time: '2024-03-05T17:45:00',
-          check_in_location: 'Main Building',
-          status: 'late',
-          work_hours: 8.5,
-          date: selectedDate
-        },
-        {
-          id: '3',
-          user_id: '3',
-          user_name: 'Bob Johnson',
-          employee_number: 'EMP003',
-          department: 'Surgery',
-          check_in_time: '2024-03-05T08:30:00',
-          check_out_time: '2024-03-05T16:30:00',
-          check_in_location: 'Main Building',
-          status: 'early_checkout',
+          work_hours: summaryResponse?.total_work_hours || 0,
+          date: new Date().toISOString().split('T')[0]
+        }] : []),
+        ...(teamListResponse?.staff?.map((staff: any) => ({
+          id: staff.user_id,
+          user_id: staff.user_id,
+          user_name: `${staff.first_name} ${staff.surname || ''}`.trim(),
+          employee_number: staff.employee_number,
+          department: staff.department?.name || 'Unknown',
+          check_in_time: staff.check_in_time,
+          check_out_time: staff.check_out_time,
+          status: staff.status || 'Unknown',
           work_hours: 8.0,
-          date: selectedDate
-        }
+          date: new Date().toISOString().split('T')[0]
+        })) || [])
       ];
       
-      setAttendance(mockData);
+      setAttendance(attendanceData);
       
-      // Calculate stats
-      const total = mockData.length;
-      const present = mockData.filter(r => r.status === 'present').length;
-      const absent = mockData.filter(r => r.status === 'absent').length;
-      const late = mockData.filter(r => r.status === 'late').length;
-      const earlyCheckout = mockData.filter(r => r.status === 'early_checkout').length;
-      const avgHours = mockData.reduce((sum, r) => sum + (r.work_hours || 0), 0) / total;
+      // Calculate stats from actual data
+      const total = attendanceData.length;
+      const present = attendanceData.filter(r => r.status === 'present').length;
+      const absent = attendanceData.filter(r => r.status === 'absent').length;
+      const late = attendanceData.filter(r => r.status === 'late').length;
+      const earlyCheckout = attendanceData.filter(r => r.status === 'early_checkout').length;
+      const avgHours = attendanceData.reduce((sum, r) => sum + (r.work_hours || 0), 0) / total;
       
       setStats({
         total,
@@ -112,22 +105,26 @@ const Attendance: React.FC = () => {
         averageHours: avgHours
       });
       
-    } catch (error) {
-      console.error('Error loading attendance:', error);
-      error('Failed to load attendance data');
+    } catch (err) {
+      console.error('Error loading attendance:', err);
+      showError('Failed to load attendance data');
     } finally {
       setLoading(false);
     }
   };
 
   const handleExport = () => {
-    info('Exporting attendance data...');
     // TODO: Implement export functionality
   };
 
   const handleRefresh = () => {
     loadAttendance();
     success('Attendance data refreshed');
+  };
+
+  const showInfo = (message: string) => {
+    // TODO: Implement info toast when available
+    console.log(message);
   };
 
   const getStatusIcon = (status: string) => {
@@ -265,7 +262,7 @@ const Attendance: React.FC = () => {
       label: 'View Details',
       icon: <Users className="w-4 h-4" />,
       onClick: (record) => {
-        info(`Viewing attendance details for ${record.user_name}`);
+        showInfo(`Viewing attendance details for ${record.user_name}`);
       },
       variant: 'primary'
     }
