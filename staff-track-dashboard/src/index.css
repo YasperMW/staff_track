@@ -5,7 +5,7 @@
 
 @layer base {
   body {
-    @apply bg-background-white font-poppins text-text-dark;
+    @apply bg-gray-50 font-poppins text-gray-900;
     font-feature-settings: "rlig" 1, "calt" 1;
     margin: 0;
     padding: 0;
@@ -13,45 +13,45 @@
   }
   
   .dark body {
-    @apply bg-background-dark text-text-dark-light;
+    @apply bg-gray-900 text-gray-100;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-sky-blue text-white px-6 py-4 rounded-xl font-semibold hover:bg-dark-sky-blue transition-colors duration-200 shadow-md;
+    @apply bg-blue-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-blue-600 transition-colors duration-200 shadow-md;
   }
   
   .btn-secondary {
-    @apply bg-light-gold text-white px-6 py-4 rounded-xl font-semibold hover:bg-yellow-600 transition-colors duration-200 shadow-md;
+    @apply bg-amber-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-amber-600 transition-colors duration-200 shadow-md;
   }
   
   .btn-danger {
-    @apply bg-pale-red text-white px-6 py-4 rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200 shadow-md;
+    @apply bg-red-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200 shadow-md;
   }
   
   .btn-outline {
-    @apply border-2 border-sky-blue text-sky-blue px-6 py-4 rounded-xl font-semibold hover:bg-sky-blue hover:text-white transition-colors duration-200;
+    @apply border-2 border-blue-500 text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-blue-500 hover:text-white transition-colors duration-200;
   }
   
   .card {
-    @apply bg-surface-white rounded-3xl shadow-card p-6;
+    @apply bg-white rounded-3xl shadow-md p-6;
   }
   
   .dark .card {
-    @apply bg-surface-dark shadow-card-dark;
+    @apply bg-gray-800 shadow-lg;
   }
   
   .input-field {
-    @apply bg-surface-white border border-gray-200 rounded-xl px-4 py-3 focus:border-sky-blue focus:ring-2 focus:ring-sky-blue focus:ring-opacity-20 transition-all duration-200;
+    @apply bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all duration-200;
   }
   
   .dark .input-field {
-    @apply bg-surface-dark border-gray-600 text-text-dark-light focus:border-sky-blue;
+    @apply bg-gray-800 border-gray-600 text-gray-100 focus:border-blue-500;
   }
   
   .gradient-card {
-    @apply bg-gradient-to-br from-sky-blue to-light-gold;
+    @apply bg-gradient-to-br from-blue-500 to-amber-500;
   }
   
   .status-badge {

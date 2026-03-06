@@ -20,10 +20,12 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   String _filterStatus = 'pending';
   String _filterType = 'all';
   String _searchQuery = '';
+  String? _userRole;
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _loadRequests();
   }
 
@@ -32,6 +34,17 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     super.didChangeDependencies();
     // Refresh data when page becomes visible (e.g., navigating back)
     _loadRequests();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final role = await AuthStorage.getUserRole();
+      if (mounted) {
+        setState(() {
+          _userRole = role;
+        });
+      }
+    } catch (_) {}
   }
 
   Widget _buildCostRow(String label, double? value, {bool isBold = false}) {
@@ -45,6 +58,27 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         ],
       ),
     );
+  }
+
+  int? _getUserApprovalLevelForRequest(AdminTeamRequest req) {
+    if (_userRole == null) return null;
+    final r = _userRole!.toLowerCase().trim();
+    final isSystemAdmin = r.contains('system admin') || r.contains('system administrator') || r.contains('sysadmin') || r.contains('it admin');
+    if (isSystemAdmin) return null;
+    final isHod = r.contains('hod') || r.contains('head of department') || r.contains('unit incharge') || r.contains('unit in charge') || r.contains('unit head') || r.contains('department head') || r.contains('department');
+    final isHr = r.contains('hr') || r.contains('human resources') || r.contains('human resource');
+    final isHospitalAdmin = r.contains('hospital administrator') || r.contains('principal administrator');
+    final isAccountant = r.contains('accountant') || r.contains('finance');
+    if (req.type.toLowerCase() == 'leave duty station') {
+      if (isAccountant) return 1;
+      if (isHod) return 2;
+      if (isHospitalAdmin) return 3;
+    } else {
+      if (isHod) return 1;
+      if (isHr) return 2;
+      if (isHospitalAdmin) return 3;
+    }
+    return null;
   }
 
   Future<void> _loadRequests() async {
@@ -883,38 +917,63 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               ),
             )
           else
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _handleDeny(req),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.paleRed,
-                      side: const BorderSide(color: AppTheme.paleRed),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+          Builder(
+            builder: (context) {
+              final level = _getUserApprovalLevelForRequest(req);
+              if (level == null) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _showApprovalDetail(context, req),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('View'),
                       ),
                     ),
-                    child: const Text('Decline'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showApprovalDetail(context, req),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _handleDeny(req),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.paleRed,
+                        side: const BorderSide(color: AppTheme.paleRed),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
+                      child: const Text('Decline'),
                     ),
-                    child: const Text('Review'),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _showApprovalDetail(context, req),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Review'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
@@ -976,53 +1035,28 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       return d.toIso8601String().split('T').first;
     }
 
-    // Helper function to determine if user can see this section
-    bool canSeeSection(String sectionType, int level) {
-      if (userRole == null) return true; // Fallback: show all if role unknown
-      
-      final role = userRole!.toLowerCase();
-      
-      if (req.type.toLowerCase() == 'leave duty station') {
-        // Trip approval workflow: Accountant -> HOD -> Admin
-        if (level == 1) {
-          return role.contains('accountant') || role.contains('finance');
-        } else if (level == 2) {
-          return role.contains('hod') || role.contains('head') || role.contains('department') || role.contains('unit');
-        } else if (level == 3) {
-          return role.contains('administrator') || role.contains('admin') || role.contains('principal');
-        }
-      } else {
-        // Leave approval workflow: HOD -> HR -> Admin
-        if (level == 1) {
-          return role.contains('hod') || role.contains('head') || role.contains('department') || role.contains('unit');
-        } else if (level == 2) {
-          return role.contains('hr') || role.contains('human') || role.contains('resource');
-        } else if (level == 3) {
-          return role.contains('administrator') || role.contains('admin') || role.contains('principal');
-        }
-      }
-      
-      return false;
-    }
+    
 
     // Helper function to get user's approval level based on role
     int? getUserApprovalLevel() {
       if (userRole == null) return null;
-      
-      final role = userRole!.toLowerCase();
+      final r = userRole!.toLowerCase().trim();
+      final isSystemAdmin = r.contains('system admin') || r.contains('system administrator') || r.contains('sysadmin') || r.contains('it admin');
+      if (isSystemAdmin) return null;
+      final isHod = r.contains('hod') || r.contains('head of department') || r.contains('unit incharge') || r.contains('unit in charge') || r.contains('unit head') || r.contains('department head') || r.contains('unit in-charge');
+      final isHr = r.contains('hr') || r.contains('human resources') || r.contains('human resource');
+      final isHospitalAdmin = r.contains('hospital administrator') || r.contains('principal administrator');
+      final isAccountant = r.contains('accountant') || r.contains('finance');
       
       if (req.type.toLowerCase() == 'leave duty station') {
-        // Trip approval workflow: Accountant -> HOD -> Admin
-        if (role.contains('accountant') || role.contains('finance')) return 1;
-        if (role.contains('hod') || role.contains('head') || role.contains('department') || role.contains('unit')) return 2;
-        if (role.contains('administrator') || role.contains('admin') || role.contains('principal')) return 3;
+        if (isAccountant) return 1;
+        if (isHod) return 2;
+        if (isHospitalAdmin) return 3;
       } else {
-        // Leave approval workflow: HOD -> HR -> Admin
-        if (role.contains('hod') || role.contains('head') || role.contains('department') || role.contains('unit')) return 1;
-        if (role.contains('hr') || role.contains('human') || role.contains('resource')) return 2;
-        if (role.contains('administrator') || role.contains('admin') || role.contains('principal')) return 3;
+        if (isHod) return 1;
+        if (isHr) return 2;
+        if (isHospitalAdmin) return 3;
       }
-      
       return null;
     }
 

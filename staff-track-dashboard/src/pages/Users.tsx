@@ -22,7 +22,10 @@ const Users: React.FC = () => {
     try {
       setLoading(true);
       const response = await usersApi.getActiveUsers();
-      setUsers(response.items || []);
+      console.log('API Response:', response);
+      console.log('Response users:', response.users);
+      console.log('Response total:', response.total_count);
+      setUsers(response.users || []);
       setPagination(prev => ({ ...prev, total: response.total_count || 0 }));
     } catch (error) {
       console.error('Error loading users:', error);

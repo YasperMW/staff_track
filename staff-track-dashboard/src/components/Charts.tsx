@@ -17,8 +17,8 @@ export const BarChart: React.FC<ChartProps & {
     <div className={`card ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">{title}</h3>}
-          {subtitle && <p className="text-sm text-text-grey dark:text-text-grey-dark">{subtitle}</p>}
+          {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       )}
       
@@ -27,16 +27,16 @@ export const BarChart: React.FC<ChartProps & {
           <div key={index} className="flex items-center space-x-3">
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-text-dark dark:text-text-dark-light">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {item.label}
                 </span>
-                <span className="text-sm text-text-grey dark:text-text-grey-dark">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   {item.value}
                 </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full transition-all duration-500 ${item.color || 'bg-sky-blue'}`}
+                  className={`h-2 rounded-full transition-all duration-500 ${item.color || 'bg-blue-500'}`}
                   style={{ width: `${(item.value / maxValue) * 100}%` }}
                 />
               </div>
@@ -65,8 +65,8 @@ export const LineChart: React.FC<ChartProps & {
     <div className={`card ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">{title}</h3>}
-          {subtitle && <p className="text-sm text-text-grey dark:text-text-grey-dark">{subtitle}</p>}
+          {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       )}
       
@@ -151,8 +151,8 @@ export const PieChart: React.FC<ChartProps & {
     <div className={`card ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">{title}</h3>}
-          {subtitle && <p className="text-sm text-text-grey dark:text-text-grey-dark">{subtitle}</p>}
+          {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       )}
       
@@ -226,8 +226,8 @@ export const ProgressRing: React.FC<ChartProps & {
     <div className={`card flex flex-col items-center ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4 text-center">
-          {title && <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">{title}</h3>}
-          {subtitle && <p className="text-sm text-text-grey dark:text-text-grey-dark">{subtitle}</p>}
+          {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       )}
       
@@ -346,32 +346,32 @@ export const ActivityHeatmap: React.FC<ChartProps & {
   const getIntensity = (value: number) => {
     if (value === 0) return 'bg-gray-100 dark:bg-gray-800';
     const intensity = value / maxValue;
-    if (intensity < 0.25) return 'bg-sky-blue bg-opacity-20';
-    if (intensity < 0.5) return 'bg-sky-blue bg-opacity-40';
-    if (intensity < 0.75) return 'bg-sky-blue bg-opacity-60';
-    return 'bg-sky-blue bg-opacity-80';
+    if (intensity < 0.25) return 'bg-blue-500 bg-opacity-20';
+    if (intensity < 0.5) return 'bg-blue-500 bg-opacity-40';
+    if (intensity < 0.75) return 'bg-blue-500 bg-opacity-60';
+    return 'bg-blue-500 bg-opacity-80';
   };
   
   return (
     <div className={`card ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
-          {title && <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">{title}</h3>}
-          {subtitle && <p className="text-sm text-text-grey dark:text-text-grey-dark">{subtitle}</p>}
+          {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
         </div>
       )}
       
       <div className="space-y-2">
         {data.map((week, weekIndex) => (
           <div key={weekIndex} className="flex items-center space-x-2">
-            <span className="text-xs text-text-grey dark:text-text-grey-dark w-8">
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-8">
               W{weekIndex + 1}
             </span>
             <div className="flex space-x-1 flex-1">
               {week.map((day, dayIndex) => (
                 <div
                   key={dayIndex}
-                  className={`flex-1 h-4 rounded ${getIntensity(day)} transition-all duration-200 hover:ring-2 hover:ring-sky-blue`}
+                  className={`flex-1 h-4 rounded ${getIntensity(day)} transition-all duration-200 hover:ring-2 hover:ring-blue-500`}
                   title={`${labels[dayIndex]}: ${day} activities`}
                 />
               ))}

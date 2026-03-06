@@ -22,7 +22,10 @@ const Roles: React.FC = () => {
     try {
       setLoading(true);
       const response = await rolesApi.getAllRoles();
-      setRoles(response.items || []);
+      console.log('API Response:', response);
+      console.log('Response roles:', response.roles);
+      console.log('Response total:', response.total_count);
+      setRoles(response.roles || []);
       setPagination(prev => ({ ...prev, total: response.total_count || 0 }));
     } catch (error) {
       console.error('Error loading roles:', error);

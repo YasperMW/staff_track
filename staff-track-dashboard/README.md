@@ -1,73 +1,240 @@
-# React + TypeScript + Vite
+# Staff Track Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive web dashboard for hospital HR workforce management. This dashboard provides HR staff and administrators with comprehensive tools to manage employee attendance, leave requests, scheduling, and workforce analytics.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The Staff Track Dashboard is part of the St. John's Hospital HR Workforce Management System, designed to streamline hospital operations through:
 
-## React Compiler
+- Real-time attendance monitoring
+- Leave request management and approvals
+- Employee scheduling and shift management
+- Workforce analytics and reporting
+- Role-based access control for different user types
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Technology Stack
 
-## Expanding the ESLint configuration
+- **Frontend**: React 19.2.0 with TypeScript
+- **Build Tool**: Vite 7.3.1
+- **Styling**: TailwindCSS 3.4.19 with Tailwind Typography
+- **Routing**: React Router DOM 7.13.1
+- **HTTP Client**: Axios 1.13.6
+- **Icons**: Lucide React 0.577.0
+- **Development**: ESLint 9.39.1 with TypeScript support
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Before you begin, ensure you have the following installed:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Node.js** (version 18.0.0 or higher)
+- **npm** (version 9.0.0 or higher) or **yarn** (version 1.22.0 or higher)
+- **Git** for version control
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd staff-track-dashboard
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Install Dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Using npm:
+```bash
+npm install
 ```
+
+Or using yarn:
+```bash
+yarn install
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file in the root directory (if it doesn't exist):
+
+```env
+VITE_API_URL=http://localhost:8888
+```
+
+**Note**: Update `VITE_API_URL` to point to your backend API server. The dashboard communicates with a FastAPI backend for data operations.
+
+## Running the Application
+
+### Development Mode
+
+Start the development server with hot module replacement:
+
+```bash
+npm run dev
+```
+
+Or using yarn:
+```bash
+yarn dev
+```
+
+The application will be available at `http://localhost:5173` (or another port if 5173 is occupied).
+
+### Production Build
+
+Build the application for production:
+
+```bash
+npm run build
+```
+
+Or using yarn:
+```bash
+yarn build
+```
+
+The built files will be generated in the `dist` directory.
+
+### Preview Production Build
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+Or using yarn:
+```bash
+yarn preview
+```
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint for code quality checks
+- `npm run preview` - Preview production build
+
+## Project Structure
+
+```
+staff-track-dashboard/
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable UI components
+│   ├── contexts/          # React contexts for state management
+│   ├── pages/             # Page components
+│   ├── services/          # API service layer
+│   ├── assets/            # Images and other assets
+│   ├── App.tsx            # Main application component
+│   ├── main.tsx           # Application entry point
+│   └── index.css          # Global styles
+├── .env                   # Environment variables
+├── package.json           # Dependencies and scripts
+├── tailwind.config.js     # TailwindCSS configuration
+├── vite.config.ts         # Vite build configuration
+└── README.md              # This file
+```
+
+## User Roles and Access
+
+The dashboard supports multiple user roles with different access levels:
+
+- **HR Admin** - Full system access and user management
+- **Medical Director** - Clinical staff oversight and approvals
+- **Department Supervisor** - Department-specific request approvals
+- **Doctor** - Limited clinical management functions
+- **Nurse** - Basic access for personal information
+- **Clinical Officer** - Mid-level clinical access
+- **Support Staff** - Basic access to personal information
+
+## Features
+
+### Core Functionality
+
+- **Dashboard Overview** - Real-time workforce statistics and metrics
+- **Attendance Management** - Monitor employee check-ins and check-outs
+- **Leave Management** - Process and approve leave requests
+- **Employee Directory** - View and manage employee profiles
+- **Scheduling** - Create and manage work schedules
+- **Reports & Analytics** - Generate workforce reports and insights
+- **Settings** - Configure system preferences and user management
+
+### Key Components
+
+- Responsive design that works on desktop and tablet devices
+- Real-time data updates from the backend API
+- Role-based UI that adapts to user permissions
+- Interactive charts and visualizations
+- Search and filtering capabilities
+- Export functionality for reports
+
+## API Integration
+
+The dashboard communicates with a FastAPI backend running on the configured `VITE_API_URL`. Ensure the backend service is running before starting the dashboard.
+
+### API Endpoints Used
+
+- Authentication and authorization
+- Employee data retrieval
+- Attendance records
+- Leave requests and approvals
+- Scheduling information
+- Analytics and reporting data
+
+## Development Guidelines
+
+### Code Quality
+
+Run linting before committing changes:
+
+```bash
+npm run lint
+```
+
+### Styling
+
+The project uses TailwindCSS for styling. Follow the existing design patterns and utility classes. Custom styles are defined in `src/index.css`.
+
+### Component Development
+
+- Use TypeScript for all components
+- Follow the existing component structure in `src/components/`
+- Implement proper error handling and loading states
+- Use the established API service pattern in `src/services/`
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port Already in Use**
+   - The development server may use a different port if 5173 is occupied
+   - Check the terminal output for the actual URL
+
+2. **API Connection Issues**
+   - Ensure the backend API is running at the configured URL
+   - Check the `.env` file for correct `VITE_API_URL`
+   - Verify network connectivity and CORS settings
+
+3. **Build Errors**
+   - Run `npm install` to ensure all dependencies are current
+   - Check for TypeScript errors in the console
+   - Run `npm run lint` to identify code quality issues
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## License
+
+This project is part of the St. John's Hospital HR Workforce Management System. Contact the system administrator for licensing information.
+
+## Support
+
+For technical support or questions about the dashboard:
+
+- Contact the development team
+- Check the project documentation
+- Review the system design document: `../Hospital_HR_System_Design.md`

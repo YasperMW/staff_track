@@ -80,7 +80,10 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   success: boolean;
   message: string;
-  items: T[];
+  items: T[];  // For general endpoints
+  users: T[];  // For users endpoints  
+  departments: T[];  // For departments endpoints
+  roles: T[];  // For roles endpoints
   total_count: number;
   page?: number;
   per_page?: number;
@@ -101,6 +104,7 @@ const createApiInstance = (): AxiosInstance => {
   instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('auth_token');
+      console.log('Token being sent:', token ? 'Bearer ' + token.substring(0, 20) + '...' : 'No token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -117,6 +121,7 @@ const createApiInstance = (): AxiosInstance => {
       return response;
     },
     (error) => {
+      console.error('API Error:', error.response?.status, error.response?.data);
       if (error.response?.status === 401) {
         // Token expired or invalid
         localStorage.removeItem('auth_token');
@@ -150,13 +155,18 @@ export const authApi = {
   },
 
   verifyToken: async (): Promise<ApiResponse<null>> => {
-    const response = await api.get('/auth/verify');
+    const response = await api.get('/auth/verify-token');
     return response.data;
   },
 };
 
 // Users API
 export const usersApi = {
+  debugToken: async (): Promise<any> => {
+    const response = await api.get('/users/debug-token');
+    return response.data;
+  },
+
   getAllUsers: async (): Promise<PaginatedResponse<User>> => {
     const response = await api.get('/users/users');
     return response.data;

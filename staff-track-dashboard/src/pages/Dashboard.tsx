@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { attendanceApi, requestsApi, announcementsApi, usersApi } from '../services/api';
+import { attendanceApi, requestsApi, announcementsApi } from '../services/api';
 import {
   Users,
   Clock,
   AlertTriangle,
   UserX,
   TrendingUp,
-  Calendar,
   Bell,
   RefreshCw,
   MapPin,
-  Activity,
-  Target,
-  Zap,
   User,
 } from 'lucide-react';
 import {
@@ -206,32 +202,32 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-4 mb-2">
-            <h1 className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Admin Dashboard
             </h1>
             {user && (
-              <div className="flex items-center space-x-2 px-3 py-1 bg-sky-blue bg-opacity-10 rounded-full">
-                <User className="w-4 h-4 text-sky-blue" />
-                <span className="text-sm font-medium text-sky-blue">
+              <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-full">
+                <User className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-500">
                   Welcome, {user.first_name} {user.surname}
                 </span>
               </div>
             )}
           </div>
-          <p className="text-text-grey dark:text-text-grey-dark">{formatDate(currentTime)}</p>
+          <p className="text-gray-500 dark:text-gray-400">{formatDate(currentTime)}</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={loadDashboardData}
             disabled={isLoading}
-            className="flex items-center space-x-2 px-4 py-2 text-sky-blue hover:bg-sky-blue hover:text-white rounded-xl transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
           <a
             href="/profile"
-            className="flex items-center space-x-2 px-4 py-2 bg-sky-blue text-white rounded-xl hover:bg-sky-blue-dark transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
           >
             <User className="w-4 h-4" />
             <span>Profile</span>
@@ -240,7 +236,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Clock In Card */}
-      <div className="gradient-card rounded-3xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-blue-500 to-amber-500 rounded-3xl p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="relative z-10">
           <div className="flex items-center space-x-2 mb-6">
@@ -253,7 +249,7 @@ const Dashboard: React.FC = () => {
             <p className="text-5xl font-bold">{formatTime(currentTime)}</p>
           </div>
           
-          <button className="w-full bg-white text-sky-blue px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+          <button className="w-full bg-white text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
             {getButtonText()}
           </button>
         </div>
@@ -387,8 +383,8 @@ const Dashboard: React.FC = () => {
         {/* Recent Announcements */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-text-dark dark:text-text-dark-light">Recent Announcements</h3>
-            <span className="px-3 py-1 bg-sky-blue bg-opacity-10 text-sky-blue rounded-full text-xs font-semibold">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Announcements</h3>
+            <span className="px-3 py-1 bg-blue-50 text-blue-500 rounded-full text-xs font-semibold">
               Latest 3
             </span>
           </div>
@@ -396,7 +392,7 @@ const Dashboard: React.FC = () => {
           {recentAnnouncements.length === 0 ? (
             <div className="text-center py-8">
               <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-text-grey dark:text-text-grey-dark">No announcements yet</p>
+              <p className="text-gray-500 dark:text-gray-400">No announcements yet</p>
             </div>
           ) : (
             <div className="space-y-4 mb-6">
@@ -406,8 +402,8 @@ const Dashboard: React.FC = () => {
                     {getAnnouncementIcon(announcement.type)}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-text-dark dark:text-text-dark-light text-sm">{announcement.title}</p>
-                    <p className="text-xs text-text-grey dark:text-text-grey-dark">{announcement.target_audience}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{announcement.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{announcement.target_audience}</p>
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${getAnnouncementColor(announcement.type)}`}>
                     {announcement.type}
@@ -423,8 +419,8 @@ const Dashboard: React.FC = () => {
         {/* Team Attendance */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-text-dark dark:text-text-dark-light">My Team Attendance</h3>
-            <button className="text-sky-blue hover:text-sky-blue-dark text-sm font-medium flex items-center space-x-1">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">My Team Attendance</h3>
+            <button className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center space-x-1">
               <span>Live View</span>
               <TrendingUp className="w-4 h-4" />
             </button>
@@ -433,21 +429,21 @@ const Dashboard: React.FC = () => {
           {teamAttendance.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-text-grey dark:text-text-grey-dark">No team attendance data available</p>
+              <p className="text-gray-500 dark:text-gray-400">No team attendance data available</p>
             </div>
           ) : (
             <div className="space-y-3">
               {teamAttendance.slice(0, 5).map((member) => (
                 <div key={member.user_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-sky-blue rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-sm font-semibold">
                         {member.name.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-text-dark dark:text-text-dark-light text-sm">{member.name}</p>
-                      <p className="text-xs text-text-grey dark:text-text-grey-dark">{member.department}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{member.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{member.department}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -455,7 +451,7 @@ const Dashboard: React.FC = () => {
                       {member.status}
                     </span>
                     {member.check_in_time && (
-                      <p className="text-xs text-text-grey dark:text-text-grey-dark mt-1">{member.check_in_time}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.check_in_time}</p>
                     )}
                   </div>
                 </div>
