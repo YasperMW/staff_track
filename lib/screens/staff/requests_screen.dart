@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/tile_date_picker.dart';
@@ -558,9 +559,17 @@ class _RequestsScreenState extends State<RequestsScreen> {
             flex: 2,
             child: TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                isDense: true, 
+                border: OutlineInputBorder(),
+                hintText: 'Optional (0.00)',
+              ),
               onChanged: (_) => setState(() {}),
+              // Allow empty values and only numbers with decimals
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
             ),
           ),
         ],
@@ -633,13 +642,18 @@ class _RequestsScreenState extends State<RequestsScreen> {
               }
 
               Future<void> handleSubmit() async {
-                if (selectedRange == null || isSubmitting) return;
+                if ((selectedType == 'Leave Duty Station' ? travelDate == null : selectedRange == null) || isSubmitting) return;
                 setSheetState(() {
                   isSubmitting = true;
                 });
                 try {
-                  final start = formatDate(selectedRange!.start);
-                  final end = formatDate(selectedRange!.end);
+                  String start, end;
+                  if (selectedType == 'Leave Duty Station') {
+                    start = end = formatDate(travelDate!);
+                  } else {
+                    start = formatDate(selectedRange!.start);
+                    end = formatDate(selectedRange!.end);
+                  }
                   await RequestsService.createRequest(
                     type: selectedType,
                     startDate: start,
@@ -822,7 +836,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         ),
                         const SizedBox(height: 24),
                         const Text(
-                          'Section B: Cost of the trip (MK)',
+                          'Section B: Cost of the trip (Optional - MK)',
                           style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue),
                         ),
                         const SizedBox(height: 12),
@@ -926,7 +940,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: selectedRange == null || isSubmitting
+                          onPressed: (selectedType == 'Leave Duty Station' ? travelDate == null : selectedRange == null) || isSubmitting
                               ? null
                               : handleSubmit,
                           style: ElevatedButton.styleFrom(
