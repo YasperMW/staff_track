@@ -78,6 +78,32 @@ abstract class AuthStorage {
     return null;
   }
 
+  static Future<String?> getUserRole() async {
+    final user = await getUser();
+    if (user == null) {
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: No user data found for role');
+      }
+      return null;
+    }
+    
+    // Try different possible role field names
+    final role = user['role'] ?? user['role_name'] ?? user['userRole'];
+    
+    if (role != null) {
+      final roleString = role.toString();
+      if (!kReleaseMode) {
+        debugPrint('AuthStorage: Found user role: $roleString');
+      }
+      return roleString;
+    }
+    
+    if (!kReleaseMode) {
+      debugPrint('AuthStorage: No role found in user data');
+    }
+    return null;
+  }
+
   static Future<bool> isAuthenticated() async {
     final token = await getToken();
     final userId = await getUserId();
