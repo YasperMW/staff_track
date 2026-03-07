@@ -1,28 +1,50 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../config/app_config.dart';
 import 'auth_storage.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 class FCMService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  
+  static const String _channelId = 'staff_track_channel';
+  static const String _channelName = 'Staff Track Notifications';
+  
+  static String? _lastSentToken;
+  static bool _isRequesting = false;
 
   static Future<void> initialize() async {
     if (kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       return;
     }
-    // 1. Request permissions (iOS)
+
+    // 1. Request permissions (Android 13+ and iOS)
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await Permission.notification.request();
+    }
+    
     await _firebaseMessaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // 2. Initialize local notifications for foreground messages
+    // 2. Set background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // 3. Initialize local notifications for foreground messages
     const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
@@ -34,18 +56,37 @@ class FCMService {
       },
     );
 
-    // 3. Handle foreground messages
+    // 4. Create Android Notification Channel
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        _channelId,
+        _channelName,
+        description: 'Notifications for staff track app',
+        importance: Importance.max,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+    }
+
+    // 5. Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
 
-    // 4. Handle notification clicks when app is in background/terminated
+    // 6. Handle notification clicks when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       // Handle navigation if needed
     });
 
-    // 5. Get and save FCM token
+    // 7. Get and save FCM token
     await updateToken();
+    
+    // 8. Listen for token refresh
+    _firebaseMessaging.onTokenRefresh.listen((newToken) {
+      _sendTokenToBackend(newToken);
+    });
   }
 
   static Future<void> updateToken() async {
@@ -54,11 +95,6 @@ class FCMService {
       if (token != null) {
         await _sendTokenToBackend(token);
       }
-      
-      // Listen for token refresh
-      _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        _sendTokenToBackend(newToken);
-      });
     } catch (e) {
       if (!kReleaseMode) {
         debugPrint('Error getting FCM token: $e');
@@ -67,10 +103,17 @@ class FCMService {
   }
 
   static Future<void> _sendTokenToBackend(String token) async {
+    // Prevent redundant requests if already sending or if token hasn't changed
+    if (_isRequesting || token == _lastSentToken) return;
+
     try {
       final authToken = await AuthStorage.getToken();
-      if (authToken == null) return;
+      if (authToken == null) {
+        debugPrint('FCM: No auth token, skipping token registration');
+        return;
+      }
 
+      _isRequesting = true;
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/notifications/register-token'),
         headers: {
@@ -81,8 +124,9 @@ class FCMService {
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        _lastSentToken = token;
         if (!kReleaseMode) {
-          debugPrint('FCM token registered successfully');
+          debugPrint('FCM token registered successfully: ${token.substring(0, 10)}...');
         }
       } else {
         if (!kReleaseMode) {
@@ -93,26 +137,38 @@ class FCMService {
       if (!kReleaseMode) {
         debugPrint('Error sending FCM token to backend: $e');
       }
+    } finally {
+      _isRequesting = false;
     }
   }
 
   static Future<void> _showLocalNotification(RemoteMessage message) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'staff_track_notifications',
-      'Staff Track Notifications',
+      _channelId,
+      _channelName,
       channelDescription: 'Notifications for staff track app',
       importance: Importance.max,
       priority: Priority.high,
-      ticker: 'ticker',
+      showWhen: true,
     );
-    
-    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-    
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+
     await _localNotifications.show(
       message.hashCode,
-      message.notification?.title ?? 'Notification',
-      message.notification?.body ?? '',
-      notificationDetails,
+      message.notification?.title ?? 'New Notification',
+      message.notification?.body ?? 'You have a new notification',
+      platformDetails,
+      payload: message.data.toString(),
     );
+  }
+
+  /// Call this on logout to clear the local token cache 
+  /// so it can be re-registered for the next user.
+  static void clearTokenCache() {
+    _lastSentToken = null;
   }
 }

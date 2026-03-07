@@ -217,12 +217,17 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       String errorMessage = e.toString();
       print('DEBUG: Check-in error: $errorMessage');
       
-      if (errorMessage.contains('Location data is required')) {
+      if (errorMessage.contains('Outside allowed work area')) {
+        _showErrorSnackBar(
+          'You are currently outside the allowed work area. '
+          'Please move closer to your workplace and try again.',
+        );
+      } else if (errorMessage.contains('Location data is required')) {
         _showErrorSnackBar('Location is required for check-in. Please ensure location services are enabled and try again.');
       } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
         _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
       } else {
-        _showErrorSnackBar('Check-in failed: $e');
+        _showErrorSnackBar('Check-in failed. Please try again or contact your administrator if the problem persists.');
       }
     }
   }
@@ -277,12 +282,17 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       String errorMessage = e.toString();
       print('DEBUG: Check-out error: $errorMessage');
       
-      if (errorMessage.contains('Location data is required')) {
+      if (errorMessage.contains('Outside allowed work area')) {
+        _showErrorSnackBar(
+          'You are currently outside the allowed work area. '
+          'Please move closer to your workplace and try again.',
+        );
+      } else if (errorMessage.contains('Location data is required')) {
         _showErrorSnackBar('Location is required for check-out. Please ensure location services are enabled and try again.');
       } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
         _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
       } else {
-        _showErrorSnackBar('Check-out failed: $e');
+        _showErrorSnackBar('Check-out failed. Please try again or contact your administrator if the problem persists.');
       }
     }
   }
