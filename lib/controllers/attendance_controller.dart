@@ -1,40 +1,49 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/models.dart';
 import '../services/auth_storage.dart';
+import '../services/api_result.dart';
 
 class AttendanceController {
   static Future<String?> _getAuthToken() async {
     return await AuthStorage.getToken();
   }
 
-  static Future<Map<String, dynamic>> checkIn({
+  static Future<ApiResult<Map<String, dynamic>>> checkIn({
     String? location,
     double? latitude,
     double? longitude,
     String? shiftType,
   }) async {
+    final token = await _getAuthToken();
+    if (token == null) {
+      return ApiResult.failure(
+        const ApiError(
+          code: 'unauthenticated',
+          message: 'User not authenticated',
+        ),
+      );
+    }
+
+    final Map<String, dynamic> requestBody = {};
+    if (location != null) requestBody['location'] = location;
+    if (latitude != null) requestBody['latitude'] = latitude;
+    if (longitude != null) requestBody['longitude'] = longitude;
+    if (shiftType != null) requestBody['shift_type'] = shiftType;
+
+    // Debug logging
+    if (kDebugMode) {
+      debugPrint('DEBUG: AttendanceController.checkIn called with:');
+      debugPrint('  location: $location');
+      debugPrint('  latitude: $latitude');
+      debugPrint('  longitude: $longitude');
+      debugPrint('  shiftType: $shiftType');
+      debugPrint('  requestBody: $requestBody');
+    }
+
     try {
-      final token = await _getAuthToken();
-      if (token == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final Map<String, dynamic> requestBody = {};
-      if (location != null) requestBody['location'] = location;
-      if (latitude != null) requestBody['latitude'] = latitude;
-      if (longitude != null) requestBody['longitude'] = longitude;
-      if (shiftType != null) requestBody['shift_type'] = shiftType;
-
-      // Debug logging
-      print('DEBUG: AttendanceController.checkIn called with:');
-      print('  location: $location');
-      print('  latitude: $latitude');
-      print('  longitude: $longitude');
-      print('  shiftType: $shiftType');
-      print('  requestBody: $requestBody');
-
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/attendance/check-in'),
         headers: {
@@ -45,39 +54,58 @@ class AttendanceController {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return ApiResult.success(jsonDecode(response.body));
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? 'Check-in failed');
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final detail = body['detail']?.toString() ?? 'Check-in failed';
+        return ApiResult.failure(
+          _mapAttendanceError(
+            detail: detail,
+            statusCode: response.statusCode,
+          ),
+        );
       }
     } catch (e) {
-      throw Exception('Failed to check in: $e');
+      return ApiResult.failure(
+        const ApiError(
+          code: 'network_error',
+          message:
+              'Failed to check in. Please check your connection and try again.',
+        ),
+      );
     }
   }
 
-  static Future<Map<String, dynamic>> checkOut({
+  static Future<ApiResult<Map<String, dynamic>>> checkOut({
     String? location,
     double? latitude,
     double? longitude,
   }) async {
+    final token = await _getAuthToken();
+    if (token == null) {
+      return ApiResult.failure(
+        const ApiError(
+          code: 'unauthenticated',
+          message: 'User not authenticated',
+        ),
+      );
+    }
+
+    final Map<String, dynamic> requestBody = {};
+    if (location != null) requestBody['location'] = location;
+    if (latitude != null) requestBody['latitude'] = latitude;
+    if (longitude != null) requestBody['longitude'] = longitude;
+
+    // Debug logging
+    if (kDebugMode) {
+      debugPrint('DEBUG: AttendanceController.checkOut called with:');
+      debugPrint('  location: $location');
+      debugPrint('  latitude: $latitude');
+      debugPrint('  longitude: $longitude');
+      debugPrint('  requestBody: $requestBody');
+    }
+
     try {
-      final token = await _getAuthToken();
-      if (token == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final Map<String, dynamic> requestBody = {};
-      if (location != null) requestBody['location'] = location;
-      if (latitude != null) requestBody['latitude'] = latitude;
-      if (longitude != null) requestBody['longitude'] = longitude;
-
-      // Debug logging
-      print('DEBUG: AttendanceController.checkOut called with:');
-      print('  location: $location');
-      print('  latitude: $latitude');
-      print('  longitude: $longitude');
-      print('  requestBody: $requestBody');
-
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/attendance/check-out'),
         headers: {
@@ -88,13 +116,25 @@ class AttendanceController {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return ApiResult.success(jsonDecode(response.body));
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? 'Check-out failed');
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final detail = body['detail']?.toString() ?? 'Check-out failed';
+        return ApiResult.failure(
+          _mapAttendanceError(
+            detail: detail,
+            statusCode: response.statusCode,
+          ),
+        );
       }
     } catch (e) {
-      throw Exception('Failed to check out: $e');
+      return ApiResult.failure(
+        const ApiError(
+          code: 'network_error',
+          message:
+              'Failed to check out. Please check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -255,5 +295,43 @@ class AttendanceController {
     } catch (e) {
       throw Exception('Failed to get team attendance list: $e');
     }
+  }
+
+  static ApiError _mapAttendanceError({
+    required String detail,
+    required int statusCode,
+  }) {
+    final lower = detail.toLowerCase();
+
+    if (lower.contains('outside allowed work area')) {
+      return const ApiError(
+        code: 'outside_work_area',
+        message:
+            'You are currently outside the allowed work area. Please move closer and try again.',
+      );
+    }
+
+    if (lower.contains('location data is required') ||
+        lower.contains('location')) {
+      return const ApiError(
+        code: 'location_required',
+        message:
+            'Location is required. Please ensure location services are enabled and try again.',
+      );
+    }
+
+    if (statusCode == 401 || statusCode == 403) {
+      return const ApiError(
+        code: 'unauthorized',
+        message: 'Your session has expired. Please log in again.',
+      );
+    }
+
+    return ApiError(
+      code: 'unknown',
+      message: detail.isNotEmpty
+          ? detail
+          : 'Attendance request failed. Please try again.',
+    );
   }
 }

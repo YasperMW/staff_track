@@ -5,6 +5,8 @@ import '../../controllers/auth_provider.dart';
 import '../services/otp_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import '../widgets/app_snackbar.dart';
+import '../controllers/register_controller.dart';
 import 'forgot_password_screen.dart';
 import 'otp_verification_screen.dart';
 
@@ -42,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         // Check if the error is related to email verification
-        if (result.message?.contains('Email not verified') == true) {
+        if (result.code == 'email_not_verified') {
           // Send OTP before redirecting
           await OTPService.sendOTP(
             email: _emailController.text,
@@ -59,11 +61,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? 'Invalid credentials.'),
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppSnackBar.showError(
+            context,
+            result.message ?? 'Invalid credentials.',
           );
         }
       }
@@ -384,7 +384,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                             Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (context) =>
-                                                    const RegisterScreen(),
+                                                    ChangeNotifierProvider(
+                                                  create: (_) =>
+                                                      RegisterController(),
+                                                  child:
+                                                      const RegisterScreen(),
+                                                ),
                                               ),
                                             );
                                           },

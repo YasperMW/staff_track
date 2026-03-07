@@ -48,7 +48,9 @@ class AttendanceRecord {
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
       id: json['attendance_log_id'] ?? '',
-      userId: '', // Will be set from auth context
+      userId: (json['user_id'] as String?) ??
+          (json['employee_id'] as String?) ??
+          '',
       date: DateTime.parse(json['date']),
       checkInTime: json['check_in_time'] != null 
           ? DateTime.parse('${json['date']} ${json['check_in_time']}')

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'controllers/auth_provider.dart';
+import 'controllers/attendance_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/fcm_service.dart';
 
@@ -27,6 +28,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
       ],
       child: const StaffTrackApp(),
     ),

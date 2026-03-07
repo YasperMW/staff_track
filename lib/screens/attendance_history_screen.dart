@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../controllers/attendance_controller.dart';
+import '../../services/attendance_service.dart';
 import '../../controllers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/tile_date_picker.dart';
+import '../../widgets/async_content.dart';
 import 'home_screen.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   bool isLoading = false;
   DateTime? startDate;
   DateTime? endDate;
+  final AttendanceService _attendanceService = const AttendanceService();
 
   @override
   void initState() {
@@ -35,12 +37,12 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     });
 
     try {
-      final history = await AttendanceController.getAttendanceHistory(
+      final history = await _attendanceService.getAttendanceHistory(
         startDate: startDate?.toIso8601String().split('T')[0],
         endDate: endDate?.toIso8601String().split('T')[0],
       );
 
-      final attendanceSummary = await AttendanceController.getAttendanceSummary(
+      final attendanceSummary = await _attendanceService.getAttendanceSummary(
         startDate: startDate?.toIso8601String().split('T')[0],
         endDate: endDate?.toIso8601String().split('T')[0],
       );
@@ -117,19 +119,16 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         onRefresh: _loadAttendanceData,
         child: Column(
           children: [
-            // Summary Card
             if (summary != null) _buildSummaryCard(),
-            
-            // Date Filter Info
             if (startDate != null && endDate != null) _buildDateFilterInfo(),
-            
-            // Attendance List
             Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : attendanceHistory.isEmpty
-                      ? _buildEmptyState()
-                      : _buildAttendanceList(),
+              child: AsyncContent(
+                isLoading: isLoading,
+                isEmpty: attendanceHistory.isEmpty,
+                loading: const Center(child: CircularProgressIndicator()),
+                empty: _buildEmptyState(),
+                builder: _buildAttendanceList,
+              ),
             ),
           ],
         ),

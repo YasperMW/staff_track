@@ -8,12 +8,14 @@ class LoginResponse {
   final String? message;
   final String? token;
   final Map<String, dynamic>? user;
+  final String? code;
 
   const LoginResponse({
     required this.success,
     this.message,
     this.token,
     this.user,
+    this.code,
   });
 }
 
@@ -33,6 +35,20 @@ class LoginService {
     } catch (_) {
       return 'Request failed';
     }
+  }
+
+  static String? _mapLoginErrorCode(String message, int statusCode) {
+    final lower = message.toLowerCase();
+
+    if (lower.contains('email not verified')) {
+      return 'email_not_verified';
+    }
+
+    if (statusCode == 401 || statusCode == 403) {
+      return 'invalid_credentials';
+    }
+
+    return null;
   }
 
   Future<LoginResponse> login({
@@ -62,6 +78,10 @@ class LoginService {
       return LoginResponse(
         success: false,
         message: _detailFromBody(response.body),
+        code: _mapLoginErrorCode(
+          _detailFromBody(response.body),
+          response.statusCode,
+        ),
       );
     } catch (e) {
       return LoginResponse(
@@ -71,11 +91,14 @@ class LoginService {
     }
   }
 
-  Future<bool> logout() async {
+  Future<bool> logout(String token) async {
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/auth/logout'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
       return response.statusCode == 200;
     } catch (_) {

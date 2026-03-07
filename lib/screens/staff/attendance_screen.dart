@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
-import '../../controllers/attendance_controller.dart';
+import '../../services/attendance_service.dart';
 import '../../models/models.dart';
 import '../../widgets/app_header.dart';
 import '../check_in_out_screen.dart';
@@ -17,6 +17,7 @@ class AttendanceScreen extends StatefulWidget {
 class _AttendanceScreenState extends State<AttendanceScreen> {
   List<AttendanceRecord> attendanceHistory = [];
   bool isLoading = false;
+  final AttendanceService _attendanceService = const AttendanceService();
   Map<String, dynamic>? summary;
 
   @override
@@ -31,8 +32,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
 
     try {
-      final history = await AttendanceController.getAttendanceHistory(limit: 10);
-      final summaryData = await AttendanceController.getAttendanceSummary();
+      final history =
+          await _attendanceService.getAttendanceHistory(limit: 10);
+      final summaryData = await _attendanceService.getAttendanceSummary();
       
       setState(() {
         attendanceHistory = history;

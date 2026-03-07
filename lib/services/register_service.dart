@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'lookup_service.dart';
@@ -124,7 +125,9 @@ class RegisterService {
       final roles = await LookupService.getRoles();
       return roles.map((role) => role.name).toList();
     } catch (e) {
-      print('Error fetching roles from API: $e');
+      if (kDebugMode) {
+        debugPrint('Error fetching roles from API: $e');
+      }
       return [];
     }
   }
@@ -134,7 +137,9 @@ class RegisterService {
       final departments = await LookupService.getDepartments();
       return departments.map((dept) => dept.name).toList();
     } catch (e) {
-      print('Error fetching departments from API: $e');
+      if (kDebugMode) {
+        debugPrint('Error fetching departments from API: $e');
+      }
       return [];
     }
   }
