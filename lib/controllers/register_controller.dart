@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 
 import '../services/register_service.dart';
 
-class RegisterController {
+class RegisterController extends ChangeNotifier {
   final RegisterService _registerService = RegisterService();
 
   // Form data state
@@ -28,6 +29,8 @@ class RegisterController {
   String department = '';
   bool isHeadOfDepartment = false;
   String password = '';
+  String? gradeId;
+  String? profilePhotoUrl;
 
   // Validation methods
   String? validateEmployeeNumber(String? value) {
@@ -99,6 +102,8 @@ class RegisterController {
   void updateDepartment(String value) => department = value;
   void updateIsHeadOfDepartment(bool value) => isHeadOfDepartment = value;
   void updatePassword(String value) => password = value;
+  void updateGradeId(String? value) => gradeId = value;
+  void updateProfilePhotoUrl(String? value) => profilePhotoUrl = value;
 
   // Registration method
   Future<RegisterResponse> register() async {
@@ -197,12 +202,13 @@ class RegisterController {
       spouseName: spouseName,
       spouseContact: spouseContact,
       dateOfEmployment: dateOfEmployment,
-      
       designationId: designationId,
       role: role,
       department: department,
       isHeadOfDepartment: isHeadOfDepartment,
       password: password,
+      gradeId: gradeId,
+      profilePhotoUrl: profilePhotoUrl,
     );
   }
 

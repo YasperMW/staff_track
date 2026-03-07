@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -11,6 +12,7 @@ import '../../controllers/attendance_controller.dart';
 import '../../controllers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../widgets/floating_navigation.dart';
+import '../../widgets/app_snackbar.dart';
 import '../services/permission_service.dart';
 import 'attendance_history_screen.dart';
 import 'home_screen.dart';
@@ -30,6 +32,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   Position? currentPosition;
   String currentShift = '';
   String shiftTimeRange = '';
+  Timer? _timer;
 
   @override
   void initState() {
@@ -39,12 +42,18 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     _getCurrentLocation();
     
     // Update time and shift info every second
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         _updateShiftInfo();
         setState(() {}); // Trigger rebuild to update time
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   void _updateShiftInfo() {
@@ -74,55 +83,64 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    print('DEBUG: Starting location capture...');
+    if (kDebugMode) {
+      debugPrint('DEBUG: Starting location capture...');
+    }
     setState(() {
       isGettingLocation = true;
     });
 
     try {
-      // Check if location services are enabled
-      print('DEBUG: Checking if location services are enabled...');
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      print('DEBUG: Location services enabled: $serviceEnabled');
-      
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled');
+      // Check location services & permission using centralized service
+      if (kDebugMode) {
+        debugPrint('DEBUG: Checking location access status...');
+      }
+      final access = await PermissionService.getLocationAccessStatus();
+      if (kDebugMode) {
+        debugPrint('DEBUG: Location access state: ${access.state}');
       }
 
-      // Check location permissions using permission service
-      print('DEBUG: Checking location permissions...');
-      bool hasPermission = await PermissionService.requestLocationPermission();
-      print('DEBUG: Location permission granted: $hasPermission');
-      
-      if (!hasPermission) {
-        throw Exception('Location permissions are required for check-in/out');
+      if (access.state != LocationAccessState.ready) {
+        throw Exception(access.message);
       }
 
       // Get current position
-      print('DEBUG: Getting current position...');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Getting current position...');
+      }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
       
-      print('DEBUG: Position obtained:');
-      print('  Latitude: ${position.latitude}');
-      print('  Longitude: ${position.longitude}');
-      print('  Accuracy: ${position.accuracy} meters');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Position obtained:');
+        debugPrint('  Latitude: ${position.latitude}');
+        debugPrint('  Longitude: ${position.longitude}');
+        debugPrint('  Accuracy: ${position.accuracy} meters');
+      }
 
       String locationText =
           'Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}';
 
       try {
-        print('DEBUG: Getting address from coordinates...');
+        if (kDebugMode) {
+          debugPrint('DEBUG: Getting address from coordinates...');
+        }
         final placemarks = await placemarkFromCoordinates(
           position.latitude,
           position.longitude,
         );
-        print('DEBUG: Found ${placemarks.length} placemarks');
+        if (kDebugMode) {
+          debugPrint('DEBUG: Found ${placemarks.length} placemarks');
+        }
         
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
-          print('DEBUG: Primary placemark: ${place.name}, ${place.locality}, ${place.subAdministrativeArea}');
+          if (kDebugMode) {
+            debugPrint(
+              'DEBUG: Primary placemark: ${place.name}, ${place.locality}, ${place.subAdministrativeArea}',
+            );
+          }
           
           final parts = <String>[];
           if (place.name != null && place.name!.isNotEmpty) {
@@ -138,26 +156,36 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
           }
           if (parts.isNotEmpty) {
             locationText = parts.join(', ');
-            print('DEBUG: Formatted location text: $locationText');
+            if (kDebugMode) {
+              debugPrint('DEBUG: Formatted location text: $locationText');
+            }
           }
         }
       } catch (e) {
-        print('DEBUG: Failed to get address: $e');
+        if (kDebugMode) {
+          debugPrint('DEBUG: Failed to get address: $e');
+        }
       }
 
-      print('DEBUG: Setting location state...');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Setting location state...');
+      }
       setState(() {
         currentPosition = position;
         currentLocation = locationText;
         isGettingLocation = false;
       });
       
-      print('DEBUG: Location capture completed successfully');
-      print('  Final currentLocation: $currentLocation');
-      print('  Final currentPosition: $currentPosition');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Location capture completed successfully');
+        debugPrint('  Final currentLocation: $currentLocation');
+        debugPrint('  Final currentPosition: $currentPosition');
+      }
       
     } catch (e) {
-      print('DEBUG: Location capture failed: $e');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Location capture failed: $e');
+      }
       setState(() {
         isGettingLocation = false;
       });
@@ -171,64 +199,77 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     });
 
     // Debug logging before location check
-    print('DEBUG: Check-in initiated with current state:');
-    print('  currentLocation: $currentLocation');
-    print('  currentPosition: $currentPosition');
-    print('  currentPosition.latitude: ${currentPosition?.latitude}');
-    print('  currentPosition.longitude: ${currentPosition?.longitude}');
+    if (kDebugMode) {
+      debugPrint('DEBUG: Check-in initiated with current state:');
+      debugPrint('  currentLocation: $currentLocation');
+      debugPrint('  currentPosition: $currentPosition');
+      debugPrint('  currentPosition.latitude: ${currentPosition?.latitude}');
+      debugPrint('  currentPosition.longitude: ${currentPosition?.longitude}');
+    }
 
     // Ensure we have location data before proceeding
     if (currentLocation == null || currentPosition == null) {
       setState(() {
         isLoading = false;
       });
-      print('DEBUG: Location missing, attempting to refresh...');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Location missing, attempting to refresh...');
+      }
       _showErrorSnackBar('Location is required for check-in. Please capture location first.');
       return;
     }
 
     // Debug logging before API call
-    print('DEBUG: About to call AttendanceController.checkIn with:');
-    print('  location: $currentLocation');
-    print('  latitude: ${currentPosition?.latitude}');
-    print('  longitude: ${currentPosition?.longitude}');
-    print('  currentShift: $currentShift');
+    if (kDebugMode) {
+      debugPrint('DEBUG: About to call AttendanceController.checkIn with:');
+      debugPrint('  location: $currentLocation');
+      debugPrint('  latitude: ${currentPosition?.latitude}');
+      debugPrint('  longitude: ${currentPosition?.longitude}');
+      debugPrint('  currentShift: $currentShift');
+    }
 
-    try {
-      final result = await AttendanceController.checkIn(
-        location: currentLocation,
-        latitude: currentPosition?.latitude,
-        longitude: currentPosition?.longitude,
-        shiftType: currentShift, // Store current shift
+    final result = await AttendanceController.checkIn(
+      location: currentLocation,
+      latitude: currentPosition?.latitude,
+      longitude: currentPosition?.longitude,
+      shiftType: currentShift, // Store current shift
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (result.isSuccess) {
+      final data = result.data!;
+      _showSuccessSnackBar(
+        'Check-in successful for $currentShift at ${data['check_in_time']}',
       );
-
-      setState(() {
-        isLoading = false;
-      });
-
-      _showSuccessSnackBar('Check-in successful for $currentShift at ${result['check_in_time']}');
       _loadTodayAttendance(); // Refresh data
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      
-      // Provide user-friendly error messages
-      String errorMessage = e.toString();
-      print('DEBUG: Check-in error: $errorMessage');
-      
-      if (errorMessage.contains('Outside allowed work area')) {
+      return;
+    }
+
+    final error = result.error!;
+    if (kDebugMode) {
+      debugPrint('DEBUG: Check-in error: ${error.code} - ${error.message}');
+    }
+
+    switch (error.code) {
+      case 'outside_work_area':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'location_required':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'unauthorized':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'network_error':
+        _showErrorSnackBar(error.message);
+        break;
+      default:
         _showErrorSnackBar(
-          'You are currently outside the allowed work area. '
-          'Please move closer to your workplace and try again.',
+          'Check-in failed. Please try again or contact your administrator if the problem persists.',
         );
-      } else if (errorMessage.contains('Location data is required')) {
-        _showErrorSnackBar('Location is required for check-in. Please ensure location services are enabled and try again.');
-      } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
-        _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
-      } else {
-        _showErrorSnackBar('Check-in failed. Please try again or contact your administrator if the problem persists.');
-      }
     }
   }
 
@@ -238,81 +279,84 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     });
 
     // Debug logging before location check
-    print('DEBUG: Check-out initiated with current state:');
-    print('  currentLocation: $currentLocation');
-    print('  currentPosition: $currentPosition');
-    print('  currentPosition.latitude: ${currentPosition?.latitude}');
-    print('  currentPosition.longitude: ${currentPosition?.longitude}');
+    if (kDebugMode) {
+      debugPrint('DEBUG: Check-out initiated with current state:');
+      debugPrint('  currentLocation: $currentLocation');
+      debugPrint('  currentPosition: $currentPosition');
+      debugPrint('  currentPosition.latitude: ${currentPosition?.latitude}');
+      debugPrint('  currentPosition.longitude: ${currentPosition?.longitude}');
+    }
 
     // Ensure we have location data before proceeding
     if (currentLocation == null || currentPosition == null) {
       setState(() {
         isLoading = false;
       });
-      print('DEBUG: Location missing, attempting to refresh...');
+      if (kDebugMode) {
+        debugPrint('DEBUG: Location missing, attempting to refresh...');
+      }
       _showErrorSnackBar('Location is required for check-out. Please capture location first.');
       return;
     }
 
     // Debug logging before API call
-    print('DEBUG: About to call AttendanceController.checkOut with:');
-    print('  location: $currentLocation');
-    print('  latitude: ${currentPosition?.latitude}');
-    print('  longitude: ${currentPosition?.longitude}');
+    if (kDebugMode) {
+      debugPrint('DEBUG: About to call AttendanceController.checkOut with:');
+      debugPrint('  location: $currentLocation');
+      debugPrint('  latitude: ${currentPosition?.latitude}');
+      debugPrint('  longitude: ${currentPosition?.longitude}');
+    }
 
-    try {
-      final result = await AttendanceController.checkOut(
-        location: currentLocation,
-        latitude: currentPosition?.latitude,
-        longitude: currentPosition?.longitude,
+    final result = await AttendanceController.checkOut(
+      location: currentLocation,
+      latitude: currentPosition?.latitude,
+      longitude: currentPosition?.longitude,
+    );
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (result.isSuccess) {
+      final data = result.data!;
+      _showSuccessSnackBar(
+        'Check-out successful for $currentShift. Work hours: ${data['work_hours']}',
       );
-
-      setState(() {
-        isLoading = false;
-      });
-
-      _showSuccessSnackBar('Check-out successful for $currentShift. Work hours: ${result['work_hours']}');
       _loadTodayAttendance(); // Refresh data
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      
-      // Provide user-friendly error messages
-      String errorMessage = e.toString();
-      print('DEBUG: Check-out error: $errorMessage');
-      
-      if (errorMessage.contains('Outside allowed work area')) {
+      return;
+    }
+
+    final error = result.error!;
+    if (kDebugMode) {
+      debugPrint('DEBUG: Check-out error: ${error.code} - ${error.message}');
+    }
+
+    switch (error.code) {
+      case 'outside_work_area':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'location_required':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'unauthorized':
+        _showErrorSnackBar(error.message);
+        break;
+      case 'network_error':
+        _showErrorSnackBar(error.message);
+        break;
+      default:
         _showErrorSnackBar(
-          'You are currently outside the allowed work area. '
-          'Please move closer to your workplace and try again.',
+          'Check-out failed. Please try again or contact your administrator if the problem persists.',
         );
-      } else if (errorMessage.contains('Location data is required')) {
-        _showErrorSnackBar('Location is required for check-out. Please ensure location services are enabled and try again.');
-      } else if (errorMessage.contains('location') || errorMessage.contains('Location')) {
-        _showErrorSnackBar('Location error occurred. Please check your location services and try again.');
-      } else {
-        _showErrorSnackBar('Check-out failed. Please try again or contact your administrator if the problem persists.');
-      }
     }
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.skyBlue,
-      ),
-    );
+    AppSnackBar.showSuccess(context, message);
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.paleRed,
-      ),
-    );
+    AppSnackBar.showError(context, message);
   }
 
   @override
@@ -1115,125 +1159,5 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     } else {
       return 'COMPLETE';
     }
-  }
-}
-
-class _CheckInOutBottomNavigation extends StatelessWidget {
-  const _CheckInOutBottomNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    if (user == null) return const SizedBox.shrink();
-
-    final isAdmin = user.role.toLowerCase().contains('admin') ||
-        user.role.toLowerCase().contains('hr') ||
-        user.role.toLowerCase().contains('manager');
-
-    const currentIndex = 1;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(initialIndex: index),
-            ),
-            (route) => false,
-          );
-        },
-        selectedItemColor: AppTheme.skyBlue,
-        unselectedItemColor: Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withValues(alpha: 0.4),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              0,
-              isAdmin ? Icons.dashboard : Icons.home,
-              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Dashboard' : 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              1,
-              Icons.access_time,
-              Icons.access_time_outlined,
-              currentIndex,
-            ),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              2,
-              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
-              isAdmin
-                  ? Icons.assignment_turned_in_outlined
-                  : Icons.bar_chart_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Requests' : 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              3,
-              isAdmin ? Icons.analytics : Icons.description,
-              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Analytics' : 'Requests',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavIcon(
-    BuildContext context,
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    int currentIndex,
-  ) {
-    final isActive = currentIndex == index;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isActive)
-          Container(
-            width: 24,
-            height: 2,
-            decoration: BoxDecoration(
-              color: AppTheme.skyBlue,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        const SizedBox(height: 4),
-        Icon(isActive ? activeIcon : inactiveIcon),
-      ],
-    );
   }
 }

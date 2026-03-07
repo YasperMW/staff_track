@@ -8,7 +8,7 @@ import '../../models/models.dart';
 import '../../services/requests_service.dart';
 import '../../services/announcements_service.dart';
 import 'package:intl/intl.dart';
-import '../../controllers/attendance_controller.dart';
+import '../../services/attendance_service.dart';
 import '../check_in_out_screen.dart';
 import 'announcements_management_screen.dart';
 import 'admin_requests_screen.dart';
@@ -38,6 +38,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<TeamAttendanceMember> _teamAttendance = [];
   List<Announcement> _recentAnnouncements = [];
   bool _isLoadingAnnouncements = false;
+  final AttendanceService _attendanceService = const AttendanceService();
 
   @override
   void initState() {
@@ -57,7 +58,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
 
     try {
-      final attendance = await AttendanceController.getTodayAttendance();
+      final attendance = await _attendanceService.getTodayAttendance();
       setState(() {
         todayAttendance = attendance;
         isLoadingAttendance = false;
@@ -115,7 +116,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _loadTeamTodaySummary() async {
     try {
-      final summary = await AttendanceController.getTeamTodaySummary();
+      final summary = await _attendanceService.getTeamTodaySummary();
       if (!mounted) return;
       setState(() {
         _teamTotalStaff = (summary['total_staff'] as num?)?.toInt() ?? 0;
@@ -134,7 +135,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
 
     try {
-      final list = await AttendanceController.getTeamTodayList();
+      final list = await _attendanceService.getTeamTodayList();
       if (!mounted) return;
       setState(() {
         _teamAttendance = list;

@@ -1,7 +1,8 @@
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../services/register_service.dart';
+import '../controllers/register_controller.dart';
 import '../services/image_service.dart';
 import '../services/lookup_service.dart';
 import '../../theme/app_theme.dart';
@@ -18,7 +19,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final PageController _pageController = PageController();
   final ScrollController _scrollController = ScrollController();
   final _formKey = GlobalKey<FormState>();
-  final RegisterService _registerService = RegisterService();
   int _currentStep = 0;
   bool _isLoading = false;
   bool _showScrollHint = false;
@@ -186,34 +186,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     setState(() => _isLoading = true);
-    
-    final response = await _registerService.register(
-      employeeNumber: _employeeNumberController.text,
-      nationalId: _nationalIdController.text,
-      suffix: _suffixController.text,
-      firstName: _firstNameController.text,
-      surName: _surNameController.text,
-      otherNames: _otherNamesController.text,
-      dateOfBirth: _dateOfBirthController.text,
-      gender: _selectedGender!,
-      email: _emailController.text,
-      phone: _phoneController.text,
-      homeOfOrigin: _homeOfOriginController.text,
-      traditionalAuthority: _traditionalAuthorityController.text,
-      district: _districtController.text,
-      currentAddress: _currentAddressController.text,
-      maritalStatus: _selectedMaritalStatus!,
-      spouseName: _spouseNameController.text,
-      spouseContact: _spouseContactController.text,
-      dateOfEmployment: _dateOfEmploymentController.text,
-      designationId: _designationController.text,
-      role: _selectedRole!,
-      department: _selectedDepartment!,
-      isHeadOfDepartment: _isHeadOfDepartment,
-      gradeId: _selectedGrade,
-      password: _passwordController.text,
-      profilePhotoUrl: _profilePhotoUrl,
-    );
+    final controller = context.read<RegisterController>();
+
+    controller
+      ..updateEmployeeNumber(_employeeNumberController.text)
+      ..updateNationalId(_nationalIdController.text)
+      ..updateSuffix(_suffixController.text)
+      ..updateFirstName(_firstNameController.text)
+      ..updateSurName(_surNameController.text)
+      ..updateOtherNames(_otherNamesController.text)
+      ..updateDateOfBirth(_dateOfBirthController.text)
+      ..updateGender(_selectedGender ?? '')
+      ..updateEmail(_emailController.text)
+      ..updatePhone(_phoneController.text)
+      ..updateHomeOfOrigin(_homeOfOriginController.text)
+      ..updateTraditionalAuthority(_traditionalAuthorityController.text)
+      ..updateDistrict(_districtController.text)
+      ..updateCurrentAddress(_currentAddressController.text)
+      ..updateMaritalStatus(_selectedMaritalStatus ?? '')
+      ..updateSpouseName(_spouseNameController.text)
+      ..updateSpouseContact(_spouseContactController.text)
+      ..updateDateOfEmployment(_dateOfEmploymentController.text)
+      ..updateDesignationId(_designationController.text)
+      ..updateRole(_selectedRole ?? '')
+      ..updateDepartment(_selectedDepartment ?? '')
+      ..updateIsHeadOfDepartment(_isHeadOfDepartment)
+      ..updatePassword(_passwordController.text)
+      ..updateGradeId(_selectedGrade)
+      ..updateProfilePhotoUrl(_profilePhotoUrl);
+
+    final response = await controller.register();
     
     if (mounted) {
       setState(() => _isLoading = false);

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
-import '../../controllers/attendance_controller.dart';
-import '../../models/models.dart';
+import '../../controllers/attendance_provider.dart';
 import '../../widgets/floating_navigation.dart';
 import 'staff/dashboard_screen.dart';
 import 'admin/admin_dashboard_screen.dart';
@@ -27,51 +26,33 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
-  AttendanceRecord? todayAttendance;
-  bool isLoadingAttendance = false;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _loadTodayAttendance();
-  }
-
-  Future<void> _loadTodayAttendance() async {
-    setState(() {
-      isLoadingAttendance = true;
-    });
-
-    try {
-      final attendance = await AttendanceController.getTodayAttendance();
-      setState(() {
-        todayAttendance = attendance;
-        isLoadingAttendance = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoadingAttendance = false;
-      });
-    }
+    context.read<AttendanceProvider>().loadTodayAttendance();
   }
 
   Future<void> _handleQuickCheckInOut() async {
-    if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+    final attendanceProvider = context.read<AttendanceProvider>();
+    final todayAttendance = attendanceProvider.todayAttendance;
+    if (todayAttendance == null || !todayAttendance.isCheckedIn) {
       // Check in
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const CheckInOutScreen(),
         ),
-      ).then((_) => _loadTodayAttendance());
-    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+      ).then((_) => attendanceProvider.loadTodayAttendance());
+    } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
       // Check out
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const CheckInOutScreen(),
         ),
-      ).then((_) => _loadTodayAttendance());
+      ).then((_) => attendanceProvider.loadTodayAttendance());
     }
   }
 

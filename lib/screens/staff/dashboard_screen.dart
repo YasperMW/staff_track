@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
-import '../../controllers/attendance_controller.dart';
+import '../../controllers/attendance_provider.dart';
 import '../../models/models.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/async_content.dart';
 import '../check_in_out_screen.dart';
 import '../attendance_history_screen.dart';
 
@@ -20,57 +21,20 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late Timer _timer;
   String _timeString = '';
-  AttendanceRecord? todayAttendance;
-  bool isLoadingAttendance = false;
-  List<AttendanceRecord> recentAttendance = [];
-  bool isLoadingRecent = false;
 
   @override
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
-    _loadTodayAttendance();
-    _loadRecentAttendance();
-  }
-
-  Future<void> _loadRecentAttendance() async {
-    setState(() {
-      isLoadingRecent = true;
-    });
-
-    try {
-      final attendance = await AttendanceController.getAttendanceHistory(limit: 5);
-      setState(() {
-        recentAttendance = attendance;
-        isLoadingRecent = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoadingRecent = false;
-      });
-    }
-  }
-
-  Future<void> _loadTodayAttendance() async {
-    setState(() {
-      isLoadingAttendance = true;
-    });
-
-    try {
-      final attendance = await AttendanceController.getTodayAttendance();
-      setState(() {
-        todayAttendance = attendance;
-        isLoadingAttendance = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoadingAttendance = false;
-      });
-    }
+    final attendanceProvider = context.read<AttendanceProvider>();
+    attendanceProvider.loadTodayAttendance();
+    attendanceProvider.loadRecentAttendance(limit: 5);
   }
 
   String _getAttendanceStatusText() {
+    final todayAttendance =
+        context.watch<AttendanceProvider>().todayAttendance;
     if (todayAttendance == null) {
       return 'Ready to check in';
     } else if (!todayAttendance!.isCheckedIn) {
@@ -83,6 +47,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _getButtonText() {
+    final todayAttendance =
+        context.watch<AttendanceProvider>().todayAttendance;
     if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
       return 'Clock In';
     } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
@@ -188,6 +154,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildClockInCard() {
+    final attendanceProvider = context.watch<AttendanceProvider>();
+    final todayAttendance = attendanceProvider.todayAttendance;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -264,7 +232,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           MaterialPageRoute(
                             builder: (context) => const CheckInOutScreen(),
                           ),
-                        ).then((_) => _loadTodayAttendance());
+                        ).then(
+                          (_) => context
+                              .read<AttendanceProvider>()
+                              .loadTodayAttendance(),
+                        );
                       } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
                         // Check out
                         Navigator.push(
@@ -272,7 +244,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           MaterialPageRoute(
                             builder: (context) => const CheckInOutScreen(),
                           ),
-                        ).then((_) => _loadTodayAttendance());
+                        ).then(
+                          (_) => context
+                              .read<AttendanceProvider>()
+                              .loadTodayAttendance(),
+                        );
                       } else {
                         // View details (already completed)
                         Navigator.push(
@@ -280,7 +256,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           MaterialPageRoute(
                             builder: (context) => const CheckInOutScreen(),
                           ),
-                        ).then((_) => _loadTodayAttendance());
+                        ).then(
+                          (_) => context
+                              .read<AttendanceProvider>()
+                              .loadTodayAttendance(),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -393,14 +373,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivityList(BuildContext context) {
-    if (isLoadingRecent) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+    final attendanceProvider = context.watch<AttendanceProvider>();
 
-    if (recentAttendance.isEmpty) {
-      return Center(
+    return AsyncContent(
+      isLoading: attendanceProvider.isLoadingRecent,
+      isEmpty: attendanceProvider.recentAttendance.isEmpty,
+      loading: const Center(child: CircularProgressIndicator()),
+      empty: Center(
         child: Column(
           children: [
             Icon(
@@ -418,11 +397,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-      );
-    }
-
-    return Column(
-      children: recentAttendance.map((attendance) => _buildAttendanceItem(context, attendance)).toList(),
+      ),
+      builder: () => Column(
+        children: attendanceProvider.recentAttendance
+            .map((attendance) => _buildAttendanceItem(context, attendance))
+            .toList(),
+      ),
     );
   }
 

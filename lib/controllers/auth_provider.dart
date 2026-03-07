@@ -10,16 +10,18 @@ class LoginResult {
   final String? message;
   final String? token;
   final Map<String, dynamic>? user;
+  final String? code;
 
   const LoginResult({
     required this.success,
     this.message,
     this.token,
     this.user,
+    this.code,
   });
 
-  factory LoginResult.failure(String message) =>
-      LoginResult(success: false, message: message);
+  factory LoginResult.failure(String message, {String? code}) =>
+      LoginResult(success: false, message: message, code: code);
 
   factory LoginResult.success({required String token, required Map<String, dynamic> user}) =>
       LoginResult(success: true, token: token, user: user);
@@ -105,7 +107,10 @@ class AuthProvider extends ChangeNotifier {
   Future<LoginResult> login(String email, String password) async {
     final result = await _loginService.login(email: email, password: password);
     if (!result.success) {
-      return LoginResult.failure(result.message ?? 'Invalid credentials');
+      return LoginResult.failure(
+        result.message ?? 'Invalid credentials',
+        code: result.code,
+      );
     }
     if (result.token == null || result.user == null) {
       return LoginResult.failure('Invalid response from server');
@@ -127,7 +132,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout({bool skipApi = false}) async {
     if (!skipApi && _token != null) {
       try {
-        await _loginService.logout();
+        await _loginService.logout(_token!);
       } catch (_) {}
     }
     _token = null;

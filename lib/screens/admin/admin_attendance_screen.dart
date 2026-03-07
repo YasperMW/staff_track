@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../check_in_out_screen.dart';
-import '../../controllers/attendance_controller.dart';
+import '../../services/attendance_service.dart';
 import '../../models/models.dart';
 
 class AdminAttendanceScreen extends StatefulWidget {
@@ -17,6 +17,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   bool isLoadingTeam = false;
   List<TeamAttendanceMember> _teamAttendance = [];
   bool _isLoadingStaff = false;
+  final AttendanceService _attendanceService = const AttendanceService();
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     });
 
     try {
-      final data = await AttendanceController.getTeamTodaySummary();
+      final data = await _attendanceService.getTeamTodaySummary();
       if (!mounted) return;
       setState(() {
         teamSummary = data;
@@ -57,7 +58,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     });
 
     try {
-      final list = await AttendanceController.getTeamTodayList();
+      final list = await _attendanceService.getTeamTodayList();
       if (!mounted) return;
       setState(() {
         _teamAttendance = list;
