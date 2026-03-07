@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import DataTable from '../components/DataTable';
-import type { Column, Action } from '../components/DataTable';
+import type { Column } from '../components/DataTable';
 import { requestsApi } from '../services/api';
 import { 
   Calendar, 
@@ -10,7 +10,6 @@ import {
   CheckCircle, 
   XCircle, 
   AlertCircle, 
-  Eye,
   Home,
   RefreshCw,
   Filter
@@ -37,7 +36,7 @@ interface Request {
 }
 
 const Requests: React.FC = () => {
-  const { success, error: showError, warning, info } = useToast();
+  const { } = useToast();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -96,36 +95,9 @@ const Requests: React.FC = () => {
       
     } catch (err) {
       console.error('Error loading requests:', err);
-      showError('Failed to load requests data');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleApprove = async (request: Request) => {
-    try {
-      await requestsApi.approveRequest(request.id);
-      success(`Request from ${request.user_name} approved`);
-      loadRequests();
-    } catch (err) {
-      console.error('Error approving request:', err);
-      showError('Failed to approve request');
-    }
-  };
-
-  const handleReject = async (request: Request) => {
-    try {
-      await requestsApi.rejectRequest(request.id, 'Rejected by administrator');
-      warning(`Request from ${request.user_name} rejected`);
-      loadRequests();
-    } catch (err) {
-      console.error('Error rejecting request:', err);
-      showError('Failed to reject request');
-    }
-  };
-
-  const handleViewDetails = (request: Request) => {
-    info(`Viewing details for ${request.title}`);
   };
 
   const getRequestIcon = (type: string) => {
@@ -295,36 +267,6 @@ const Requests: React.FC = () => {
     }
   ];
 
-  const getActions = (request: Request): Action<Request>[] => {
-    const baseActions: Action<Request>[] = [
-      {
-        label: 'View Details',
-        icon: <Eye className="w-4 h-4" />,
-        onClick: handleViewDetails,
-        variant: 'primary'
-      }
-    ];
-
-    if (request.status === 'pending') {
-      baseActions.push(
-        {
-          label: 'Approve',
-          icon: <CheckCircle className="w-4 h-4" />,
-          onClick: handleApprove,
-          variant: 'secondary'
-        },
-        {
-          label: 'Reject',
-          icon: <XCircle className="w-4 h-4" />,
-          onClick: handleReject,
-          variant: 'danger'
-        }
-      );
-    }
-
-    return baseActions;
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -446,7 +388,6 @@ const Requests: React.FC = () => {
       <DataTable
         data={requests}
         columns={columns}
-        actions={getActions}
         loading={loading}
         emptyMessage="No requests found matching the selected filter."
       />

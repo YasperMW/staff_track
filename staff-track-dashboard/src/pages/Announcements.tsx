@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import DataTable from '../components/DataTable';
 import type { Column, Action } from '../components/DataTable';
+import { announcementsApi } from '../services/api';
 import { 
   Megaphone, 
   Calendar, 
@@ -20,24 +21,25 @@ import {
 interface Announcement {
   id: string;
   title: string;
-  content: string;
-  type: 'general' | 'urgent' | 'policy' | 'event' | 'maintenance';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  target_audience: 'all' | 'staff' | 'management' | 'specific_departments';
+  message?: string;
+  content?: string;
+  type: 'general' | 'urgent' | 'policy' | 'event' | 'maintenance' | 'holiday';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  targetAudience?: 'all' | 'staff' | 'management' | 'specific_departments';
   target_departments?: string[];
-  author_id: string;
-  author_name: string;
-  status: 'draft' | 'published' | 'scheduled' | 'archived';
+  authorId?: string;
+  authorName?: string;
+  status?: 'draft' | 'published' | 'scheduled' | 'archived';
   published_at?: string;
   scheduled_at?: string;
   expires_at?: string;
-  view_count: number;
-  created_at: string;
-  updated_at: string;
+  view_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Announcements: React.FC = () => {
-  const { success, error, warning, info } = useToast();
+  const { success, error, info } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'published' | 'draft' | 'scheduled'>('all');
@@ -58,84 +60,27 @@ const Announcements: React.FC = () => {
     try {
       setLoading(true);
       
-      // Mock data for now - replace with actual API call
-      const mockData: Announcement[] = [
-        {
-          id: '1',
-          title: 'New Hospital Policy Updates',
-          content: 'Important updates to patient care protocols and safety guidelines. All staff must review and acknowledge the new policies by end of month.',
-          type: 'policy',
-          priority: 'high',
-          target_audience: 'all',
-          author_id: '1',
-          author_name: 'Dr. Sarah Wilson',
-          status: 'published',
-          published_at: '2024-03-01T09:00:00',
-          expires_at: '2024-03-31T23:59:59',
-          view_count: 145,
-          created_at: '2024-03-01T08:30:00',
-          updated_at: '2024-03-01T09:00:00'
-        },
-        {
-          id: '2',
-          title: 'System Maintenance This Weekend',
-          content: 'The hospital management system will undergo scheduled maintenance this weekend from Saturday 10 PM to Sunday 2 AM. Please save all work before the maintenance window.',
-          type: 'maintenance',
-          priority: 'critical',
-          target_audience: 'all',
-          author_id: '2',
-          author_name: 'IT Department',
-          status: 'published',
-          published_at: '2024-03-04T14:00:00',
-          view_count: 89,
-          created_at: '2024-03-04T13:45:00',
-          updated_at: '2024-03-04T14:00:00'
-        },
-        {
-          id: '3',
-          title: 'Staff Recognition Ceremony',
-          content: 'Join us for the quarterly staff recognition ceremony to celebrate outstanding performance and dedication. Event will be held in the main conference room.',
-          type: 'event',
-          priority: 'medium',
-          target_audience: 'all',
-          author_id: '3',
-          author_name: 'HR Department',
-          status: 'scheduled',
-          scheduled_at: '2024-03-10T08:00:00',
-          view_count: 0,
-          created_at: '2024-03-05T10:15:00',
-          updated_at: '2024-03-05T10:15:00'
-        },
-        {
-          id: '4',
-          title: 'Emergency Protocol Review',
-          content: 'Draft version of updated emergency response protocols. Please review and provide feedback before publication.',
-          type: 'urgent',
-          priority: 'high',
-          target_audience: 'management',
-          author_id: '1',
-          author_name: 'Dr. Sarah Wilson',
-          status: 'draft',
-          view_count: 12,
-          created_at: '2024-03-05T11:30:00',
-          updated_at: '2024-03-05T11:30:00'
-        }
-      ];
+      // Get announcements from API
+      const response = await announcementsApi.getAnnouncements();
+      console.log('Announcements:', response);
+      
+      // Process announcements data
+      const announcementsData: Announcement[] = Array.isArray(response) ? response : [];
       
       // Filter announcements based on selected filter
       const filteredAnnouncements = selectedFilter === 'all' 
-        ? mockData 
-        : mockData.filter(ann => ann.status === selectedFilter);
+        ? announcementsData 
+        : announcementsData.filter((ann: Announcement) => ann.status === selectedFilter);
       
       setAnnouncements(filteredAnnouncements);
       
       // Calculate stats
-      const total = mockData.length;
-      const published = mockData.filter(a => a.status === 'published').length;
-      const draft = mockData.filter(a => a.status === 'draft').length;
-      const scheduled = mockData.filter(a => a.status === 'scheduled').length;
-      const totalViews = mockData.reduce((sum, a) => sum + a.view_count, 0);
-      const urgent = mockData.filter(a => a.priority === 'critical' || a.priority === 'high').length;
+      const total = announcementsData.length;
+      const published = announcementsData.filter((a: Announcement) => a.status === 'published').length;
+      const draft = announcementsData.filter((a: Announcement) => a.status === 'draft').length;
+      const scheduled = announcementsData.filter((a: Announcement) => a.status === 'scheduled').length;
+      const totalViews = announcementsData.reduce((sum: number, a: Announcement) => sum + (a.view_count || 0), 0);
+      const urgent = announcementsData.filter((a: Announcement) => a.priority === 'critical' || a.priority === 'high').length;
       
       setStats({
         total,
@@ -146,8 +91,8 @@ const Announcements: React.FC = () => {
         urgent
       });
       
-    } catch (error) {
-      console.error('Error loading announcements:', error);
+    } catch (err: any) {
+      console.error('Error loading announcements:', err);
       error('Failed to load announcements data');
     } finally {
       setLoading(false);
@@ -166,11 +111,6 @@ const Announcements: React.FC = () => {
 
   const handleEdit = (announcement: Announcement) => {
     info(`Editing "${announcement.title}"`);
-  };
-
-  const handleDelete = (announcement: Announcement) => {
-    warning(`"${announcement.title}" deleted`);
-    loadAnnouncements();
   };
 
   const handleView = (announcement: Announcement) => {
@@ -254,15 +194,15 @@ const Announcements: React.FC = () => {
       render: (_, row) => (
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
-            <div className={`p-1 rounded-full ${getPriorityColor(row.priority)}`}>
-              {getTypeIcon(row.type)}
+            <div className={`p-1 rounded-full ${getPriorityColor(row.priority || 'low')}`}>
+              {getTypeIcon(row.type || 'general')}
             </div>
             <h4 className="font-medium text-text-dark dark:text-text-dark-light">
               {row.title}
             </h4>
           </div>
           <p className="text-sm text-text-grey dark:text-text-grey-dark line-clamp-2">
-            {row.content}
+            {row.message || row.content || 'No content available'}
           </p>
         </div>
       )
@@ -285,8 +225,8 @@ const Announcements: React.FC = () => {
       filterable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
-          <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(value)}`}>
-            {value.toUpperCase()}
+          <div className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(value || 'low')}`}>
+            {(value || 'low').toUpperCase()}
           </div>
         </div>
       )
@@ -298,11 +238,11 @@ const Announcements: React.FC = () => {
       filterable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
-          <div className={`p-1 rounded-full ${getStatusColor(value)}`}>
-            {getStatusIcon(value)}
+          <div className={`p-1 rounded-full ${getStatusColor(value || 'draft')}`}>
+            {getStatusIcon(value || 'draft')}
           </div>
           <span className="text-sm font-medium capitalize">
-            {value}
+            {value || 'draft'}
           </span>
         </div>
       )
@@ -325,7 +265,7 @@ const Announcements: React.FC = () => {
       label: 'Published',
       sortable: true,
       render: (_, row) => {
-        const date = row.published_at || row.scheduled_at || row.created_at;
+        const date = row.published_at || row.scheduled_at || row.created_at || new Date().toISOString();
         return (
           <span className="text-sm text-text-grey dark:text-text-grey-dark">
             {formatDate(date)}

@@ -26,6 +26,7 @@ interface AttendanceRecord {
   check_out_location?: string;
   status: 'present' | 'absent' | 'late' | 'early_checkout';
   work_hours?: number;
+  shift_type?: string;
   date: string;
 }
 
@@ -242,6 +243,17 @@ const Attendance: React.FC = () => {
       ) : (
         <span className="text-sm text-text-grey dark:text-text-grey-dark">
           Not checked out
+        </span>
+      )
+    },
+    {
+      key: 'shift_type',
+      label: 'Shift',
+      sortable: true,
+      filterable: true,
+      render: (value) => (
+        <span className="text-sm font-medium text-text-dark dark:text-text-dark-light">
+          {value || 'Not assigned'}
         </span>
       )
     },

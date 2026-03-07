@@ -167,6 +167,16 @@ export const usersApi = {
     return response.data;
   },
 
+  getCurrentUserProfile: async (): Promise<any> => {
+    const response = await api.get('/users/profile');
+    return response.data;
+  },
+
+  getCompleteUserProfile: async (): Promise<any> => {
+    const response = await api.get('/users/profile/complete');
+    return response.data;
+  },
+
   getAllUsers: async (): Promise<PaginatedResponse<User>> => {
     const response = await api.get('/users/users');
     return response.data;

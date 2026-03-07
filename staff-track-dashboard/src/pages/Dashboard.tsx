@@ -86,6 +86,13 @@ const Dashboard: React.FC = () => {
         attendanceApi.getTeamTodayList(),
       ]);
 
+      console.log('Dashboard data:', {
+        attendanceSummary,
+        requestsSummary,
+        announcements,
+        teamList
+      });
+
       // Process attendance summary
       setStats(prev => ({
         ...prev,
@@ -109,11 +116,13 @@ const Dashboard: React.FC = () => {
         }));
       }
 
-      // Process announcements
-      setRecentAnnouncements(announcements.items || []);
+      // Process announcements - handle different response formats
+      const announcementsData = Array.isArray(announcements) ? announcements : (announcements.items || []);
+      setRecentAnnouncements(announcementsData.slice(0, 3));
 
-      // Process team attendance
-      setTeamAttendance(teamList.items || []);
+      // Process team attendance - handle different response formats
+      const teamData = Array.isArray(teamList) ? teamList : (teamList.staff || teamList.items || []);
+      setTeamAttendance(teamData);
 
       // Get today's attendance for current user
       try {
@@ -149,16 +158,113 @@ const Dashboard: React.FC = () => {
   };
 
   const getAttendanceStatus = () => {
-    if (!todayAttendance) return 'Ready to check in';
-    if (!todayAttendance.isCheckedIn) return 'Not checked in today';
-    if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) return 'Currently working';
-    return 'Completed for today';
+    if (!todayAttendance || todayAttendance.message === 'No attendance record for today') return 'Ready to check in';
+    if (todayAttendance.check_in_time && !todayAttendance.check_out_time) return 'Currently working';
+    if (todayAttendance.check_in_time && todayAttendance.check_out_time) return 'Completed for today';
+    return 'Not checked in today';
   };
 
   const getButtonText = () => {
-    if (!todayAttendance || !todayAttendance.isCheckedIn) return 'Clock In';
-    if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) return 'Clock Out';
+    if (!todayAttendance || todayAttendance.message === 'No attendance record for today') return 'Clock In';
+    if (todayAttendance.check_in_time && !todayAttendance.check_out_time) return 'Clock Out';
     return 'View Details';
+  };
+
+  const handleClockAction = async () => {
+    try {
+      if (!todayAttendance || todayAttendance.message === 'No attendance record for today') {
+        // Clock in - get user location
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const locationData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                device_id: 'web-dashboard',
+                shift_type: 'Day Shift'
+              };
+              
+              const result = await attendanceApi.checkIn(locationData);
+              console.log('Check-in successful:', result);
+              await loadDashboardData(); // Refresh data
+            },
+            (error) => {
+              console.error('Geolocation error:', error);
+              // Fallback without location
+              handleClockInWithoutLocation();
+            }
+          );
+        } else {
+          handleClockInWithoutLocation();
+        }
+      } else if (todayAttendance.check_in_time && !todayAttendance.check_out_time) {
+        // Clock out
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const locationData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                device_id: 'web-dashboard'
+              };
+              
+              const result = await attendanceApi.checkOut(locationData);
+              console.log('Check-out successful:', result);
+              await loadDashboardData(); // Refresh data
+            },
+            (error) => {
+              console.error('Geolocation error:', error);
+              handleClockOutWithoutLocation();
+            }
+          );
+        } else {
+          handleClockOutWithoutLocation();
+        }
+      } else {
+        // View details - navigate to attendance page
+        window.location.href = '/attendance';
+      }
+    } catch (error: any) {
+      console.error('Clock action error:', error);
+      alert(error?.detail || 'Failed to perform clock action');
+    }
+  };
+
+  const handleClockInWithoutLocation = async () => {
+    const locationData = {
+      location: 'Office - Main Building',
+      device_id: 'web-dashboard',
+      shift_type: 'Day Shift'
+    };
+    
+    const result = await attendanceApi.checkIn(locationData);
+    console.log('Check-in successful:', result);
+    await loadDashboardData();
+  };
+
+  const handleClockOutWithoutLocation = async () => {
+    const locationData = {
+      location: 'Office - Main Building',
+      device_id: 'web-dashboard'
+    };
+    
+    const result = await attendanceApi.checkOut(locationData);
+    console.log('Check-out successful:', result);
+    await loadDashboardData();
+  };
+
+  const handleNavigateToAnnouncements = () => {
+    window.location.href = '/announcements';
+  };
+
+  const handleNavigateToAttendance = () => {
+    window.location.href = '/attendance';
+  };
+
+  const handleNavigateToRequests = () => {
+    window.location.href = '/requests';
   };
 
   const getStatusColor = (status: string) => {
@@ -249,9 +355,43 @@ const Dashboard: React.FC = () => {
             <p className="text-5xl font-bold">{formatTime(currentTime)}</p>
           </div>
           
-          <button className="w-full bg-white text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+          <button 
+            onClick={handleClockAction}
+            disabled={isLoading}
+            className="w-full bg-white text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {getButtonText()}
           </button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card p-6">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
+          <div className="space-y-3">
+            <button 
+              onClick={handleNavigateToRequests}
+              className="w-full btn-outline flex items-center justify-center space-x-2"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>View Pending Requests</span>
+            </button>
+            <button 
+              onClick={handleNavigateToAttendance}
+              className="w-full btn-outline flex items-center justify-center space-x-2"
+            >
+              <Clock className="w-4 h-4" />
+              <span>Attendance Report</span>
+            </button>
+            <button 
+              onClick={handleNavigateToAnnouncements}
+              className="w-full btn-outline flex items-center justify-center space-x-2"
+            >
+              <Bell className="w-4 h-4" />
+              <span>Manage Announcements</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -413,14 +553,14 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          <button className="btn-primary w-full">Manage Announcements</button>
+          <button onClick={handleNavigateToAnnouncements} className="btn-primary w-full">Manage Announcements</button>
         </div>
 
         {/* Team Attendance */}
         <div className="card">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">My Team Attendance</h3>
-            <button className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center space-x-1">
+            <button onClick={handleNavigateToAttendance} className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center space-x-1">
               <span>Live View</span>
               <TrendingUp className="w-4 h-4" />
             </button>

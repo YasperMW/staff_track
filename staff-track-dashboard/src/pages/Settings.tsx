@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { usersApi } from '../services/api';
 import { 
   Settings as SettingsIcon, 
   User, 
   Bell, 
-  Shield, 
   Database, 
-  Mail, 
-  Smartphone, 
-  Globe, 
   Moon, 
   Sun, 
   Save,
@@ -28,13 +25,52 @@ const Settings: React.FC = () => {
   
   // Profile Settings
   const [profile, setProfile] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@hospital.com',
-    phone: '+1 234 567 8900',
-    department: 'Emergency Department',
-    role: 'Administrator'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    department: '',
+    role: '',
+    employeeNumber: '',
+    status: '',
+    profilePhotoUrl: '',
+    lastLoginAt: ''
   });
+
+  // Loading state
+  const [loading, setLoading] = useState(true);
+
+  // Load profile data on component mount
+  useEffect(() => {
+    loadProfileData();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      setLoading(true);
+      const profileData = await usersApi.getCurrentUserProfile();
+      console.log('Profile data:', profileData);
+      
+      setProfile({
+        firstName: profileData.first_name || '',
+        lastName: profileData.surname || '',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+        department: profileData.department_name || '',
+        role: profileData.role_name || '',
+        employeeNumber: profileData.employee_number || '',
+        status: profileData.status || '',
+        profilePhotoUrl: profileData.profile_photo_url || '',
+        lastLoginAt: profileData.last_login_at || ''
+      });
+      
+    } catch (err: any) {
+      console.error('Error loading profile data:', err);
+      error('Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Notification Settings
   const [notifications, setNotifications] = useState({
@@ -46,15 +82,6 @@ const Settings: React.FC = () => {
     systemAlerts: true,
     weeklyReports: true,
     monthlyReports: false
-  });
-
-  // Security Settings
-  const [security, setSecurity] = useState({
-    twoFactorAuth: false,
-    sessionTimeout: '30',
-    passwordExpiry: '90',
-    loginAlerts: true,
-    apiAccess: false
   });
 
   // System Settings
@@ -80,16 +107,19 @@ const Settings: React.FC = () => {
     confirmPassword: ''
   });
 
-  const handleSaveProfile = () => {
-    success('Profile settings saved successfully');
+  const handleSaveProfile = async () => {
+    try {
+      // TODO: Implement profile update API call
+      console.log('Saving profile data:', profile);
+      success('Profile settings saved successfully');
+    } catch (err: any) {
+      console.error('Error saving profile:', err);
+      error('Failed to save profile settings');
+    }
   };
 
   const handleSaveNotifications = () => {
     success('Notification preferences updated');
-  };
-
-  const handleSaveSecurity = () => {
-    success('Security settings updated');
   };
 
   const handleSaveSystem = () => {
@@ -158,9 +188,34 @@ const Settings: React.FC = () => {
               <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
                 Profile Settings
               </h2>
+              {loading && <RefreshCw className="w-4 h-4 animate-spin text-text-grey" />}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                  Employee Number
+                </label>
+                <input
+                  type="text"
+                  value={profile.employeeNumber}
+                  disabled
+                  className="input-field bg-gray-100 dark:bg-gray-800"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                  Status
+                </label>
+                <input
+                  type="text"
+                  value={profile.status}
+                  disabled
+                  className="input-field bg-gray-100 dark:bg-gray-800"
+                />
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
                   First Name
@@ -169,6 +224,7 @@ const Settings: React.FC = () => {
                   type="text"
                   value={profile.firstName}
                   onChange={(e) => setProfile({...profile, firstName: e.target.value})}
+                  disabled={loading}
                   className="input-field"
                 />
               </div>
@@ -181,6 +237,7 @@ const Settings: React.FC = () => {
                   type="text"
                   value={profile.lastName}
                   onChange={(e) => setProfile({...profile, lastName: e.target.value})}
+                  disabled={loading}
                   className="input-field"
                 />
               </div>
@@ -193,6 +250,7 @@ const Settings: React.FC = () => {
                   type="email"
                   value={profile.email}
                   onChange={(e) => setProfile({...profile, email: e.target.value})}
+                  disabled={loading}
                   className="input-field"
                 />
               </div>
@@ -205,6 +263,7 @@ const Settings: React.FC = () => {
                   type="tel"
                   value={profile.phone}
                   onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                  disabled={loading}
                   className="input-field"
                 />
               </div>
@@ -213,16 +272,12 @@ const Settings: React.FC = () => {
                 <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
                   Department
                 </label>
-                <select
+                <input
+                  type="text"
                   value={profile.department}
-                  onChange={(e) => setProfile({...profile, department: e.target.value})}
-                  className="input-field"
-                >
-                  <option value="Emergency Department">Emergency Department</option>
-                  <option value="ICU">ICU</option>
-                  <option value="Surgery">Surgery</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                </select>
+                  disabled
+                  className="input-field bg-gray-100 dark:bg-gray-800"
+                />
               </div>
               
               <div>
@@ -239,9 +294,13 @@ const Settings: React.FC = () => {
             </div>
             
             <div className="mt-6">
-              <button onClick={handleSaveProfile} className="btn-primary flex items-center space-x-2">
+              <button 
+                onClick={handleSaveProfile} 
+                disabled={loading}
+                className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Save className="w-4 h-4" />
-                <span>Save Profile</span>
+                <span>{loading ? 'Loading...' : 'Save Profile'}</span>
               </button>
             </div>
           </div>
