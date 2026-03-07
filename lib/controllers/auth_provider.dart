@@ -88,6 +88,9 @@ class AuthProvider extends ChangeNotifier {
       final valid = await _loginService.verifyToken(_token!);
       if (!valid) {
         await logout(skipApi: true);
+      } else {
+        // Token still valid, ensure FCM registration is up to date
+        FCMService.updateToken();
       }
     } catch (e) {
       // On network error, we keep the session but might want to handle it
@@ -112,7 +115,8 @@ class AuthProvider extends ChangeNotifier {
     await AuthStorage.saveToken(result.token!);
     await AuthStorage.saveUser(result.user!);
     
-    // Register FCM token after login
+    // Reset FCM cache and register for new user
+    FCMService.clearTokenCache();
     FCMService.updateToken();
     
     notifyListeners();
@@ -129,6 +133,10 @@ class AuthProvider extends ChangeNotifier {
     _token = null;
     _user = null;
     await AuthStorage.clear();
+    
+    // Clear FCM token cache so it can be re-registered for a different user
+    FCMService.clearTokenCache();
+
     notifyListeners();
   }
 
