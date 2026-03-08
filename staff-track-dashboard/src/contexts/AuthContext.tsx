@@ -23,7 +23,7 @@ type AuthAction =
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('auth_token'),
-  isLoading: false,
+  isLoading: true, // Start with loading true
   isAuthenticated: false,
   error: null,
 };
@@ -115,19 +115,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token && userData) {
         try {
           const user = JSON.parse(userData);
+          
+          // First, set the user from localStorage to avoid flash of login screen
           dispatch({ type: 'SET_USER', payload: user });
           
-          // Verify token is still valid
-          await authApi.verifyToken();
-          console.log('Token verification successful');
+          // Then verify token in the background
+          try {
+            const response = await authApi.verifyToken();
+            if (response.success) {
+              console.log('Token verification successful');
+            } else {
+              console.warn('Token verification returned failure:', response.message);
+            }
+          } catch (error: any) {
+            // Token verification failed, but don't immediately log out
+            // This could be due to network issues, temporary server issues, etc.
+            console.warn('Token verification failed, but keeping user logged in:', error);
+            
+            // Only log out if it's a clear authentication error (401)
+            if (error.response?.status === 401) {
+              console.log('Token is invalid, logging out');
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('user_data');
+              dispatch({ type: 'LOGOUT' });
+            }
+            // For other errors (network, server), keep the user logged in
+          }
         } catch (error) {
-          // Token is invalid, clear storage
-          console.error('Token verification failed:', error);
+          // User data is corrupted, clear storage
+          console.error('User data parsing failed:', error);
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user_data');
           dispatch({ type: 'LOGOUT' });
         }
+      } else {
+        // No token or user data, user is not logged in
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
+      
+      // Always set loading to false when done
+      dispatch({ type: 'SET_LOADING', payload: false });
     };
 
     initAuth();
