@@ -2,12 +2,18 @@ import React, { useState, useEffect } from 'react';
 import type { Department } from '../services/api';
 import { departmentsApi } from '../services/api';
 import DataTable from '../components/DataTable';
+import Modal from '../components/Modal';
+import DepartmentForm from '../components/DepartmentForm';
+import DepartmentDesignationsModal from '../components/DepartmentDesignationsModal';
 import type { Column, Action } from '../components/DataTable';
 import { Plus, Building2, Edit, Trash2, Eye, Users, Settings, MapPin } from 'lucide-react';
 
 const Departments: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDesignationsModalOpen, setIsDesignationsModalOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     perPage: 25,
@@ -35,28 +41,59 @@ const Departments: React.FC = () => {
   };
 
   const handleEditDepartment = (department: Department) => {
-    console.log('Edit department:', department);
-    // TODO: Open edit modal
+    setSelectedDepartment(department);
+    setIsModalOpen(true);
   };
 
-  const handleDeleteDepartment = (department: Department) => {
-    console.log('Delete department:', department);
-    // TODO: Show confirmation dialog
+  const handleDeleteDepartment = async (department: Department) => {
+    if (!window.confirm(`Are you sure you want to delete the department "${department.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await departmentsApi.deleteDepartment(department.department_id);
+      loadDepartments();
+    } catch (error: any) {
+      console.error('Error deleting department:', error);
+      const errorMessage = error.response?.data?.detail || 'Failed to delete department';
+      alert(errorMessage);
+    }
   };
 
   const handleViewDepartment = (department: Department) => {
-    console.log('View department:', department);
-    // TODO: Open department details modal
+    const designationCount = department.designations?.length || 0;
+    alert(`
+Department Details:
+
+Name: ${department.name}
+Description: ${department.description || 'No description'}
+Designations: ${designationCount}
+Created: ${department.created_at ? new Date(department.created_at).toLocaleDateString() : 'N/A'}
+    `.trim());
   };
 
   const handleManageDesignations = (department: Department) => {
-    console.log('Manage designations:', department);
-    // TODO: Open designations management modal
+    setSelectedDepartment(department);
+    setIsDesignationsModalOpen(true);
   };
 
   const handleAddDepartment = () => {
-    console.log('Add new department');
-    // TODO: Open add department modal
+    setSelectedDepartment(null);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedDepartment(null);
+  };
+
+  const handleModalSave = () => {
+    loadDepartments();
+  };
+
+  const handleDesignationsModalClose = () => {
+    setIsDesignationsModalOpen(false);
+    setSelectedDepartment(null);
   };
 
   const getDepartmentColor = (index: number) => {
@@ -264,10 +301,16 @@ const Departments: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center space-x-1">
-                <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+                <button 
+                  onClick={() => handleEditDepartment(department)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                >
                   <Edit className="w-4 h-4 text-text-grey" />
                 </button>
-                <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">
+                <button 
+                  onClick={() => handleDeleteDepartment(department)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                >
                   <Trash2 className="w-4 h-4 text-pale-red" />
                 </button>
               </div>
@@ -291,7 +334,10 @@ const Departments: React.FC = () => {
                   designations
                 </span>
               </div>
-              <button className="text-sky-blue hover:text-sky-blue-dark text-sm font-medium">
+              <button 
+                onClick={() => handleManageDesignations(department)}
+                className="text-sky-blue hover:text-sky-blue-dark text-sm font-medium"
+              >
                 Manage →
               </button>
             </div>
@@ -311,6 +357,28 @@ const Departments: React.FC = () => {
           onPerPageChange: (perPage) => setPagination(prev => ({ ...prev, perPage, page: 1 }))
         }}
         emptyMessage="No departments found. Create your first department to get started."
+      />
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        title={selectedDepartment ? 'Edit Department' : 'Create Department'}
+        size="md"
+      >
+        <DepartmentForm
+          department={selectedDepartment}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleModalSave}
+        />
+      </Modal>
+
+      {/* Designations Modal */}
+      <DepartmentDesignationsModal
+        department={selectedDepartment}
+        isOpen={isDesignationsModalOpen}
+        onClose={handleDesignationsModalClose}
       />
     </div>
   );

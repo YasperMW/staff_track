@@ -59,6 +59,15 @@ export interface Department {
   designations: string[];
 }
 
+export interface Designation {
+  designation_id: string;
+  name: string;
+  description?: string;
+  department_id: string;
+  department_name?: string;
+  created_at: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -84,6 +93,7 @@ export interface PaginatedResponse<T> {
   users: T[];  // For users endpoints  
   departments: T[];  // For departments endpoints
   roles: T[];  // For roles endpoints
+  designations: T[];  // For designations endpoints
   total_count: number;
   page?: number;
   per_page?: number;
@@ -122,7 +132,10 @@ const createApiInstance = (): AxiosInstance => {
     },
     (error) => {
       console.error('API Error:', error.response?.status, error.response?.data);
-      if (error.response?.status === 401) {
+      
+      // Only redirect to login on 401 errors for protected endpoints
+      // Don't redirect for token verification endpoint itself
+      if (error.response?.status === 401 && !error.config?.url?.includes('/verify-token')) {
         // Token expired or invalid
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
@@ -155,8 +168,18 @@ export const authApi = {
   },
 
   verifyToken: async (): Promise<ApiResponse<null>> => {
-    const response = await api.get('/auth/verify-token');
-    return response.data;
+    try {
+      const response = await api.get('/auth/verify-token');
+      return response.data;
+    } catch (error: any) {
+      // If verify token endpoint fails with network error or server error
+      // don't treat it as authentication failure
+      if (error.code === 'NETWORK_ERROR' || error.response?.status >= 500) {
+        console.warn('Token verification endpoint unavailable, assuming token is valid');
+        return { success: true, message: 'Token verification skipped due to server unavailability' };
+      }
+      throw error;
+    }
   },
 };
 
@@ -325,6 +348,29 @@ export const announcementsApi = {
 
   deleteAnnouncement: async (announcementId: string): Promise<ApiResponse<null>> => {
     const response = await api.delete(`/api/announcements/${announcementId}`);
+    return response.data;
+  },
+};
+
+// Designations API
+export const designationsApi = {
+  getAllDesignations: async (): Promise<PaginatedResponse<Designation>> => {
+    const response = await api.get('/lookup/designations');
+    return response.data;
+  },
+
+  createDesignation: async (designationData: Partial<Designation>): Promise<ApiResponse<Designation>> => {
+    const response = await api.post('/lookup/designations', designationData);
+    return response.data;
+  },
+
+  updateDesignation: async (designationId: string, designationData: Partial<Designation>): Promise<ApiResponse<Designation>> => {
+    const response = await api.put(`/lookup/designations/${designationId}`, designationData);
+    return response.data;
+  },
+
+  deleteDesignation: async (designationId: string): Promise<ApiResponse<null>> => {
+    const response = await api.delete(`/lookup/designations/${designationId}`);
     return response.data;
   },
 };
