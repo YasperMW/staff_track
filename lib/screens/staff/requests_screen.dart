@@ -673,8 +673,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     costTotal: calculateTotal(),
                   );
                   if (!mounted) return;
-                  Navigator.of(ctx).pop();
+                  Navigator.of(context).pop();
                   await _loadRequests();
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Request submitted for approval'),
@@ -685,6 +686,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   setSheetState(() {
                     isSubmitting = false;
                   });
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Failed to submit request')),
                   );
