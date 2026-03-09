@@ -720,7 +720,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
   DateTime? _holidayDate;
   String _holidayKind = 'Institutional Holiday';
   bool _holidayRecurring = false;
-  List<String> _selectedDepartments = [];  // Changed to support multiple departments
+  final List<String> _selectedDepartments = [];  // Changed to support multiple departments
   String? _selectedRole;
   bool _isActive = true;
   DateTime? _expiresAt;
@@ -880,7 +880,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   labelText: 'Announcement Type',
                   border: OutlineInputBorder(),
@@ -945,7 +945,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _holidayKind,
+                  initialValue: _holidayKind,
                   decoration: const InputDecoration(
                     labelText: 'Holiday Type',
                     border: OutlineInputBorder(),
@@ -1012,7 +1012,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
                           });
                         },
                         backgroundColor: Colors.grey[200],
-                        selectedColor: AppTheme.skyBlue.withOpacity(0.2),
+                        selectedColor: AppTheme.skyBlue.withValues(alpha: 0.2),
                         checkmarkColor: AppTheme.skyBlue,
                       );
                     }).toList(),
@@ -1034,7 +1034,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
               const SizedBox(height: 16),
               if (_selectedDepartments.isNotEmpty) ...[
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Target Role (Optional)',
                     border: OutlineInputBorder(),
@@ -1319,7 +1319,7 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   labelText: 'Announcement Type',
                   border: OutlineInputBorder(),
@@ -1340,7 +1340,7 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedDepartment,
+                initialValue: _selectedDepartment,
                 decoration: const InputDecoration(
                   labelText: 'Target Department (Optional)',
                   border: OutlineInputBorder(),
@@ -1360,7 +1360,7 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
               const SizedBox(height: 16),
               if (_selectedDepartment != null) ...[
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Target Role (Optional)',
                     border: OutlineInputBorder(),

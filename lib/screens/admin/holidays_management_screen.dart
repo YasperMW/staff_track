@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/models.dart';
@@ -34,22 +35,14 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
     });
 
     try {
-      // Debug: Print loading details
-      print('=== LOAD HOLIDAYS DEBUG ===');
-      print('Selected year: ${_selectedYear}');
-      print('Selected category: ${_selectedCategory}');
-      print('Category filter: ${_selectedCategory == 'all' ? null : _selectedCategory}');
-      
+
       final holidays = await HolidaysService.getHolidays(
         year: int.parse(_selectedYear),
         category: _selectedCategory == 'all' ? null : _selectedCategory,
       );
       
-      print('Total holidays returned: ${holidays.length}');
-      print('Holiday categories:');
-      for (var holiday in holidays) {
-        print('  - ${holiday.name}: ${holiday.category} (${holiday.source})');
-      }
+
+
       
       setState(() {
         _holidays = holidays;
@@ -57,12 +50,11 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
         _isLoading = false;
       });
       
-      print('Institutional holidays: ${holidays.where((h) => h.category == 'institutional').length}');
-      print('Public holidays: ${holidays.where((h) => h.category == 'public').length}');
-      print('Filtered holidays count: ${_filteredHolidays.length}');
-      
+
     } catch (e) {
-      print('Error loading holidays: $e');
+      if (kDebugMode) {
+        print('Error loading holidays: $e');
+      }
       setState(() {
         _isLoading = false;
       });
@@ -136,16 +128,17 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
 
     if (confirmed == true) {
       try {
-        // Debug: Print delete attempt
-        print('=== DELETE HOLIDAY UI DEBUG ===');
-        print('Attempting to delete holiday: ${holiday.name}');
-        print('Holiday ID: ${holiday.id}');
+
         
         await HolidaysService.deleteHoliday(holiday.id);
-        print('Delete service call completed successfully');
+        if (kDebugMode) {
+          print('Delete service call completed successfully');
+        }
         
         _loadHolidays();
-        print('Holidays reloaded after delete');
+        if (kDebugMode) {
+          print('Holidays reloaded after delete');
+        }
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -153,11 +146,7 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
           );
         }
       } catch (e) {
-        // Debug: Print error details
-        print('=== DELETE HOLIDAY UI ERROR DEBUG ===');
-        print('Error: $e');
-        print('Error type: ${e.runtimeType}');
-        print('Error stack trace: ${StackTrace.current}');
+
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -254,8 +243,8 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddHolidaySheet,
         backgroundColor: AppTheme.skyBlue,
-        child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Holiday',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -772,12 +761,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
         );
       }
     } catch (e) {
-      // Debug: Print the error details
-      print('=== HOLIDAY CREATION ERROR DEBUG ===');
-      print('Error: $e');
-      print('Error type: ${e.runtimeType}');
-      print('Error stack trace: ${StackTrace.current}');
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to add holiday: $e')),
@@ -875,7 +859,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   labelText: 'Holiday Type',
                   border: OutlineInputBorder(),
@@ -1108,7 +1092,7 @@ class _EditHolidaySheetState extends State<EditHolidaySheet> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: const InputDecoration(
                   labelText: 'Holiday Type',
                   border: OutlineInputBorder(),

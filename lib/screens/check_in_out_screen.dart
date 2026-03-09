@@ -841,12 +841,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                             final hasLocation =
                                 currentLocation != null && currentPosition != null;
                             
-                            // Debug logging
-                            print('DEBUG: Button state check:');
-                            print('  currentLocation: $currentLocation');
-                            print('  currentPosition: $currentPosition');
-                            print('  hasLocation: $hasLocation');
-                            print('  isLoading: $isLoading');
+
                             
                             if (todayAttendance == null ||
                                 !todayAttendance!.isCheckedIn) {

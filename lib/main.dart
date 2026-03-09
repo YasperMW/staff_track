@@ -20,7 +20,9 @@ void main() async {
       await FCMService.initialize();
     }
   } catch (e) {
-    print('Error initializing Firebase: $e');
+    if (kDebugMode) {
+      print('Error initializing Firebase: $e');
+    }
   }
 
   runApp(

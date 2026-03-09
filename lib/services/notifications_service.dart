@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../config/app_config.dart';
@@ -69,9 +70,13 @@ class NotificationsService {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final List<dynamic> data = jsonDecode(response.body);
-        print('Notifications data: $data'); // Debug print
+        if (kDebugMode) {
+          print('Notifications data: $data');
+        } // Debug print
         return data.map((item) {
-          print('Processing notification item: $item'); // Debug print
+          if (kDebugMode) {
+            print('Processing notification item: $item');
+          } // Debug print
           return NotificationItem.fromJson(item);
         }).toList();
       } else {

@@ -37,9 +37,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context.watch<AttendanceProvider>().todayAttendance;
     if (todayAttendance == null) {
       return 'Ready to check in';
-    } else if (!todayAttendance!.isCheckedIn) {
+    } else if (!todayAttendance.isCheckedIn) {
       return 'Not checked in today';
-    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+    } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
       return 'Currently working';
     } else {
       return 'Completed for today';
@@ -49,9 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _getButtonText() {
     final todayAttendance =
         context.watch<AttendanceProvider>().todayAttendance;
-    if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+    if (todayAttendance == null || !todayAttendance.isCheckedIn) {
       return 'Clock In';
-    } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+    } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
       return 'Clock Out';
     } else {
       return 'View Details';
@@ -225,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (todayAttendance == null || !todayAttendance!.isCheckedIn) {
+                      if (todayAttendance == null || !todayAttendance.isCheckedIn) {
                         // Check in
                         Navigator.push(
                           context,
@@ -237,7 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               .read<AttendanceProvider>()
                               .loadTodayAttendance(),
                         );
-                      } else if (todayAttendance!.isCheckedIn && !todayAttendance!.isCheckedOut) {
+                      } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
                         // Check out
                         Navigator.push(
                           context,

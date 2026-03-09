@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
@@ -48,7 +49,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       final metrics = await UserProfileService.getUserMetrics(token);
       if (mounted) {
-        print('Profile data received: ${profile?.toJson()}');
+        if (kDebugMode) {
+          print('Profile data received: ${profile?.toJson()}');
+        }
         setState(() {
           userProfile = profile;
           isLoadingProfile = false;
@@ -61,7 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('Error loading profile: $e');
+      if (kDebugMode) {
+        print('Error loading profile: $e');
+      }
       if (mounted) {
         setState(() {
           isLoadingProfile = false;
@@ -289,8 +294,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (context) => PopScope(
+        canPop: false,
         child: AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,

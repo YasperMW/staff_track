@@ -66,7 +66,7 @@ class _AdminLeavePoliciesScreenState extends State<AdminLeavePoliciesScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: leaveType,
+                initialValue: leaveType,
                 items: const [
                   DropdownMenuItem(value: 'annual_leave', child: Text('Annual Leave')),
                   DropdownMenuItem(value: 'compassionate_leave', child: Text('Compassionate Leave')),
