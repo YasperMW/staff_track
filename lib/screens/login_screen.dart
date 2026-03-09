@@ -51,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
             purpose: 'registration',
           );
           
+          if (!mounted) return;
           // Redirect to OTP verification screen
           Navigator.of(context).push(
             MaterialPageRoute(
