@@ -27,8 +27,10 @@ class RegisterController extends ChangeNotifier {
   String designationId = '';
   String role = '';
   String department = '';
+  String departmentId = '';
   bool isHeadOfDepartment = false;
   String password = '';
+  String confirmPassword = '';
   String? gradeId;
   String? profilePhotoUrl;
 
@@ -73,6 +75,12 @@ class RegisterController extends ChangeNotifier {
     return null;
   }
 
+  String? validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) return 'Password confirmation is required';
+    if (value != password) return 'Passwords do not match';
+    return null;
+  }
+
   String? validateDropdown(String? value, String fieldName) {
     if (value == null || value.isEmpty) return 'Please select $fieldName';
     return null;
@@ -100,8 +108,10 @@ class RegisterController extends ChangeNotifier {
   void updateDesignationId(String value) => designationId = value;
   void updateRole(String value) => role = value;
   void updateDepartment(String value) => department = value;
+  void updateDepartmentId(String value) => departmentId = value;
   void updateIsHeadOfDepartment(bool value) => isHeadOfDepartment = value;
   void updatePassword(String value) => password = value;
+  void updateConfirmPassword(String value) => confirmPassword = value;
   void updateGradeId(String? value) => gradeId = value;
   void updateProfilePhotoUrl(String? value) => profilePhotoUrl = value;
 
@@ -128,6 +138,16 @@ class RegisterController extends ChangeNotifier {
       return RegisterResponse(success: false, message: surNameError);
     }
 
+    final dateOfBirthError = validateDateOfBirth();
+    if (dateOfBirthError != null) {
+      return RegisterResponse(success: false, message: dateOfBirthError);
+    }
+
+    final genderError = validateDropdown(gender, 'Gender');
+    if (genderError != null) {
+      return RegisterResponse(success: false, message: genderError);
+    }
+
     final emailError = validateEmail(email);
     if (emailError != null) {
       return RegisterResponse(success: false, message: emailError);
@@ -141,6 +161,11 @@ class RegisterController extends ChangeNotifier {
     final homeError = validateHomeOfOrigin();
     if (homeError != null) {
       return RegisterResponse(success: false, message: homeError);
+    }
+
+    final traditionalAuthorityError = validateTraditionalAuthority();
+    if (traditionalAuthorityError != null) {
+      return RegisterResponse(success: false, message: traditionalAuthorityError);
     }
 
     final districtError = validateDistrict();
@@ -178,9 +203,19 @@ class RegisterController extends ChangeNotifier {
       return RegisterResponse(success: false, message: departmentError);
     }
 
+    final departmentIdError = validateDepartmentId();
+    if (departmentIdError != null) {
+      return RegisterResponse(success: false, message: departmentIdError);
+    }
+
     final passwordError = validatePassword(password);
     if (passwordError != null) {
       return RegisterResponse(success: false, message: passwordError);
+    }
+
+    final confirmPasswordError = validateConfirmPassword(confirmPassword);
+    if (confirmPasswordError != null) {
+      return RegisterResponse(success: false, message: confirmPasswordError);
     }
 
     return await _registerService.register(
@@ -205,8 +240,10 @@ class RegisterController extends ChangeNotifier {
       designationId: designationId,
       role: role,
       department: department,
+      departmentId: departmentId,
       isHeadOfDepartment: isHeadOfDepartment,
       password: password,
+      confirmPassword: confirmPassword,
       gradeId: gradeId,
       profilePhotoUrl: profilePhotoUrl,
     );
@@ -215,6 +252,11 @@ class RegisterController extends ChangeNotifier {
   // Additional validation methods
   String? validateHomeOfOrigin() {
     if (homeOfOrigin.isEmpty) return 'Home of origin is required';
+    return null;
+  }
+
+  String? validateTraditionalAuthority() {
+    if (traditionalAuthority.isEmpty) return 'Traditional authority is required';
     return null;
   }
 
@@ -228,6 +270,11 @@ class RegisterController extends ChangeNotifier {
     return null;
   }
 
+  String? validateDateOfBirth() {
+    if (dateOfBirth.isEmpty) return 'Date of birth is required';
+    return null;
+  }
+
   String? validateDateOfEmployment() {
     if (dateOfEmployment.isEmpty) return 'Date of employment is required';
     return null;
@@ -235,6 +282,11 @@ class RegisterController extends ChangeNotifier {
 
   String? validateDesignation(String? value) {
     if (value == null || value.isEmpty) return 'Designation is required';
+    return null;
+  }
+
+  String? validateDepartmentId() {
+    if (departmentId.isEmpty) return 'Department ID is required';
     return null;
   }
 

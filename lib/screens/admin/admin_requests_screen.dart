@@ -18,6 +18,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   List<AdminTeamRequest> _requests = [];
   List<AdminTeamRequest> _myRequests = [];
   List<AdminTeamRequest> _teamRequests = [];
+  List<LeaveBalance> _leaveBalances = [];
   final String _filterStatus = 'pending';
   final String _filterType = 'all';
   final String _searchQuery = '';
@@ -28,6 +29,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     super.initState();
     _loadUserRole();
     _loadRequests();
+    _loadLeaveBalances();
   }
 
   @override
@@ -82,6 +84,19 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     return null;
   }
 
+  Future<void> _loadLeaveBalances() async {
+    try {
+      final data = await RequestsService.getLeaveBalances();
+      if (!mounted) return;
+      setState(() {
+        _leaveBalances = data;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Silently fail for now, will use fallback values
+    }
+  }
+
   Future<void> _loadRequests() async {
     setState(() {
       _isLoading = true;
@@ -92,19 +107,22 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       final myRequestsFuture = RequestsService.getMyAdminRequests();
       final teamRequestsFuture = RequestsService.getAdminPendingRequests();
       
-      final results = await Future.wait([myRequestsFuture, teamRequestsFuture]);
+      final results = await Future.wait([
+        myRequestsFuture, 
+        teamRequestsFuture,
+      ]);
+      
+      // Load leave balances separately to avoid void result issue
+      await _loadLeaveBalances();
       
       if (!mounted) return;
       
       setState(() {
-        _myRequests = results[0];
-        _teamRequests = results[1];
-        _requests = [...results[0], ...results[1]];
+        _myRequests = results[0] as List<AdminTeamRequest>;
+        _teamRequests = results[1] as List<AdminTeamRequest>;
+        _requests = [..._myRequests, ..._teamRequests];
         _isLoading = false;
       });
-      if (kDebugMode) {
-        print('Loaded ${results[0].length} my requests and ${results[1].length} team requests');
-      }
     } catch (e) {
       if (!mounted) return;
       if (kDebugMode) {
@@ -125,115 +143,19 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     await _loadRequests();
   }
 
-  Future<void> _debugRequests() async {
+  Future<void> _withdrawRequest(String requestId) async {
     try {
-
-      
-      // Check authentication status first
-      final isAuth = await AuthStorage.isAuthenticated();
-      final token = await AuthStorage.getToken();
-      var userId = await AuthStorage.getUserId();
-      
-      // If user_id is missing but token exists, try to refresh user data
-      if (token != null && userId == null) {
-        if (kDebugMode) {
-          print('User ID missing but token exists, attempting to refresh user data...');
-        }
-        final refreshed = await AuthStorage.refreshUserData();
-        if (refreshed) {
-          userId = await AuthStorage.getUserId();
-          if (kDebugMode) {
-            print('User data refreshed, new user ID: $userId');
-          }
-        } else {
-          if (kDebugMode) {
-            print('Failed to refresh user data');
-          }
-        }
-      }
-      
-      final finalIsAuth = token != null && userId != null;
-      
-      if (!finalIsAuth) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Authentication Error'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Not properly authenticated:'),
-                  Text('• Token: ${token == null ? 'Missing' : 'Present'}'),
-                  Text('• User ID: ${userId == null ? 'Missing' : 'Present'}'),
-                  const SizedBox(height: 16),
-                  const Text('Please try logging out and logging back in.'),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
-      }
-      
-      // Test normal endpoint
-      final normalData = await RequestsService.getAdminPendingRequests();
-
-      // Test debug endpoint
-      final debugData = await RequestsService.getAllPendingRequestsDebug();
-      if (kDebugMode) {
-        print('Debug endpoint returned: ${debugData.length} requests');
-      }
-
-      // Show comparison
+      await RequestsService.withdrawRequest(requestId);
+      await _loadRequests();
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Debug Info'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Authenticated: $finalIsAuth'),
-                  Text('User ID: $userId'),
-                  const SizedBox(height: 16),
-                  Text('Normal endpoint: ${normalData.length} requests'),
-                  Text('Debug endpoint: ${debugData.length} requests'),
-                  const SizedBox(height: 16),
-                  if (debugData.isNotEmpty) ...[
-                    const Text('Debug endpoint details:'),
-                    ...debugData.map((req) => Text(
-                      '- ${req['type']} by ${req['user_name']} (approver: ${req['current_approver_id'] ?? 'NULL'})'
-                    )).take(5),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request withdrawn successfully')),
         );
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Debug error: $e');
-      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Debug error: $e')),
+          SnackBar(content: Text('Failed to withdraw request: $e')),
         );
       }
     }
@@ -297,15 +219,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.bug_report, color: AppTheme.skyBlue),
-                            onPressed: _debugRequests,
-                            tooltip: 'Debug Requests',
-                          ),
-                          const SizedBox(width: 8),
                           _buildAddButton(),
                         ],
                       ),
+                      const SizedBox(height: 24),
+                      _buildLeaveBalanceSummary(context),
+                      const SizedBox(height: 24),
+                      _buildRequestStatusSummary(context),
                       const SizedBox(height: 24),
                       _buildMyRequestsSection(context),
                       const SizedBox(height: 32),
@@ -582,6 +502,306 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     }
   }
 
+  Widget _buildLeaveBalanceSummary(BuildContext context) {
+    // Find annual leave balance from API
+    final annualBalance = _leaveBalances.firstWhere(
+      (balance) => balance.leaveType.toLowerCase().contains('annual'),
+      orElse: () => LeaveBalance(
+        leaveType: 'annual_leave',
+        allocatedDays: 21, // Fallback to hard-coded value
+        usedDays: 0,
+        bonusDays: 0,
+        remainingDays: 21,
+        updatedAt: '',
+      ),
+    );
+    
+    // Calculate percentage
+    final double annualPercentage = annualBalance.allocatedDays > 0 
+        ? (annualBalance.usedDays / annualBalance.allocatedDays * 100) 
+        : 0.0;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.skyBlue,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.skyBlue.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.beach_access_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'My Leave Balance',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'This Year',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _EnhancedLeaveCard(
+            usedDays: annualBalance.usedDays,
+            totalDays: annualBalance.allocatedDays,
+            remainingDays: annualBalance.remainingDays,
+            percentage: annualPercentage,
+            label: 'Annual Leave',
+            icon: Icons.event_available,
+            color: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestStatusSummary(BuildContext context) {
+    // Count requests by status for both my and team requests
+    int myApprovedCount = 0;
+    int myPendingCount = 0;
+    int myRejectedCount = 0;
+    int teamPendingCount = 0;
+
+    // Count my requests
+    for (var request in _myRequests) {
+      final status = request.status.toLowerCase();
+      if (status == 'approved') {
+        myApprovedCount++;
+      } else if (status == 'pending') {
+        myPendingCount++;
+      } else if (status == 'rejected' || status == 'denied') {
+        myRejectedCount++;
+      }
+    }
+
+    // Count team pending requests
+    for (var request in _teamRequests) {
+      if (request.status.toLowerCase() == 'pending') {
+        teamPendingCount++;
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.assignment_outlined,
+                color: AppTheme.skyBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Request Status Overview',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'All Requests',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _RequestStatusCard(
+                  count: myApprovedCount,
+                  label: 'My Approved',
+                  icon: Icons.check_circle,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _RequestStatusCard(
+                  count: myPendingCount,
+                  label: 'My Pending',
+                  icon: Icons.pending,
+                  color: AppTheme.lightGold,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _RequestStatusCard(
+                  count: teamPendingCount,
+                  label: 'Team Pending',
+                  icon: Icons.people,
+                  color: AppTheme.skyBlue,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _EnhancedLeaveCard({
+    required int usedDays,
+    required int totalDays,
+    required int remainingDays,
+    required double percentage,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$usedDays',
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          'used',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$remainingDays left',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          height: 4,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentage / 100,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '${percentage.toStringAsFixed(0)}%',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _RequestStatusCard({
+    required int count,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$count',
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMyRequestsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,6 +847,37 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           ),
       ],
     );
+  }
+
+  Future<void> _handleWithdrawAction(BuildContext context, AdminTeamRequest request) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Request'),
+        content: Text(
+          'Are you sure you want to withdraw your ${request.type} request?\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.paleRed,
+            ),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _withdrawRequest(request.id);
+    }
   }
 
   Widget _buildMyRequestItem(BuildContext context, AdminTeamRequest req) {
@@ -727,21 +978,33 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () => _handleWithdraw(req),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.lightGold,
-                side: const BorderSide(color: AppTheme.lightGold),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (req.status.toLowerCase() == 'pending')
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => _handleWithdrawAction(context, req),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.paleRed,
+                  side: const BorderSide(color: AppTheme.paleRed),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cancel_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Withdraw Request',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text('Withdraw Request'),
             ),
-          ),
-        ],
+          ],
       ),
     );
   }

@@ -152,7 +152,60 @@ class AdminTeamRequest {
   }
 }
 
+class LeaveBalance {
+  final String leaveType;
+  final int allocatedDays;
+  final int usedDays;
+  final int bonusDays;
+  final int remainingDays;
+  final String updatedAt;
+
+  LeaveBalance({
+    required this.leaveType,
+    required this.allocatedDays,
+    required this.usedDays,
+    required this.bonusDays,
+    required this.remainingDays,
+    required this.updatedAt,
+  });
+
+  factory LeaveBalance.fromJson(Map<String, dynamic> json) {
+    return LeaveBalance(
+      leaveType: json['leave_type'] as String? ?? '',
+      allocatedDays: (json['allocated_days'] as num?)?.toInt() ?? 0,
+      usedDays: (json['used_days'] as num?)?.toInt() ?? 0,
+      bonusDays: (json['bonus_days'] as num?)?.toInt() ?? 0,
+      remainingDays: (json['remaining_days'] as num?)?.toInt() ?? 0,
+      updatedAt: json['updated_at'] as String? ?? '',
+    );
+  }
+}
+
 class RequestsService {
+  static Future<List<LeaveBalance>> getLeaveBalances() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('No authentication token found');
+    }
+
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/leave/balances'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      return data.map((e) => LeaveBalance.fromJson(e as Map<String, dynamic>)).toList();
+    } else {
+      throw Exception(
+        'Failed to load leave balances: ${response.statusCode}',
+      );
+    }
+  }
+
   static Future<RequestsSummaryResponse> getRequestsSummary() async {
     final token = await AuthStorage.getToken();
     if (token == null) {
@@ -429,7 +482,7 @@ class RequestsService {
     }
 
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/requests/admin/$requestId/withdraw'),
+      Uri.parse('${AppConfig.apiBaseUrl}/admin/$requestId/withdraw'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

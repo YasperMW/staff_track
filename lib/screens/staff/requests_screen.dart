@@ -15,12 +15,14 @@ class RequestsScreen extends StatefulWidget {
 
 class _RequestsScreenState extends State<RequestsScreen> {
   List<Map<String, dynamic>> requestsHistory = [];
+  List<LeaveBalance> leaveBalances = [];
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadRequests();
+    _loadLeaveBalances();
   }
 
   Future<void> _loadRequests() async {
@@ -49,8 +51,42 @@ class _RequestsScreenState extends State<RequestsScreen> {
     }
   }
 
+  Future<void> _loadLeaveBalances() async {
+    try {
+      final data = await RequestsService.getLeaveBalances();
+      if (!mounted) return;
+      setState(() {
+        leaveBalances = data;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // Silently fail for now, will use fallback values
+    }
+  }
+
+  Future<void> _withdrawRequest(String requestId) async {
+    try {
+      await RequestsService.withdrawRequest(requestId);
+      await _loadRequests();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Request withdrawn successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to withdraw request: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _onRefresh() async {
-    await _loadRequests();
+    await Future.wait([
+      _loadRequests(),
+      _loadLeaveBalances(),
+    ]);
   }
 
   int _parseDuration(String? duration) {
@@ -139,6 +175,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       const SizedBox(height: 24),
                       _buildSummaryGrid(context),
                       const SizedBox(height: 24),
+                      _buildRequestStatusCards(context),
+                      const SizedBox(height: 24),
                       _buildRequestsList(context),
                       const SizedBox(height: 24),
                     ],
@@ -173,14 +211,292 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Widget _buildSummaryGrid(BuildContext context) {
-    final stats = _calculateStats();
-    return Row(
+    // Find annual leave balance from API
+    final annualBalance = leaveBalances.firstWhere(
+      (balance) => balance.leaveType.toLowerCase().contains('annual'),
+      orElse: () => LeaveBalance(
+        leaveType: 'annual_leave',
+        allocatedDays: 21, // Fallback to hard-coded value
+        usedDays: 0,
+        bonusDays: 0,
+        remainingDays: 21,
+        updatedAt: '',
+      ),
+    );
+    
+    // Calculate percentage
+    final double annualPercentage = annualBalance.allocatedDays > 0 
+        ? (annualBalance.usedDays / annualBalance.allocatedDays * 100) 
+        : 0.0;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.skyBlue,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.skyBlue.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.beach_access_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Leave Balance Summary',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'This Year',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _EnhancedLeaveCard(
+            usedDays: annualBalance.usedDays,
+            totalDays: annualBalance.allocatedDays,
+            remainingDays: annualBalance.remainingDays,
+            percentage: annualPercentage,
+            label: 'Annual Leave',
+            icon: Icons.event_available,
+            color: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestStatusCards(BuildContext context) {
+    // Count requests by status
+    int approvedCount = 0;
+    int pendingCount = 0;
+    int rejectedCount = 0;
+
+    for (var request in requestsHistory) {
+      final status = request['status']?.toString().toLowerCase();
+      if (status == 'approved') {
+        approvedCount++;
+      } else if (status == 'pending') {
+        pendingCount++;
+      } else if (status == 'rejected' || status == 'denied') {
+        rejectedCount++;
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.assignment_outlined,
+                color: AppTheme.skyBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Request Status Summary',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'All Time',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _RequestStatusCard(
+                  count: approvedCount,
+                  label: 'Approved',
+                  icon: Icons.check_circle,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _RequestStatusCard(
+                  count: pendingCount,
+                  label: 'Pending',
+                  icon: Icons.pending,
+                  color: AppTheme.lightGold,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _RequestStatusCard(
+                  count: rejectedCount,
+                  label: 'Rejected',
+                  icon: Icons.cancel,
+                  color: AppTheme.paleRed,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _RequestStatusCard({
+    required int count,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
       children: [
-        Expanded(child: _buildSummaryCard(context, '${stats['annual']}', '/ 21 Annual')),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSummaryCard(context, '${stats['sick']}', '/ 10 Sick')),
-        const SizedBox(width: 12),
-        Expanded(child: _buildSummaryCard(context, '${stats['personal']}', '/ 5 Personal')),
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$count',
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _EnhancedLeaveCard({
+    required int usedDays,
+    required int totalDays,
+    required int remainingDays,
+    required double percentage,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '$usedDays',
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          'used',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$remainingDays left',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          height: 4,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentage / 100,
+            child: Container(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '${percentage.toStringAsFixed(0)}%',
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 10,
+          ),
+        ),
       ],
     );
   }
@@ -363,10 +679,72 @@ class _RequestsScreenState extends State<RequestsScreen> {
               const Icon(Icons.chevron_right, color: AppTheme.skyBlue, size: 20),
             ],
           ),
+          if (request['status'] == 'Pending') ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => _handleWithdrawAction(context, request),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.paleRed,
+                  side: const BorderSide(color: AppTheme.paleRed),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cancel_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Withdraw Request',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _handleWithdrawAction(BuildContext context, Map<String, dynamic> request) async {
+    final requestId = request['id']?.toString();
+    if (requestId == null || requestId.isEmpty) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Withdraw Request'),
+        content: Text(
+          'Are you sure you want to withdraw your ${request['type']} request?\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.paleRed,
+            ),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _withdrawRequest(requestId);
+    }
   }
 
   Future<void> _showApprovalHistory(BuildContext context, Map<String, dynamic> request) async {

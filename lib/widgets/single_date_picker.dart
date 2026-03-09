@@ -31,6 +31,8 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
   late DateTime _lastDate;
   List<PublicHoliday> _holidays = [];
   bool _isLoadingHolidays = false;
+  bool _isSelectingMonth = false;
+  bool _isSelectingYear = false;
 
   @override
   void initState() {
@@ -129,6 +131,40 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
     if (yearChanged) {
       _loadHolidays();
     }
+  }
+
+  void _selectMonth(int month) {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, month);
+      _isSelectingMonth = false;
+    });
+    _loadHolidays();
+  }
+
+  void _selectYear(int year) {
+    final yearChanged = year != _currentMonth.year;
+    setState(() {
+      _currentMonth = DateTime(year, _currentMonth.month);
+      _isSelectingYear = false;
+    });
+    if (yearChanged) {
+      _loadHolidays();
+    }
+  }
+
+  List<int> _getAvailableYears() {
+    final startYear = _firstDate.year;
+    final endYear = _lastDate.year;
+    final years = <int>[];
+    for (int year = startYear; year <= endYear; year++) {
+      years.add(year);
+    }
+    return years;
+  }
+
+  bool _isMonthSelectable(int month) {
+    final testDate = DateTime(_currentMonth.year, month, 1);
+    return _isDateSelectable(testDate);
   }
 
   List<DateTime> _getDaysInMonth() {
@@ -235,20 +271,66 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    onPressed: _previousMonth,
+                    onPressed: _isSelectingMonth || _isSelectingYear ? null : _previousMonth,
                     icon: const Icon(Icons.chevron_left),
                     color: AppTheme.skyBlue,
                   ),
-                  Text(
-                    DateFormat('MMMM yyyy').format(_currentMonth),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isSelectingMonth = !_isSelectingMonth;
+                        _isSelectingYear = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isSelectingMonth 
+                            ? AppTheme.skyBlue.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        DateFormat('MMMM').format(_currentMonth),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isSelectingMonth 
+                              ? AppTheme.skyBlue
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isSelectingYear = !_isSelectingYear;
+                        _isSelectingMonth = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isSelectingYear 
+                            ? AppTheme.skyBlue.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        DateFormat('yyyy').format(_currentMonth),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isSelectingYear 
+                              ? AppTheme.skyBlue
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
-                    onPressed: _nextMonth,
+                    onPressed: _isSelectingMonth || _isSelectingYear ? null : _nextMonth,
                     icon: const Icon(Icons.chevron_right),
                     color: AppTheme.skyBlue,
                   ),
@@ -256,32 +338,151 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
               ),
             ),
 
-            // Weekday Headers
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                    .map((day) => Expanded(
-                          child: Center(
-                            child: Text(
-                              day,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
+            // Month Selection Grid
+            if (_isSelectingMonth) ...[
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Select Month',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 2.5,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = index + 1;
+                        final isSelectable = _isMonthSelectable(month);
+                        final isSelected = month == _currentMonth.month;
+                        
+                        return GestureDetector(
+                          onTap: isSelectable ? () => _selectMonth(month) : null,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppTheme.skyBlue
+                                  : isSelectable
+                                      ? AppTheme.skyBlue.withValues(alpha: 0.1)
+                                      : Colors.grey.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                DateFormat('MMM').format(DateTime(2023, month, 1)),
+                                style: TextStyle(
+                                  color: isSelected 
+                                      ? Colors.white
+                                      : isSelectable
+                                          ? AppTheme.skyBlue
+                                          : Colors.grey,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
                               ),
                             ),
                           ),
-                        ))
-                    .toList(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
+
+            // Year Selection Grid
+            if (_isSelectingYear) ...[
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Select Year',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: _getAvailableYears().length,
+                      itemBuilder: (context, index) {
+                        final year = _getAvailableYears()[index];
+                        final isSelected = year == _currentMonth.year;
+                        
+                        return GestureDetector(
+                          onTap: () => _selectYear(year),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppTheme.skyBlue
+                                  : AppTheme.skyBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: Text(
+                                year.toString(),
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : AppTheme.skyBlue,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Weekday Headers
+            if (!_isSelectingMonth && !_isSelectingYear) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                      .map((day) => Expanded(
+                            child: Center(
+                              child: Text(
+                                day,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
 
             // Holiday Legend
-            if (_holidays.isNotEmpty) ...[
+            if (!_isSelectingMonth && !_isSelectingYear && _holidays.isNotEmpty) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
@@ -310,6 +511,7 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
             ],
 
             // Date Tiles Grid
+            if (!_isSelectingMonth && !_isSelectingYear) ...[
             Container(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -332,6 +534,7 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
                 ],
               ),
             ),
+            ],
 
             // Action Buttons
             Container(

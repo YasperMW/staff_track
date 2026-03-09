@@ -366,13 +366,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isFocused 
-                      ? AppTheme.skyBlue 
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                  width: isFocused ? 2 : 1,
+                      ? Colors.black 
+                      : Colors.black.withValues(alpha: 0.5),
+                  width: isFocused ? 3 : 2,
                 ),
                 boxShadow: isFocused ? [
                   BoxShadow(
-                    color: AppTheme.skyBlue.withValues(alpha: 0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
