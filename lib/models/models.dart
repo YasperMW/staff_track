@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum RequestStatus { pending, approved, rejected }
@@ -289,11 +290,7 @@ class PublicHoliday {
   });
 
   factory PublicHoliday.fromJson(Map<String, dynamic> json) {
-    // Debug: Print the JSON being parsed
-    print('=== PUBLIC HOLIDAY FROM JSON DEBUG ===');
-    print('Incoming JSON: $json');
-    print('JSON keys: ${json.keys}');
-    
+
     try {
       final holiday = PublicHoliday(
         id: json['id'] as String? ?? '',
@@ -309,17 +306,12 @@ class PublicHoliday {
             : null,
         createdBy: json['created_by'] as String?,
       );
-      print('Successfully parsed PublicHoliday: ${holiday.name}');
+      if (kDebugMode) {
+        print('Successfully parsed PublicHoliday: ${holiday.name}');
+      }
       return holiday;
     } catch (e) {
-      print('Error parsing PublicHoliday: $e');
-      print('Field values:');
-      print('  id: ${json['id']}');
-      print('  name: ${json['name']}');
-      print('  date: ${json['date']}');
-      print('  category: ${json['category']}');
-      print('  isRecurring: ${json['isRecurring']}');
-      print('  is_recurring: ${json['is_recurring']}');
+
       rethrow;
     }
   }
@@ -381,8 +373,7 @@ class Announcement {
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
     try {
-      print('Parsing announcement JSON: $json'); // Debug print
-      
+
       final announcement = Announcement(
         id: json['id']?.toString() ?? '',
         title: json['title']?.toString() ?? '',
@@ -402,11 +393,9 @@ class Announcement {
         attachmentUrl: json['attachment_url']?.toString(),
       );
       
-      print('Successfully parsed announcement: ${announcement.id} - ${announcement.title}'); // Debug print
       return announcement;
     } catch (e) {
-      print('Error parsing announcement JSON: $e'); // Debug print
-      print('Problematic JSON: $json'); // Debug print
+
       rethrow;
     }
   }

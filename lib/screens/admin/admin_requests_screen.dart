@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
@@ -17,9 +18,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   List<AdminTeamRequest> _requests = [];
   List<AdminTeamRequest> _myRequests = [];
   List<AdminTeamRequest> _teamRequests = [];
-  String _filterStatus = 'pending';
-  String _filterType = 'all';
-  String _searchQuery = '';
+  final String _filterStatus = 'pending';
+  final String _filterType = 'all';
+  final String _searchQuery = '';
   String? _userRole;
 
   @override
@@ -101,10 +102,14 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         _requests = [...results[0], ...results[1]];
         _isLoading = false;
       });
-      print('Loaded ${results[0].length} my requests and ${results[1].length} team requests');
+      if (kDebugMode) {
+        print('Loaded ${results[0].length} my requests and ${results[1].length} team requests');
+      }
     } catch (e) {
       if (!mounted) return;
-      print('Error loading admin requests: $e');
+      if (kDebugMode) {
+        print('Error loading admin requests: $e');
+      }
       setState(() {
         _isLoading = false;
       });
@@ -122,7 +127,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 
   Future<void> _debugRequests() async {
     try {
-      print('=== DEBUG: Authentication & Requests ===');
+
       
       // Check authentication status first
       final isAuth = await AuthStorage.isAuthenticated();
@@ -131,13 +136,19 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       
       // If user_id is missing but token exists, try to refresh user data
       if (token != null && userId == null) {
-        print('User ID missing but token exists, attempting to refresh user data...');
+        if (kDebugMode) {
+          print('User ID missing but token exists, attempting to refresh user data...');
+        }
         final refreshed = await AuthStorage.refreshUserData();
         if (refreshed) {
           userId = await AuthStorage.getUserId();
-          print('User data refreshed, new user ID: $userId');
+          if (kDebugMode) {
+            print('User data refreshed, new user ID: $userId');
+          }
         } else {
-          print('Failed to refresh user data');
+          if (kDebugMode) {
+            print('Failed to refresh user data');
+          }
         }
       }
       
@@ -174,12 +185,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       
       // Test normal endpoint
       final normalData = await RequestsService.getAdminPendingRequests();
-      print('Normal endpoint returned: ${normalData.length} requests');
-      
+
       // Test debug endpoint
       final debugData = await RequestsService.getAllPendingRequestsDebug();
-      print('Debug endpoint returned: ${debugData.length} requests');
-      
+      if (kDebugMode) {
+        print('Debug endpoint returned: ${debugData.length} requests');
+      }
+
       // Show comparison
       if (mounted) {
         showDialog(
@@ -216,7 +228,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         );
       }
     } catch (e) {
-      print('Debug error: $e');
+      if (kDebugMode) {
+        print('Debug error: $e');
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Debug error: $e')),
@@ -999,7 +1013,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     try {
       userRole = await AuthStorage.getUserRole();
     } catch (e) {
-      print('Error getting user role: $e');
+      if (kDebugMode) {
+        print('Error getting user role: $e');
+      }
     }
     
     // HOD Fields
@@ -1040,7 +1056,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     // Helper function to get user's approval level based on role
     int? getUserApprovalLevel() {
       if (userRole == null) return null;
-      final r = userRole!.toLowerCase().trim();
+      final r = userRole.toLowerCase().trim();
       final isSystemAdmin = r.contains('system admin') || r.contains('system administrator') || r.contains('sysadmin') || r.contains('it admin');
       if (isSystemAdmin) return null;
       final isHod = r.contains('hod') || r.contains('head of department') || r.contains('unit incharge') || r.contains('unit in charge') || r.contains('unit head') || r.contains('department head') || r.contains('unit in-charge');
@@ -1658,7 +1674,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: hrLeaveGrantStatus,
+                            initialValue: hrLeaveGrantStatus,
                             decoration: const InputDecoration(labelText: 'Leave Grant Status', border: OutlineInputBorder()),
                             items: const [
                               DropdownMenuItem(value: 'given', child: Text('Given')),

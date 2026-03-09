@@ -538,7 +538,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                   ],
                 ),
               ),
@@ -907,7 +907,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             const Spacer(),
                             Switch(
                               value: leaveGrantRequired,
-                              activeColor: AppTheme.skyBlue,
+                              activeThumbColor: AppTheme.skyBlue,
                               onChanged: (v) {
                                 setSheetState(() {
                                   leaveGrantRequired = v;

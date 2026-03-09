@@ -88,12 +88,12 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
   }
 
   bool _isHoliday(DateTime date) {
-    return _holidays.any((holiday) => holiday?.matchesDate(date) ?? false);
+    return _holidays.any((holiday) => holiday.matchesDate(date));
   }
 
   PublicHoliday? _getHolidayForDate(DateTime date) {
     try {
-      return _holidays.firstWhere((holiday) => holiday?.matchesDate(date) ?? false);
+      return _holidays.firstWhere((holiday) => holiday.matchesDate(date));
     } catch (e) {
       return null;
     }
