@@ -137,71 +137,287 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   Widget _buildSummaryCard() {
-    return Card(
+    // Calculate proper working days and attendance from the history data
+    int totalWorkingDays = 0;
+    int presentDays = 0;
+    int onTimeDays = 0;
+    int lateDays = 0;
+    double totalWorkHours = 0;
+    double totalOvertimeHours = 0;
+    final Set<DateTime> processedDays = {};
+    
+    // Determine date range
+    DateTime start;
+    if (startDate != null) {
+      start = startDate!;
+    } else if (attendanceHistory.isEmpty) {
+      start = DateTime.now();
+    } else {
+      start = attendanceHistory.map((r) => r.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    }
+    final DateTime end = endDate ?? DateTime.now();
+    
+    // Count working days in the selected period (excluding weekends)
+    for (DateTime day = start; 
+         day.isBefore(end.add(const Duration(days: 1))); 
+         day = day.add(const Duration(days: 1))) {
+      if (day.weekday != DateTime.saturday && day.weekday != DateTime.sunday) {
+        totalWorkingDays++;
+      }
+    }
+    
+    // Process attendance records
+    for (final record in attendanceHistory) {
+      final DateTime recordDate = DateTime(
+        record.date.year, 
+        record.date.month, 
+        record.date.day
+      );
+      
+      if (!processedDays.contains(recordDate)) {
+        processedDays.add(recordDate);
+        
+        // Only count weekdays
+        if (record.date.weekday != DateTime.saturday && 
+            record.date.weekday != DateTime.sunday) {
+          
+          if (record.checkInTime != null) {
+            // Count all check-ins as present
+            presentDays++;
+            
+            // Check if late (after 9:05 AM to allow 5-minute grace period)
+            if (record.checkInTime!.hour > 9 || 
+                (record.checkInTime!.hour == 9 && record.checkInTime!.minute > 5)) {
+              lateDays++;
+            } else {
+              onTimeDays++;
+            }
+            
+            // Add work hours and overtime
+            if (record.workHours != null) {
+              totalWorkHours += record.workHours!;
+              if (record.workHours! > 8) {
+                totalOvertimeHours += record.workHours! - 8;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    final int absentDays = totalWorkingDays - presentDays;
+    final double averageWorkHours = presentDays > 0 ? 
+        totalWorkHours / presentDays : 0.0;
+    final double attendanceRate = totalWorkingDays > 0 ? 
+        (presentDays / totalWorkingDays * 100) : 0.0;
+    
+    return Container(
+      width: double.infinity,
       margin: const EdgeInsets.all(16),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Summary',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryItem(
-                    'Total Days',
-                    '${summary!['total_days']}',
-                    Icons.calendar_today,
-                    Colors.blue,
-                  ),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.skyBlue,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.skyBlue.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Attendance Summary',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
-                Expanded(
-                  child: _buildSummaryItem(
-                    'Present',
-                    '${summary!['present_days']}',
-                    Icons.check_circle,
-                    Colors.green,
-                  ),
+              ),
+              const Spacer(),
+              Text(
+                startDate != null && endDate != null 
+                    ? '${DateFormat('MMM d').format(startDate!)} - ${DateFormat('MMM d').format(endDate!)}'
+                    : 'This Period',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryItem(
-                    'Late',
-                    '${summary!['late_days']}',
-                    Icons.access_time,
-                    AppTheme.lightGold,
-                  ),
-                ),
-                Expanded(
-                  child: _buildSummaryItem(
-                    'Avg Hours',
-                    '${summary!['average_work_hours'].toStringAsFixed(1)}',
-                    Icons.schedule,
-                    Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-            if (summary!['total_overtime_hours'] > 0) ...[
-              const SizedBox(height: 12),
-              _buildSummaryItem(
-                'Total Overtime',
-                '${summary!['total_overtime_hours'].toStringAsFixed(1)} hours',
-                Icons.access_time,
-                AppTheme.paleRed,
               ),
             ],
-          ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _EnhancedHistorySummaryItem(
+                value: '$onTimeDays',
+                label: 'On Time',
+                percentage: totalWorkingDays > 0 ? '${(onTimeDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.check_circle_outline,
+                color: Colors.white,
+              ),
+              _EnhancedHistorySummaryItem(
+                value: '$lateDays',
+                label: 'Late',
+                percentage: totalWorkingDays > 0 ? '${(lateDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.access_time,
+                color: Colors.white,
+              ),
+              _EnhancedHistorySummaryItem(
+                value: '$presentDays',
+                label: 'Present',
+                percentage: totalWorkingDays > 0 ? '${(presentDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.person_outline,
+                color: Colors.white,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAdditionalMetric(
+                  'Avg Hours',
+                  '${averageWorkHours.toStringAsFixed(1)}h',
+                  Icons.schedule,
+                ),
+              ),
+              if (totalOvertimeHours > 0) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildAdditionalMetric(
+                    'Overtime',
+                    '${totalOvertimeHours.toStringAsFixed(1)}h',
+                    Icons.access_time,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Attendance Rate: ${attendanceRate.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _EnhancedHistorySummaryItem({
+    required String value,
+    required String label,
+    required String percentage,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
         ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          percentage,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdditionalMetric(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: Colors.white.withValues(alpha: 0.8),
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 11,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

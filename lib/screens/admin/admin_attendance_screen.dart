@@ -192,15 +192,182 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     final int present = (teamSummary?['present'] as num?)?.toInt() ?? 0;
     final int absent = (teamSummary?['absent'] as num?)?.toInt() ?? 0;
     final int late = (teamSummary?['late'] as num?)?.toInt() ?? 0;
+    final int totalTeamMembers = present + absent + late;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.groups_outlined,
+                color: AppTheme.skyBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Today's Team Status",
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$totalTeamMembers Members',
+                  style: TextStyle(
+                    color: AppTheme.skyBlue,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _EnhancedTeamStatCard(
+                context: context,
+                label: 'Present',
+                value: '$present',
+                percentage: totalTeamMembers > 0 ? '${(present / totalTeamMembers * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.check_circle_outline,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 12),
+              _EnhancedTeamStatCard(
+                context: context,
+                label: 'Absent',
+                value: '$absent',
+                percentage: totalTeamMembers > 0 ? '${(absent / totalTeamMembers * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.cancel_outlined,
+                color: AppTheme.paleRed,
+              ),
+              const SizedBox(width: 12),
+              _EnhancedTeamStatCard(
+                context: context,
+                label: 'Late',
+                value: '$late',
+                percentage: totalTeamMembers > 0 ? '${(late / totalTeamMembers * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.access_time,
+                color: AppTheme.lightGold,
+              ),
+            ],
+          ),
+          if (totalTeamMembers > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.trending_up,
+                    color: AppTheme.skyBlue.withValues(alpha: 0.8),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Team Attendance Rate: ${((present + late) / totalTeamMembers * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: AppTheme.skyBlue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
-    return Row(
-      children: [
-        _buildStatCard(context, 'Present', '$present', Colors.green),
-        const SizedBox(width: 12),
-        _buildStatCard(context, 'Absent', '$absent', AppTheme.paleRed),
-        const SizedBox(width: 12),
-        _buildStatCard(context, 'Late', '$late', AppTheme.lightGold),
-      ],
+  Widget _EnhancedTeamStatCard({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String percentage,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: color.withValues(alpha: 0.9),
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: color.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              percentage,
+              style: TextStyle(
+                fontSize: 11,
+                color: color.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../config/app_config.dart';
 import 'permission_service.dart';
@@ -78,12 +79,34 @@ class ImageService {
         Uri.parse('${AppConfig.apiBaseUrl}/files/upload/profile-photo'),
       );
 
-      // Add image file
+      // Add image file with proper content type
       final imageBytes = await imageFile.readAsBytes();
+      final fileName = imagePath.split('/').last;
+      final fileExtension = fileName.split('.').last.toLowerCase();
+      
+      // Determine content type based on file extension
+      String contentType = 'image/jpeg'; // default
+      switch (fileExtension) {
+        case 'png':
+          contentType = 'image/png';
+          break;
+        case 'jpg':
+        case 'jpeg':
+          contentType = 'image/jpeg';
+          break;
+        case 'gif':
+          contentType = 'image/gif';
+          break;
+        case 'webp':
+          contentType = 'image/webp';
+          break;
+      }
+      
       final imageFileUpload = http.MultipartFile.fromBytes(
         'file',
         imageBytes,
-        filename: imagePath.split('/').last,
+        filename: fileName,
+        contentType: MediaType.parse(contentType),
       );
       
       request.files.add(imageFileUpload);
@@ -97,6 +120,11 @@ class ImageService {
         if (responseData['success'] == true) {
           return responseData['file_url'];
         }
+      }
+      
+      if (kDebugMode) {
+        print('Upload failed with status: ${response.statusCode}');
+        print('Response body: ${response.body}');
       }
       
       return null;

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../controllers/register_controller.dart';
 import '../services/image_service.dart';
 import '../services/lookup_service.dart';
+import '../widgets/single_date_picker.dart';
 import '../../theme/app_theme.dart';
 import 'otp_verification_screen.dart';
 
@@ -51,6 +52,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _grades = grades;
         _selectedRole = _roles.isNotEmpty ? _roles.first : null;
         _selectedDepartment = _departments.isNotEmpty ? _departments.first.name : null;
+        _selectedDepartmentId = _departments.isNotEmpty ? _departments.first.departmentId ?? '' : null;
+        if (kDebugMode) {
+          print('Loaded ${departments.length} departments');
+          for (var dept in departments) {
+            print('Department: ${dept.name} -> ID: ${dept.departmentId}');
+          }
+          print('Selected department ID: $_selectedDepartmentId');
+        }
         _selectedGrade = _grades.isNotEmpty ? _grades.first.id : null;
         _isLoadingLookupData = false;
       });
@@ -111,6 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _selectedRole;
   String? _selectedDepartment;
+  String? _selectedDepartmentId;
   String? _selectedGrade;
   String? _selectedGender;
   String? _selectedMaritalStatus;
@@ -213,8 +223,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..updateDesignationId(_designationController.text)
       ..updateRole(_selectedRole ?? '')
       ..updateDepartment(_selectedDepartment ?? '')
+      ..updateDepartmentId(_selectedDepartmentId ?? '')
       ..updateIsHeadOfDepartment(_isHeadOfDepartment)
       ..updatePassword(_passwordController.text)
+      ..updateConfirmPassword(_confirmPasswordController.text)
       ..updateGradeId(_selectedGrade)
       ..updateProfilePhotoUrl(_profilePhotoUrl);
 
@@ -481,11 +493,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             theme: theme,
             readOnly: true,
             onTap: () async {
-              final date = await showDatePicker(
+              final date = await showSingleDatePicker(
                 context: context,
                 initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
                 firstDate: DateTime.now().subtract(const Duration(days: 365 * 70)),
                 lastDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+                title: 'Select Date of Birth',
               );
               if (date != null) {
                 _dateOfBirthController.text = date.toIso8601String().split('T')[0];
@@ -636,11 +649,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             theme: theme,
             readOnly: true,
             onTap: () async {
-              final date = await showDatePicker(
+              final date = await showSingleDatePicker(
                 context: context,
                 initialDate: DateTime.now().subtract(const Duration(days: 365)),
                 firstDate: DateTime.now().subtract(const Duration(days: 365 * 50)),
                 lastDate: DateTime.now(),
+                title: 'Select Employment Date',
               );
               if (date != null) {
                 _dateOfEmploymentController.text = date.toIso8601String().split('T')[0];
@@ -654,11 +668,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
             items: _isLoadingLookupData ? ['Loading...'] : _departments.map((d) => d.name).toList(),
             value: _isLoadingLookupData ? null : _selectedDepartment,
             onChanged: (String? value) {
-              setState(() => _selectedDepartment = value);
-              if (value != null) {
-                // Update designations based on selected department
-                _updateDesignations(value);
-              }
+              setState(() {
+                _selectedDepartment = value;
+                if (value != null) {
+                  // Find department and get its ID and designations
+                  final selectedDept = _departments.firstWhere(
+                    (dept) => dept.name == value,
+                    orElse: () => Department(
+                      departmentId: '',
+                      name: value,
+                      designations: [],
+                      createdAt: '',
+                    ),
+                  );
+                  _selectedDepartmentId = selectedDept.departmentId ?? '';
+                  if (kDebugMode) {
+                    print('Selected department: $value');
+                    print('Department ID: $_selectedDepartmentId');
+                    print('Department object: ${selectedDept.departmentId}');
+                  }
+                  // Update designations based on selected department
+                  _updateDesignations(value);
+                }
+              });
             },
             theme: theme,
           ),

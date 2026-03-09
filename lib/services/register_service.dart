@@ -16,15 +16,32 @@ String _detailFromBody(String body) {
     final data = jsonDecode(body) as Map<String, dynamic>;
     final detail = data['detail'];
     if (detail == null) return 'Registration failed';
+    
     if (detail is String) return detail;
+    
     if (detail is List && detail.isNotEmpty) {
       final first = detail.first;
-      if (first is Map && first['msg'] != null) return first['msg'] as String;
+      if (first is Map) {
+        // Handle FastAPI validation errors format
+        if (first['loc'] is List && first['msg'] is String) {
+          final fieldPath = (first['loc'] as List).join('.');
+          return 'Validation error in $fieldPath: ${first['msg']}';
+        }
+        if (first['msg'] != null) return first['msg'] as String;
+        if (first['field'] != null && first['message'] != null) {
+          return '${first['field']}: ${first['message']}';
+        }
+      }
       return first.toString();
     }
-    return 'Registration failed';
-  } catch (_) {
-    return 'Registration failed';
+    
+    // Check for common error fields
+    if (data['error'] != null) return data['error'].toString();
+    if (data['message'] != null) return data['message'].toString();
+    
+    return 'Registration failed: ${body.substring(0, body.length > 100 ? 100 : body.length)}';
+  } catch (e) {
+    return 'Registration failed: Unable to parse error response';
   }
 }
 
@@ -51,43 +68,58 @@ class RegisterService {
     required String designationId,
     required String role,
     required String department,
+    required String departmentId,
     required bool isHeadOfDepartment,
     required String password,
+    required String confirmPassword,
     String? gradeId,
     String? profilePhotoUrl,
   }) async {
     try {
+      final requestBody = jsonEncode({
+        'employee_number': employeeNumber,
+        'national_id': nationalId,
+        'suffix': suffix,
+        'first_name': firstName,
+        'surname': surName,
+        'other_names': otherNames,
+        'date_of_birth': dateOfBirth,
+        'gender': gender,
+        'email': email,
+        'phone': phone,
+        'home_of_origin': homeOfOrigin,
+        'traditional_authority': traditionalAuthority,
+        'district': district,
+        'current_address': currentAddress,
+        'marital_status': maritalStatus,
+        'spouse_name': spouseName,
+        'spouse_contact': spouseContact,
+        'date_of_employment': dateOfEmployment,
+        'designation_id': designationId,
+        'role': role,
+        'department': department,
+        'department_id': departmentId,
+        'is_head_of_department': isHeadOfDepartment,
+        'password': password,
+        'confirm_password': confirmPassword,
+        'grade_id': gradeId,
+        'profile_photo_url': profilePhotoUrl,
+      });
+
+      if (kDebugMode) {
+        debugPrint('Registration request body: $requestBody');
+      }
+
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'employee_number': employeeNumber,
-          'national_id': nationalId,
-          'suffix': suffix,
-          'first_name': firstName,
-          'surname': surName,
-          'other_names': otherNames,
-          'date_of_birth': dateOfBirth,
-          'gender': gender,
-          'email': email,
-          'phone': phone,
-          'home_of_origin': homeOfOrigin,
-          'traditional_authority': traditionalAuthority,
-          'district': district,
-          'current_address': currentAddress,
-          'marital_status': maritalStatus,
-          'spouse_name': spouseName,
-          'spouse_contact': spouseContact,
-          'date_of_employment': dateOfEmployment,
-          'designation_id': designationId,
-          'role': role,
-          'department': department,
-          'is_head_of_department': isHeadOfDepartment,
-          'password': password,
-          'grade_id': gradeId,
-          'profile_photo_url': profilePhotoUrl,
-        }),
+        body: requestBody,
       );
+      
+      if (kDebugMode) {
+        debugPrint('Registration response status: ${response.statusCode}');
+        debugPrint('Registration response body: ${response.body}');
+      }
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);

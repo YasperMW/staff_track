@@ -213,27 +213,156 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildSummaryCard() {
+    final DateTime now = DateTime.now();
+    final DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final DateTime today = now;
+    
+    // Calculate working days in current month (excluding weekends)
+    int workingDaysInMonth = 0;
+    for (DateTime day = firstDayOfMonth; 
+         day.isBefore(today.add(const Duration(days: 1))); 
+         day = day.add(const Duration(days: 1))) {
+      if (day.weekday != DateTime.saturday && day.weekday != DateTime.sunday) {
+        workingDaysInMonth++;
+      }
+    }
+    
+    // Count actual attendance from history
+    int presentDays = 0;
+    int onTimeDays = 0;
+    int lateDays = 0;
+    final Set<DateTime> checkedInDays = {};
+    
+    for (final record in attendanceHistory) {
+      if (record.checkInTime != null) {
+        final DateTime checkInDate = DateTime(
+          record.date.year, 
+          record.date.month, 
+          record.date.day
+        );
+        
+        if (!checkedInDays.contains(checkInDate)) {
+          checkedInDays.add(checkInDate);
+          
+          // Check if it's a working day (exclude weekends)
+          if (record.date.weekday != DateTime.saturday && 
+              record.date.weekday != DateTime.sunday) {
+            
+            // Count all check-ins as present
+            presentDays++;
+            
+            // Check if late (after 9:05 AM to allow 5-minute grace period)
+            if (record.checkInTime!.hour > 9 || 
+                (record.checkInTime!.hour == 9 && record.checkInTime!.minute > 5)) {
+              lateDays++;
+            } else {
+              onTimeDays++;
+            }
+          }
+        }
+      }
+    }
+    
+    final int absentDays = workingDaysInMonth - presentDays;
+    final double attendanceRate = workingDaysInMonth > 0 ? 
+        (presentDays / workingDaysInMonth * 100) : 0.0;
+    
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.skyBlue,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.skyBlue.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SummaryItem(
-            value: '${summary?['present_days'] ?? 0}', 
-            label: 'Present'
+          Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Attendance Summary',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'This Month',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-          _SummaryItem(
-            value: '${summary?['late_days'] ?? 0}', 
-            label: 'Late'
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _EnhancedSummaryItem(
+                value: '$onTimeDays',
+                label: 'On Time',
+                percentage: workingDaysInMonth > 0 ? '${(onTimeDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.check_circle_outline,
+                color: Colors.white,
+              ),
+              _EnhancedSummaryItem(
+                value: '$lateDays',
+                label: 'Late',
+                percentage: workingDaysInMonth > 0 ? '${(lateDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.access_time,
+                color: Colors.white,
+              ),
+              _EnhancedSummaryItem(
+                value: '$presentDays',
+                label: 'Present',
+                percentage: workingDaysInMonth > 0 ? '${(presentDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.person_outline,
+                color: Colors.white,
+              ),
+            ],
           ),
-          _SummaryItem(
-            value: '${(summary?['total_days'] ?? 0) - (summary?['present_days'] ?? 0)}', 
-            label: 'Absent'
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Attendance Rate: ${attendanceRate.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -360,6 +489,61 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EnhancedSummaryItem extends StatelessWidget {
+  final String value;
+  final String label;
+  final String percentage;
+  final IconData icon;
+  final Color color;
+
+  const _EnhancedSummaryItem({
+    required this.value,
+    required this.label,
+    required this.percentage,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color.withValues(alpha: 0.9),
+          size: 24,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          percentage,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.6),
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 }
