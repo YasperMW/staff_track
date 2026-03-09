@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'auth_storage.dart';
@@ -199,12 +200,18 @@ class CompleteUserProfileService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return CompleteUserProfile.fromJson(data);
       } else {
-        print('Failed to load complete profile: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        if (kDebugMode) {
+          print('Failed to load complete profile: ${response.statusCode}');
+
+          print('Response body: ${response.body}');
+        }
+
         return null;
       }
     } catch (e) {
-      print('Error fetching complete user profile: $e');
+      if (kDebugMode) {
+        print('Error fetching complete user profile: $e');
+      }
       return null;
     }
   }

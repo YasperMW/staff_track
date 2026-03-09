@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../config/app_config.dart';
@@ -13,7 +14,9 @@ class ImageService {
       // Request camera permission
       bool hasPermission = await PermissionService.requestCameraPermission();
       if (!hasPermission) {
-        print('Camera permission denied');
+        if (kDebugMode) {
+          print('Camera permission denied');
+        }
         return null;
       }
 
@@ -29,7 +32,9 @@ class ImageService {
       }
       return null;
     } catch (e) {
-      print('Error picking image: $e');
+      if (kDebugMode) {
+        print('Error picking image: $e');
+      }
       return null;
     }
   }
@@ -39,7 +44,9 @@ class ImageService {
       // Request camera permission
       bool hasPermission = await PermissionService.requestCameraPermission();
       if (!hasPermission) {
-        print('Camera permission denied');
+        if (kDebugMode) {
+          print('Camera permission denied');
+        }
         return null;
       }
       final XFile? photo = await _picker.pickImage(
@@ -54,7 +61,9 @@ class ImageService {
       }
       return null;
     } catch (e) {
-      print('Error taking photo: $e');
+      if (kDebugMode) {
+        print('Error taking photo: $e');
+      }
       return null;
     }
   }
@@ -92,7 +101,9 @@ class ImageService {
       
       return null;
     } catch (e) {
-      print('Error uploading image: $e');
+      if (kDebugMode) {
+        print('Error uploading image: $e');
+      }
       return null;
     }
   }

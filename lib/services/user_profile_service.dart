@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
@@ -117,12 +118,17 @@ class UserProfileService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return UserProfile.fromJson(data);
       } else {
+        if (kDebugMode) {
         print('Failed to load profile: ${response.statusCode}');
-        print('Response body: ${response.body}');
+
+          print('Response body: ${response.body}');
+        }
         return null;
       }
     } catch (e) {
-      print('Error fetching user profile: $e');
+      if (kDebugMode) {
+        print('Error fetching user profile: $e');
+      }
       return null;
     }
   }
@@ -144,11 +150,15 @@ class UserProfileService {
         final data = jsonDecode(response.body);
         return data['success'] == true;
       } else {
-        print('Failed to update profile photo: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Failed to update profile photo: ${response.statusCode}');
+        }
         return false;
       }
     } catch (e) {
-      print('Error updating profile photo: $e');
+      if (kDebugMode) {
+        print('Error updating profile photo: $e');
+      }
       return false;
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/models.dart';
@@ -8,10 +9,7 @@ class HolidaysService {
 
   static Future<List<PublicHoliday>> getHolidays({int? year, String? category}) async {
     try {
-      // Debug: Print request details
-      print('=== GET HOLIDAYS DEBUG ===');
-      print('Year filter: $year');
-      print('Category filter: $category');
+
       
       final token = await AuthStorage.getToken();
       String url = '${AppConfig.apiBaseUrl}/api/holidays/';
@@ -25,7 +23,7 @@ class HolidaysService {
         url += '?${queryParams.join('&')}';
       }
       
-      print('Request URL: $url');
+
       
       final response = await http.get(
         Uri.parse(url),
@@ -35,30 +33,34 @@ class HolidaysService {
         },
       );
 
-      // Debug: Print response details
-      print('Response status code: ${response.statusCode}');
-      print('Response headers: ${response.headers}');
-      print('Response body: ${response.body}');
+
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final List<dynamic> data = json.decode(response.body);
-        print('Successfully parsed ${data.length} holidays');
+        if (kDebugMode) {
+          print('Successfully parsed ${data.length} holidays');
+        }
         
         final holidays = data.map((json) {
           final holiday = PublicHoliday.fromJson(json);
-          print('Parsed holiday: ${holiday.name} (${holiday.category})');
+          if (kDebugMode) {
+            print('Parsed holiday: ${holiday.name} (${holiday.category})');
+          }
           return holiday;
         }).toList();
         
-        print('Final holidays list length: ${holidays.length}');
+        if (kDebugMode) {
+          print('Final holidays list length: ${holidays.length}');
+        }
         return holidays;
       } else {
-        print('Failed to load holidays: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Failed to load holidays: ${response.statusCode}');
+        }
         throw Exception('Failed to load holidays: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in getHolidays: $e');
-      print('Error type: ${e.runtimeType}');
+
       throw Exception('Error loading holidays: $e');
     }
   }
@@ -73,11 +75,7 @@ class HolidaysService {
   }) async {
     try {
       final token = await AuthStorage.getToken();
-      
-      // Debug: Print request details
-      print('=== CREATE HOLIDAY DEBUG ===');
-      print('Token: ${token != null ? "Found" : "Not found"}');
-      print('URL: ${AppConfig.apiBaseUrl}/api/holidays/');
+
       
       final requestBody = json.encode({
         'name': name,
@@ -87,7 +85,9 @@ class HolidaysService {
         'category': category,
         'isRecurring': isRecurring,
       });
-      print('Request body: $requestBody');
+      if (kDebugMode) {
+        print('Request body: $requestBody');
+      }
       
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/api/holidays/'),
@@ -98,39 +98,50 @@ class HolidaysService {
         body: requestBody,
       );
 
-      // Debug: Print response details
-      print('Response status code: ${response.statusCode}');
-      print('Response headers: ${response.headers}');
-      print('Response body: ${response.body}');
-      print('Response body length: ${response.body.length}');
+
       
       // Try to parse the response body to see if it's valid JSON
       try {
         final parsedBody = json.decode(response.body);
-        print('Parsed response body: $parsedBody');
+        if (kDebugMode) {
+          print('Parsed response body: $parsedBody');
+        }
       } catch (e) {
-        print('Failed to parse response body as JSON: $e');
+        if (kDebugMode) {
+          print('Failed to parse response body as JSON: $e');
+
         print('Raw response body: "${response.body}"');
+        }
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        print('Status code is in success range, attempting to parse holiday...');
+
         try {
           final holiday = PublicHoliday.fromJson(json.decode(response.body));
-          print('Successfully parsed holiday: ${holiday.name}');
+          if (kDebugMode) {
+            print('Successfully parsed holiday: ${holiday.name}');
+          }
           return holiday;
         } catch (e) {
-          print('Failed to parse holiday from response: $e');
+          if (kDebugMode) {
+            print('Failed to parse holiday from response: $e');
+
           print('Response body that failed to parse: ${response.body}');
+          }
           rethrow;
         }
       } else {
-        print('Status code indicates error: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Status code indicates error: ${response.statusCode}');
+        }
         throw Exception('Failed to create holiday: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error in createHoliday: $e');
+      if (kDebugMode) {
+        print('Error in createHoliday: $e');
+
       print('Error type: ${e.runtimeType}');
+      }
       throw Exception('Error creating holiday: $e');
     }
   }
@@ -152,11 +163,11 @@ class HolidaysService {
           'Authorization': 'Bearer $token',
         },
         body: json.encode({
-          if (name != null) 'name': name,
+          'name': ?name,
           if (date != null) 'date': date.toIso8601String().split('T')[0],
-          if (description != null) 'description': description,
-          if (type != null) 'type': type,
-          if (isRecurring != null) 'isRecurring': isRecurring,
+          'description': ?description,
+          'type': ?type,
+          'isRecurring': ?isRecurring,
         }),
       );
 
@@ -175,10 +186,13 @@ class HolidaysService {
       final token = await AuthStorage.getToken();
       
       // Debug: Print request details
-      print('=== DELETE HOLIDAY DEBUG ===');
+      if (kDebugMode) {
+        print('=== DELETE HOLIDAY DEBUG ===');
+
       print('Token: ${token != null ? "Found" : "Not found"}');
       print('URL: ${AppConfig.apiBaseUrl}/api/holidays/$id');
       print('Holiday ID to delete: $id');
+      }
       
       final response = await http.delete(
         Uri.parse('${AppConfig.apiBaseUrl}/api/holidays/$id'),
@@ -189,20 +203,31 @@ class HolidaysService {
       );
 
       // Debug: Print response details
-      print('Delete response status code: ${response.statusCode}');
+      if (kDebugMode) {
+        print('Delete response status code: ${response.statusCode}');
+
       print('Delete response headers: ${response.headers}');
       print('Delete response body: ${response.body}');
       print('Delete response body length: ${response.body.length}');
+      }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        print('Delete failed with status: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Delete failed with status: ${response.statusCode}');
+        }
         throw Exception('Failed to delete holiday: ${response.statusCode}');
       } else {
-        print('Delete successful with status: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Delete successful with status: ${response.statusCode}');
+        }
       }
     } catch (e) {
+
+      if (kDebugMode) {
       print('Error in deleteHoliday: $e');
-      print('Error type: ${e.runtimeType}');
+
+        print('Error type: ${e.runtimeType}');
+      }
       throw Exception('Failed to delete holiday: $e');
     }
   }
@@ -250,7 +275,9 @@ class HolidaysService {
       );
     } catch (e) {
       // Mock notification for development
-      print('Holiday notification sent: ${holiday.name} on ${holiday.date}');
+      if (kDebugMode) {
+        print('Holiday notification sent: ${holiday.name} on ${holiday.date}');
+      }
     }
   }
 

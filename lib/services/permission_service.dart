@@ -190,7 +190,9 @@ class PermissionService {
       return permission == LocationPermission.always || 
              permission == LocationPermission.whileInUse;
     } catch (e) {
-      print('Error checking location permission: $e');
+      if (kDebugMode) {
+        print('Error checking location permission: $e');
+      }
       return false;
     }
   }
@@ -200,7 +202,9 @@ class PermissionService {
       var status = await ph.Permission.camera.status;
       return status.isGranted;
     } catch (e) {
-      print('Error checking camera permission: $e');
+      if (kDebugMode) {
+        print('Error checking camera permission: $e');
+      }
       return false;
     }
   }
@@ -210,7 +214,9 @@ class PermissionService {
       var status = await ph.Permission.storage.status;
       return status.isGranted;
     } catch (e) {
-      print('Error checking storage permission: $e');
+      if (kDebugMode) {
+        print('Error checking storage permission: $e');
+      }
       return false;
     }
   }

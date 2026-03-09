@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/models.dart';
@@ -21,8 +22,8 @@ class AnnouncementsService {
         if (limit != null) 'limit': limit.toString(),
         if (offset != null) 'offset': offset.toString(),
         if (activeOnly != null) 'active_only': activeOnly.toString(),
-        if (department != null) 'department': department,
-        if (role != null) 'role': role,
+        'department': ?department,
+        'role': ?role,
       };
 
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/api/announcements').replace(queryParameters: queryParams);
@@ -37,18 +38,23 @@ class AnnouncementsService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        print('Announcements data received: ${data.length} items'); // Debug print
+        if (kDebugMode) {
+          print('Announcements data received: ${data.length} items');
+        } // Debug print
         return data.map((json) {
-          print('Processing announcement: ${json['id']} - ${json['title']}'); // Debug print
+          if (kDebugMode) {
+            print('Processing announcement: ${json['id']} - ${json['title']}');
+          } // Debug print
           return Announcement.fromJson(json);
         }).toList();
       } else {
-        print('Failed to load announcements - Status: ${response.statusCode}'); // Debug print
-        print('Response body: ${response.body}'); // Debug print
+
         throw Exception('Failed to load announcements: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error loading announcements: $e'); // Debug print
+      if (kDebugMode) {
+        print('Error loading announcements: $e');
+      } // Debug print
       throw Exception('Error loading announcements: $e');
     }
   }
@@ -114,14 +120,14 @@ class AnnouncementsService {
           'Authorization': 'Bearer $token',
         },
         body: json.encode({
-          if (title != null) 'title': title,
-          if (message != null) 'message': message,
-          if (type != null) 'type': type,
-          if (targetDepartment != null) 'target_department': targetDepartment,
-          if (targetRole != null) 'target_role': targetRole,
-          if (isActive != null) 'is_active': isActive,
+          'title': ?title,
+          'message': ?message,
+          'type': ?type,
+          'target_department': ?targetDepartment,
+          'target_role': ?targetRole,
+          'is_active': ?isActive,
           if (expiresAt != null) 'expires_at': expiresAt.toIso8601String(),
-          if (attachmentUrl != null) 'attachment_url': attachmentUrl,
+          'attachment_url': ?attachmentUrl,
         }),
       );
 

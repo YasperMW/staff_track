@@ -1,4 +1,5 @@
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -54,7 +55,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isLoadingLookupData = false;
       });
     } catch (e) {
-      print('Error loading lookup data: $e');
+      if (kDebugMode) {
+        print('Error loading lookup data: $e');
+      }
       setState(() {
         _isLoadingLookupData = false;
       });
@@ -691,7 +694,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildGradeDropdown(ThemeData theme) {
     return DropdownButtonFormField<String>(
-      value: _selectedGrade,
+      initialValue: _selectedGrade,
       items: _grades.map((Grade g) {
         return DropdownMenuItem<String>(
           value: g.id,

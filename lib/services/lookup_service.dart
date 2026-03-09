@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
@@ -109,7 +110,9 @@ class LookupService {
         throw Exception('Failed to load grades: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching grades: $e');
+      if (kDebugMode) {
+        print('Error fetching grades: $e');
+      }
       return [];
     }
   }
@@ -129,7 +132,9 @@ class LookupService {
         throw Exception('Failed to load roles: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching roles: $e');
+      if (kDebugMode) {
+        print('Error fetching roles: $e');
+      }
       return [];
     }
   }
@@ -149,7 +154,9 @@ class LookupService {
         throw Exception('Failed to load departments: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error fetching departments: $e');
+      if (kDebugMode) {
+        print('Error fetching departments: $e');
+      }
       return [];
     }
   }
@@ -166,12 +173,17 @@ class LookupService {
         final designationsList = data['designations'] as List;
         return designationsList.map((designation) => Designation.fromJson(designation)).toList();
       } else {
+        if (kDebugMode) {
         print('Failed to load designations: ${response.statusCode}');
-        print('Response body: ${response.body}');
+
+          print('Response body: ${response.body}');
+        }
         return [];
       }
     } catch (e) {
-      print('Error fetching designations: $e');
+      if (kDebugMode) {
+        print('Error fetching designations: $e');
+      }
       return [];
     }
   }
@@ -188,12 +200,17 @@ class LookupService {
         final designationsList = data['designations'] as List;
         return designationsList.map((designation) => Designation.fromJson(designation)).toList();
       } else {
-        print('Failed to load designations: ${response.statusCode}');
+        if (kDebugMode) {
+          print('Failed to load designations: ${response.statusCode}');
+
         print('Response body: ${response.body}');
+        }
         return [];
       }
     } catch (e) {
-      print('Error fetching designations: $e');
+      if (kDebugMode) {
+        print('Error fetching designations: $e');
+      }
       return [];
     }
   }
