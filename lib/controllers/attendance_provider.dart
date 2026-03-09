@@ -16,6 +16,10 @@ class AttendanceProvider extends ChangeNotifier {
   bool _isLoadingRecent = false;
   String? _recentError;
 
+  Map<String, dynamic>? _profileMetrics;
+  bool _isLoadingMetrics = false;
+  String? _metricsError;
+
   AttendanceRecord? get todayAttendance => _todayAttendance;
   bool get isLoadingToday => _isLoadingToday;
   String? get todayError => _todayError;
@@ -23,6 +27,10 @@ class AttendanceProvider extends ChangeNotifier {
   List<AttendanceRecord> get recentAttendance => _recentAttendance;
   bool get isLoadingRecent => _isLoadingRecent;
   String? get recentError => _recentError;
+
+  Map<String, dynamic>? get profileMetrics => _profileMetrics;
+  bool get isLoadingMetrics => _isLoadingMetrics;
+  String? get metricsError => _metricsError;
 
   Future<void> loadTodayAttendance() async {
     _isLoadingToday = true;
@@ -57,13 +65,32 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loadProfileMetrics() async {
+    _isLoadingMetrics = true;
+    _metricsError = null;
+    notifyListeners();
+
+    try {
+      final metrics = await _attendanceService.getMyProfileMetrics();
+      _profileMetrics = metrics;
+    } catch (e) {
+      _metricsError = e.toString();
+    } finally {
+      _isLoadingMetrics = false;
+      notifyListeners();
+    }
+  }
+
   void clear() {
     _todayAttendance = null;
     _recentAttendance = [];
     _todayError = null;
     _recentError = null;
+    _profileMetrics = null;
+    _metricsError = null;
     _isLoadingToday = false;
     _isLoadingRecent = false;
+    _isLoadingMetrics = false;
     notifyListeners();
   }
 }

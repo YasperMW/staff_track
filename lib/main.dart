@@ -17,7 +17,6 @@ void main() async {
         (defaultTargetPlatform == TargetPlatform.android ||
          defaultTargetPlatform == TargetPlatform.iOS)) {
       await Firebase.initializeApp();
-      await FCMService.initialize();
     }
   } catch (e) {
     if (kDebugMode) {

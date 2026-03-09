@@ -13,6 +13,7 @@ import '../../controllers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../widgets/floating_navigation.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/simple_header.dart';
 import '../services/permission_service.dart';
 import 'attendance_history_screen.dart';
 import 'home_screen.dart';
@@ -365,54 +366,38 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     final formattedDate = DateFormat('EEEE, MMMM d, y').format(now);
     final formattedTime = DateFormat('hh:mm:ss a').format(now);
 
-    return FloatingNavigation(
-      currentIndex: 1, // Attendance is index 1
-      onTap: (index) {
-        if (index == 1) {
-          // Already on attendance screen, do nothing
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(initialIndex: index),
-          ),
-        );
-      },
-      child: RefreshIndicator(
-        onRefresh: _loadTodayAttendance,
-        color: AppTheme.skyBlue,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    Text(
-                      'Check in & out',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage today\'s time and location in one place.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+    return Scaffold(
+      appBar: const SimpleHeader(
+        title: 'Check in & out',
+      ),
+      body: FloatingNavigation(
+        currentIndex: 1, // Attendance is index 1
+        onTap: (index) {
+          if (index == 1) {
+            // Already on attendance screen, do nothing
+            return;
+          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(initialIndex: index),
+            ),
+          );
+        },
+        child: RefreshIndicator(
+          onRefresh: _loadTodayAttendance,
+          color: AppTheme.skyBlue,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -917,23 +902,74 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const AttendanceHistoryScreen(),
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppTheme.skyBlue.withValues(alpha: 0.05),
+                              AppTheme.lightGold.withValues(alpha: 0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const AttendanceHistoryScreen(),
+                              ),
+                            );
+                          },
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.history),
-                        label: const Text('View attendance history'),
-                        style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            child: const Icon(
+                              Icons.history_outlined,
+                              color: AppTheme.skyBlue,
+                              size: 20,
+                            ),
+                          ),
+                          label: Column(
+                            children: [
+                              const Text(
+                                'View Attendance History',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.skyBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Check your complete attendance records',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: AppTheme.skyBlue,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                         ),
                       ),
@@ -945,7 +981,8 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             ),
           ),
         ),
-    );
+    ),
+      );
   }
 
   Widget _buildNoAttendanceStatus() {
@@ -1109,7 +1146,8 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
         ],
       ],
     );
-  }
+
+}
 
   Widget _buildStatusRow(String label, String value, IconData icon, Color color) {
     return Row(
