@@ -5,7 +5,7 @@ enum AppEnvironment {
 
 class AppConfig {
   /// Change this value when building for different environments.
-  static const AppEnvironment environment = AppEnvironment.dev;
+  static const AppEnvironment environment = AppEnvironment.prod;
 
   static String get apiBaseUrl {
     switch (environment) {

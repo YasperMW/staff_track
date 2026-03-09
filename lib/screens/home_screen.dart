@@ -14,6 +14,7 @@ import 'staff/reports_screen.dart';
 import 'staff/requests_screen.dart';
 import 'staff/announcements_screen.dart';
 import 'check_in_out_screen.dart';
+import '../services/fcm_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -32,6 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     context.read<AttendanceProvider>().loadTodayAttendance();
+    
+    // Initialize FCM service with context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FCMService.initialize(context);
+    });
   }
 
   Future<void> _handleQuickCheckInOut() async {

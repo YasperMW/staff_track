@@ -39,5 +39,9 @@ class AttendanceService {
   Future<List<TeamAttendanceMember>> getTeamTodayList() {
     return AttendanceController.getTeamTodayList();
   }
+
+  Future<Map<String, dynamic>> getMyProfileMetrics() {
+    return AttendanceController.getMyProfileMetrics();
+  }
 }
 

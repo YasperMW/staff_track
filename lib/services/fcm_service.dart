@@ -6,8 +6,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import 'auth_storage.dart';
+import 'navigation_service.dart';
+import '../screens/SharedScreens/notifications_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -24,8 +27,11 @@ class FCMService {
   
   static String? _lastSentToken;
   static bool _isRequesting = false;
+  static BuildContext? _appContext;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize(BuildContext context) async {
+    _appContext = context;
+    
     if (kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       return;
     }
@@ -52,7 +58,7 @@ class FCMService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification click when app is in foreground
+        _handleNotificationClick(response.payload);
       },
     );
 
@@ -77,13 +83,19 @@ class FCMService {
 
     // 6. Handle notification clicks when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      // Handle navigation if needed
+      _handleNotificationClick(message.data.toString());
     });
 
-    // 7. Get and save FCM token
+    // 7. Check if app was opened from a notification when terminated
+    final initialMessage = await _firebaseMessaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationClick(initialMessage.data.toString());
+    }
+
+    // 8. Get and save FCM token
     await updateToken();
     
-    // 8. Listen for token refresh
+    // 9. Listen for token refresh
     _firebaseMessaging.onTokenRefresh.listen((newToken) {
       _sendTokenToBackend(newToken);
     });
@@ -164,6 +176,25 @@ class FCMService {
       platformDetails,
       payload: message.data.toString(),
     );
+  }
+
+  static void _handleNotificationClick(String? payload) {
+    if (_appContext == null || payload == null) return;
+    
+    try {
+      final Map<String, dynamic> data = Map<String, dynamic>.from(
+        jsonDecode(payload) as Map
+      );
+      
+      NotificationNavigationService.handleNotificationClick(_appContext!, data);
+    } catch (e) {
+      debugPrint('Error handling notification click: $e');
+      // Fallback to notifications screen
+      Navigator.push(
+        _appContext!,
+        MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+      );
+    }
   }
 
   /// Call this on logout to clear the local token cache 

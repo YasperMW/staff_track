@@ -30,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final attendanceProvider = context.read<AttendanceProvider>();
     attendanceProvider.loadTodayAttendance();
     attendanceProvider.loadRecentAttendance(limit: 5);
+    attendanceProvider.loadProfileMetrics();
   }
 
   String _getAttendanceStatusText() {
@@ -290,13 +291,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStatsRow(BuildContext context) {
+    final attendanceProvider = context.watch<AttendanceProvider>();
+    final metrics = attendanceProvider.profileMetrics;
+    
+    // Show loading state while metrics are being fetched
+    if (attendanceProvider.isLoadingMetrics) {
+      return Row(
+        children: [
+          Expanded(child: _buildLoadingStatCard(context)),
+          const SizedBox(width: 12),
+          Expanded(child: _buildLoadingStatCard(context)),
+          const SizedBox(width: 12),
+          Expanded(child: _buildLoadingStatCard(context)),
+        ],
+      );
+    }
+    
+    // Show error state if metrics failed to load
+    if (attendanceProvider.metricsError != null || metrics == null) {
+      return Row(
+        children: [
+          Expanded(child: _buildStatCard(context, Icons.access_time, '--', 'This Week', AppTheme.skyBlue)),
+          const SizedBox(width: 12),
+          Expanded(child: _buildStatCard(context, Icons.trending_up, '--', 'On Time', AppTheme.lightGold)),
+          const SizedBox(width: 12),
+          Expanded(child: _buildStatCard(context, Icons.calendar_today, '--', 'Leave Left', AppTheme.lightGold)),
+        ],
+      );
+    }
+    
+    // Calculate weekly hours from working days (assuming 8 hours per day)
+    final weeklyHours = (metrics['working_days'] as int? ?? 0) * 8;
+    final weeklyMinutes = (weeklyHours % 1) * 60;
+    final weeklyHoursStr = weeklyHours > 0 
+        ? '${weeklyHours.toInt()}h ${weeklyMinutes.toInt()}m'
+        : '0h 0m';
+    
+    final onTimeRate = metrics['on_time_rate'] as double? ?? 0.0;
+    final onTimeRateStr = onTimeRate > 0 ? '${onTimeRate.toStringAsFixed(0)}%' : '0%';
+    
+    // Calculate leave left (assuming 21 days total annual leave)
+    final totalAnnualLeave = 21;
+    final leaveUsed = metrics['leave_used'] as int? ?? 0;
+    final leaveLeft = totalAnnualLeave - leaveUsed;
+    final leaveLeftStr = leaveLeft > 0 ? '$leaveLeft days' : '0 days';
+    
     return Row(
       children: [
-        Expanded(child: _buildStatCard(context, Icons.access_time, '38h 20m', 'This Week', AppTheme.skyBlue)),
+        Expanded(child: _buildStatCard(context, Icons.access_time, weeklyHoursStr, 'This Week', AppTheme.skyBlue)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.trending_up, '96%', 'On Time', AppTheme.lightGold)),
+        Expanded(child: _buildStatCard(context, Icons.trending_up, onTimeRateStr, 'On Time', AppTheme.lightGold)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.calendar_today, '12 days', 'Leave Left', AppTheme.lightGold)),
+        Expanded(child: _buildStatCard(context, Icons.calendar_today, leaveLeftStr, 'Leave Left', AppTheme.lightGold)),
       ],
     );
   }
@@ -333,6 +379,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: const TextStyle(
               fontSize: 12,
               color: AppTheme.textLightBlue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingStatCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha:0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 50,
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
         ],
@@ -410,6 +503,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final attendanceShift = attendance.shiftType ?? 'Unknown Shift';
     final isCurrentShift = attendanceShift == ShiftUtils.getCurrentShift();
     
+    // Check if attendance is from today and has been active for more than 24 hours without check-out
+    final now = DateTime.now();
+    final isToday = attendance.date.year == now.year && 
+                   attendance.date.month == now.month && 
+                   attendance.date.day == now.day;
+    
+    String statusText = 'Complete';
+    Color statusColor = AppTheme.skyBlue;
+    Color statusBgColor = AppTheme.skyBlue.withValues(alpha: 0.1);
+    String? activeHoursText;
+    
+    if (!attendance.isCheckedOut && attendance.checkInTime != null) {
+      final durationSinceCheckIn = now.difference(attendance.checkInTime!);
+      
+      if (isToday) {
+        statusText = 'Active';
+        statusColor = AppTheme.paleRed;
+        statusBgColor = AppTheme.paleRed.withValues(alpha: 0.1);
+        activeHoursText = _formatDuration(durationSinceCheckIn);
+      } else {
+        statusText = 'No Check Out';
+        statusColor = AppTheme.paleRed;
+        statusBgColor = AppTheme.paleRed.withValues(alpha: 0.1);
+        // Don't show active hours for "No Check Out" status
+      }
+    } else if (attendance.isCheckedOut) {
+      statusText = 'Complete';
+      statusColor = AppTheme.skyBlue;
+      statusBgColor = AppTheme.skyBlue.withValues(alpha: 0.1);
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -459,15 +583,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: attendance.isCheckedOut ? AppTheme.skyBlue.withValues(alpha: 0.1) : AppTheme.paleRed.withValues(alpha: 0.1),
+                  color: statusBgColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  attendance.isCheckedOut ? 'Complete' : 'Active',
+                  statusText,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: attendance.isCheckedOut ? AppTheme.skyBlue : AppTheme.paleRed,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -490,8 +614,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: AppTheme.textLightBlue,
               ),
             ),
+          if (activeHoursText != null)
+            Text(
+              'Active: $activeHoursText',
+              style: TextStyle(
+                fontSize: 12,
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else {
+      return '${minutes}m';
+    }
   }
 }

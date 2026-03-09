@@ -297,6 +297,31 @@ class AttendanceController {
     }
   }
 
+  static Future<Map<String, dynamic>> getMyProfileMetrics() async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/attendance/my-profile-metrics'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to get profile metrics');
+      }
+    } catch (e) {
+      throw Exception('Failed to get profile metrics: $e');
+    }
+  }
+
   static ApiError _mapAttendanceError({
     required String detail,
     required int statusCode,
