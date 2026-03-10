@@ -6,6 +6,7 @@ import '../theme/theme_provider.dart';
 import '../controllers/auth_provider.dart';
 import '../screens/SharedScreens/profile_screen.dart';
 import '../screens/SharedScreens/notifications_screen.dart';
+import '../config/app_config.dart';
 
 class AppHeader extends StatelessWidget {
   final String subtitle;
@@ -162,7 +163,11 @@ class AppHeader extends StatelessWidget {
         radius: 18,
         backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
         backgroundImage: user != null && user.profileImage.isNotEmpty
-            ? NetworkImage(user.profileImage)
+            ? NetworkImage(
+                user.profileImage.startsWith('http') 
+                    ? user.profileImage 
+                    : '${AppConfig.apiBaseUrl}/${user.profileImage}'
+              )
             : null,
         child: user == null || user.profileImage.isEmpty
             ? Text(

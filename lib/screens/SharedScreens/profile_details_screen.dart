@@ -9,6 +9,7 @@ import '../../services/image_service.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/employee_files_service.dart';
+import '../../config/app_config.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -173,7 +174,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 child: user.profileImage.isNotEmpty
                     ? ClipOval(
                         child: Image.network(
-                          user.profileImage,
+                          user.profileImage.startsWith('http') 
+                              ? user.profileImage 
+                              : '${AppConfig.apiBaseUrl}/${user.profileImage}',
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,

@@ -10,6 +10,7 @@ import '../services/user_profile_service.dart';
 import '../services/lookup_service.dart';
 import '../widgets/single_date_picker.dart';
 import '../../theme/app_theme.dart';
+import '../config/app_config.dart';
 import 'otp_verification_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -904,7 +905,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     : _profilePhotoUrl != null
                         ? ClipOval(
                             child: Image.network(
-                              _profilePhotoUrl!,
+                              _profilePhotoUrl!.startsWith('http') 
+                                  ? _profilePhotoUrl! 
+                                  : '${AppConfig.apiBaseUrl}/${_profilePhotoUrl!}',
                               width: 160,
                               height: 160,
                               fit: BoxFit.cover,
