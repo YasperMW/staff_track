@@ -969,7 +969,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               ),
               const Spacer(),
               Text(
-                'All Requests',
+                '',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   fontSize: 12,
