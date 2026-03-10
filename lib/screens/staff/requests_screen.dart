@@ -1017,6 +1017,18 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Future<void> _openCreateRequestSheet() async {
+    final contactAddressController = TextEditingController();
+    
+    // Trip fields
+    final reasonForLeavingController = TextEditingController();
+    final travelPlaceController = TextEditingController();
+    final accCostController = TextEditingController();
+    final bfCostController = TextEditingController();
+    final lunchCostController = TextEditingController();
+    final supperCostController = TextEditingController();
+    final transportCostController = TextEditingController();
+    final fuelCostController = TextEditingController();
+    
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1027,18 +1039,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         String selectedType = 'Annual Leave';
         DateTimeRange? selectedRange;
         bool leaveGrantRequired = false;
-        final contactAddressController = TextEditingController();
-        
-        // Trip fields
-        final reasonForLeavingController = TextEditingController();
         DateTime? travelDate;
-        final travelPlaceController = TextEditingController();
-        final accCostController = TextEditingController();
-        final bfCostController = TextEditingController();
-        final lunchCostController = TextEditingController();
-        final supperCostController = TextEditingController();
-        final transportCostController = TextEditingController();
-        final fuelCostController = TextEditingController();
         
         bool isSubmitting = false;
 

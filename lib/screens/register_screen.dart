@@ -2,9 +2,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 
 import '../controllers/register_controller.dart';
 import '../services/image_service.dart';
+import '../services/user_profile_service.dart';
 import '../services/lookup_service.dart';
 import '../widgets/single_date_picker.dart';
 import '../../theme/app_theme.dart';
@@ -125,6 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedGender;
   String? _selectedMaritalStatus;
   final bool _isHeadOfDepartment = false;
+  String? _profilePhotoPath;
   String? _profilePhotoUrl;
 
   void _scrollListener() {
@@ -228,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..updatePassword(_passwordController.text)
       ..updateConfirmPassword(_confirmPasswordController.text)
       ..updateGradeId(_selectedGrade)
-      ..updateProfilePhotoUrl(_profilePhotoUrl);
+      ..updateProfilePhotoUrl(null); // Will be uploaded after OTP verification
 
     final response = await controller.register();
     
@@ -236,12 +239,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = false);
       
       if (response.success) {
-        // Redirect to OTP verification screen instead of showing dialog
+        // Store the image path for later upload after OTP verification
+        String? pendingImagePath = _profilePhotoPath;
+        
+        // Show message about profile photo
+        if (pendingImagePath != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Registration successful! Profile photo will be uploaded after verification.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        
+        // Redirect to OTP verification screen with pending image path
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => OTPVerificationScreen(
               email: _emailController.text,
               purpose: 'registration',
+              pendingImagePath: pendingImagePath,
             ),
           ),
           (route) => false,
@@ -807,20 +824,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           Navigator.of(context).pop();
                           final imagePath = await imageService.takePhoto();
                           if (imagePath != null) {
-                            setState(() => _isLoading = true);
-                            final uploadedUrl = await imageService.uploadImage(imagePath);
                             setState(() {
-                              _isLoading = false;
-                              if (uploadedUrl != null) {
-                                _profilePhotoUrl = uploadedUrl;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Profile photo uploaded successfully!')),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Failed to upload photo')),
-                                );
-                              }
+                              _profilePhotoPath = imagePath;
+                              _profilePhotoUrl = null; // Clear any previous uploaded URL
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Photo captured! Will upload after form submission.')),
+                              );
                             });
                           }
                         },
@@ -832,31 +841,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           Navigator.of(context).pop();
                           final imagePath = await imageService.pickImage();
                           if (imagePath != null) {
-                            setState(() => _isLoading = true);
-                            final uploadedUrl = await imageService.uploadImage(imagePath);
                             setState(() {
-                              _isLoading = false;
-                              if (uploadedUrl != null) {
-                                _profilePhotoUrl = uploadedUrl;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Profile photo uploaded successfully!')),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Failed to upload photo')),
-                                );
-                              }
+                              _profilePhotoPath = imagePath;
+                              _profilePhotoUrl = null; // Clear any previous uploaded URL
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Image selected! Will upload after form submission.')),
+                              );
                             });
                           }
                         },
                       ),
-                      if (_profilePhotoUrl != null)
+                      if (_profilePhotoPath != null || _profilePhotoUrl != null)
                         ListTile(
                           leading: const Icon(Icons.delete, color: AppTheme.paleRed),
                           title: const Text('Remove Photo', style: TextStyle(color: AppTheme.paleRed)),
                           onTap: () {
                             Navigator.of(context).pop();
                             setState(() {
+                              _profilePhotoPath = null;
                               _profilePhotoUrl = null;
                             });
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -883,19 +885,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: 2,
                   ),
                 ),
-                child: _profilePhotoUrl != null
+                child: _profilePhotoPath != null
                     ? ClipOval(
-                        child: Image.network(
-                          _profilePhotoUrl!,
+                        child: Image.file(
+                          File(_profilePhotoPath!),
                           width: 160,
                           height: 160,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(color: AppTheme.skyBlue),
-                            );
-                          },
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.person_outline,
@@ -905,11 +901,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           },
                         ),
                       )
-                    : const Icon(
-                        Icons.person_outline,
-                        size: 80,
-                        color: AppTheme.skyBlue,
-                      ),
+                    : _profilePhotoUrl != null
+                        ? ClipOval(
+                            child: Image.network(
+                              _profilePhotoUrl!,
+                              width: 160,
+                              height: 160,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(color: AppTheme.skyBlue),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.person_outline,
+                                  size: 80,
+                                  color: AppTheme.skyBlue,
+                                );
+                              },
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person_outline,
+                            size: 80,
+                            color: AppTheme.skyBlue,
+                          ),
               ),
               Positioned(
                 bottom: 0,
@@ -947,13 +965,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          _profilePhotoUrl != null 
-              ? 'Profile photo added successfully!'
+          _profilePhotoPath != null || _profilePhotoUrl != null
+              ? 'Profile photo added!'
               : 'Tap to add a professional photo',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: _profilePhotoUrl != null ? Colors.green : Colors.grey,
-            fontWeight: _profilePhotoUrl != null ? FontWeight.w500 : FontWeight.normal,
+            color: _profilePhotoPath != null || _profilePhotoUrl != null ? Colors.green : Colors.grey,
+            fontWeight: _profilePhotoPath != null || _profilePhotoUrl != null ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
         const SizedBox(height: 8),

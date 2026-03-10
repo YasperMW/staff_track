@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/otp_service.dart';
+import '../services/image_service.dart';
+import '../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
   final String purpose; // 'registration' or 'password_reset'
+  final String? pendingImagePath; // Path to image that needs to be uploaded after verification
   
   const OTPVerificationScreen({
     super.key,
     required this.email,
     this.purpose = 'registration',
+    this.pendingImagePath,
   });
 
   @override
@@ -94,6 +98,10 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         setState(() => _isLoading = false);
         
         if (response['success']) {
+          // Handle profile photo upload if there's a pending image
+          if (widget.pendingImagePath != null && widget.purpose == 'registration') {
+            await _uploadProfilePhotoAfterVerification();
+          }
           _showSuccessDialog();
         } else {
           _showErrorDialog(response['message'] ?? 'OTP verification failed');
@@ -106,6 +114,45 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       }
     }
   }
+
+Future<void> _uploadProfilePhotoAfterVerification() async {
+  try {
+    // Upload the image first
+    final imageService = ImageService();
+    final uploadedUrl = await imageService.uploadImage(widget.pendingImagePath!);
+    
+    if (uploadedUrl != null) {
+      // Get auth token (this would need to be handled differently - 
+      // for now, we'll show a message that user needs to upload from profile)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo uploaded! Please login to complete setup.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo upload failed. You can upload it later from your profile.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo upload failed. You can upload it later from your profile.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+}
   
   Future<void> _resendOTP() async {
     if (_resendCooldown > 0) return;

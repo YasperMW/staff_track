@@ -351,6 +351,18 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   }
 
   Future<void> _openCreateRequestSheet() async {
+    final contactAddressController = TextEditingController();
+    
+    // Trip fields
+    final reasonForLeavingController = TextEditingController();
+    final travelPlaceController = TextEditingController();
+    final accCostController = TextEditingController();
+    final bfCostController = TextEditingController();
+    final lunchCostController = TextEditingController();
+    final supperCostController = TextEditingController();
+    final transportCostController = TextEditingController();
+    final fuelCostController = TextEditingController();
+    
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -361,18 +373,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         String selectedType = 'Annual Leave';
         DateTimeRange? selectedRange;
         bool leaveGrantRequired = false;
-        final contactAddressController = TextEditingController();
-        
-        // Trip fields
-        final reasonForLeavingController = TextEditingController();
         DateTime? travelDate;
-        final travelPlaceController = TextEditingController();
-        final accCostController = TextEditingController();
-        final bfCostController = TextEditingController();
-        final lunchCostController = TextEditingController();
-        final supperCostController = TextEditingController();
-        final transportCostController = TextEditingController();
-        final fuelCostController = TextEditingController();
         
         bool isSubmitting = false;
 
@@ -2358,14 +2359,17 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                     ],
 
                     const SizedBox(height: 16),
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'General Comment (optional)',
-                        border: OutlineInputBorder(),
+                    // Only show General Comment field if user can approve
+                    if (canApprove) ...[
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'General Comment (optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (v) => comment = v,
                       ),
-                      onChanged: (v) => comment = v,
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
+                    ],
                     // Only show action buttons if user hasn't already approved at their level
                     if (canApprove) ...[
                       Row(
