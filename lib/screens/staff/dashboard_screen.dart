@@ -311,7 +311,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (attendanceProvider.metricsError != null || metrics == null) {
       return Row(
         children: [
-          Expanded(child: _buildStatCard(context, Icons.access_time, '--', 'This Week', AppTheme.skyBlue)),
+          Expanded(child: _buildStatCard(context, Icons.access_time, '--', 'Days Present This Year', AppTheme.skyBlue)),
           const SizedBox(width: 12),
           Expanded(child: _buildStatCard(context, Icons.trending_up, '--', 'On Time', AppTheme.lightGold)),
           const SizedBox(width: 12),
@@ -320,12 +320,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
     
-    // Calculate weekly hours from working days (assuming 8 hours per day)
-    final weeklyHours = (metrics['working_days'] as int? ?? 0) * 8;
-    final weeklyMinutes = (weeklyHours % 1) * 60;
-    final weeklyHoursStr = weeklyHours > 0 
-        ? '${weeklyHours.toInt()}h ${weeklyMinutes.toInt()}m'
-        : '0h 0m';
+    // Show days present this year (working days since January 1st)
+    final workingDays = metrics['working_days'] as int? ?? 0;
+    final workingDaysStr = workingDays > 0 ? '$workingDays days' : '0 days';
     
     final onTimeRate = metrics['on_time_rate'] as double? ?? 0.0;
     final onTimeRateStr = onTimeRate > 0 ? '${onTimeRate.toStringAsFixed(0)}%' : '0%';
@@ -338,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     return Row(
       children: [
-        Expanded(child: _buildStatCard(context, Icons.access_time, weeklyHoursStr, 'This Week', AppTheme.skyBlue)),
+        Expanded(child: _buildStatCard(context, Icons.access_time, workingDaysStr, 'Days Present This Year', AppTheme.skyBlue)),
         const SizedBox(width: 12),
         Expanded(child: _buildStatCard(context, Icons.trending_up, onTimeRateStr, 'On Time', AppTheme.lightGold)),
         const SizedBox(width: 12),

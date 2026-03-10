@@ -52,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _grades = grades;
         _selectedRole = _roles.isNotEmpty ? _roles.first : null;
         _selectedDepartment = _departments.isNotEmpty ? _departments.first.name : null;
-        _selectedDepartmentId = _departments.isNotEmpty ? _departments.first.departmentId ?? '' : null;
+        _selectedDepartmentId = _departments.isNotEmpty ? _departments.first.departmentId : null;
         if (kDebugMode) {
           print('Loaded ${departments.length} departments');
           for (var dept in departments) {
@@ -681,7 +681,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       createdAt: '',
                     ),
                   );
-                  _selectedDepartmentId = selectedDept.departmentId ?? '';
+                  _selectedDepartmentId = selectedDept.departmentId;
                   if (kDebugMode) {
                     print('Selected department: $value');
                     print('Department ID: $_selectedDepartmentId');

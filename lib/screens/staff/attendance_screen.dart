@@ -484,7 +484,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            attendance.workHours != null ? '${attendance.workHours!.toStringAsFixed(1)}h total' : '--:-- total',
+            attendance.workHours != null ? _formatWorkHours(attendance.workHours!) : '--:-- total',
             style: const TextStyle(
               color: AppTheme.skyBlue,
               fontWeight: FontWeight.w600,
@@ -493,6 +493,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ],
       ),
     );
+  }
+
+  String _formatWorkHours(double hours) {
+    if (hours < 1) {
+      // Show minutes for less than 1 hour
+      final minutes = (hours * 60).round();
+      return '${minutes}m total';
+    } else {
+      // Show hours for 1 hour or more
+      return '${hours.toStringAsFixed(1)}h total';
+    }
   }
 }
 
