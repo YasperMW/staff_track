@@ -199,8 +199,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       if (!mounted) return;
       
       setState(() {
-        _myRequests = results[0] as List<AdminTeamRequest>;
-        _teamRequests = results[1] as List<AdminTeamRequest>;
+        _myRequests = results[0];
+        _teamRequests = results[1];
         _requests = [..._myRequests, ..._teamRequests];
         _isLoading = false;
       });

@@ -10,7 +10,7 @@ class AppConfig {
   static String get apiBaseUrl {
     switch (environment) {
       case AppEnvironment.dev:
-        return 'http://192.168.1.179:8888';
+        return 'http://192.168.137.1:8888';
       case AppEnvironment.prod:
         return 'https://staff-track-api.onrender.com';
     }

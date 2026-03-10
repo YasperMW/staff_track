@@ -639,7 +639,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                     Icon(Icons.schedule, color: Colors.blue, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      '${attendance.workHours!.toStringAsFixed(2)} hours',
+                      '${_formatWorkHours(attendance.workHours!)}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -706,7 +706,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 const SizedBox(height: 12),
                 _buildDetailRow(
                   'Work Hours',
-                  '${attendance.workHours!.toStringAsFixed(2)} hours',
+                  _formatWorkHours(attendance.workHours!),
                   Colors.blue,
                 ),
               ],
@@ -785,6 +785,17 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       return 'CHECKED IN';
     } else {
       return 'COMPLETE';
+    }
+  }
+
+  String _formatWorkHours(double hours) {
+    if (hours < 1) {
+      // Show minutes for less than 1 hour
+      final minutes = (hours * 60).round();
+      return '${minutes}m';
+    } else {
+      // Show hours for 1 hour or more
+      return '${hours.toStringAsFixed(1)}h';
     }
   }
 }

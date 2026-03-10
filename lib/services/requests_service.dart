@@ -189,7 +189,7 @@ class RequestsService {
     }
 
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/leave/balances'),
+      Uri.parse('${AppConfig.apiBaseUrl}/api/leave/balances'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
