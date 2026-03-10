@@ -48,13 +48,30 @@ class SimpleHeader extends StatelessWidget implements PreferredSizeWidget {
             const SizedBox(width: 16),
             // Title
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate appropriate font size based on title length and available width
+                  double fontSize = 18;
+                  if (title.length > 20) {
+                    fontSize = 16;
+                  }
+                  if (title.length > 30) {
+                    fontSize = 14;
+                  }
+                  
+                  return Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.2,
+                    ),
+                    overflow: TextOverflow.visible,
+                    maxLines: 2,
+                    softWrap: true,
+                  );
+                },
               ),
             ),
             // Actions

@@ -169,7 +169,7 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Connecting to server...',
+                                'Loading...',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                   letterSpacing: 1.2,
