@@ -359,7 +359,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           await _loadUserProfile();
           
           if (mounted) {
-            Navigator.of(context).pop(); // Close progress dialog
+            Navigator.of(context).pop(true); // Close progress dialog and signal update
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Profile photo updated successfully!')),
             );

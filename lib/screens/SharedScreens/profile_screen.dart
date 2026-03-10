@@ -330,15 +330,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // 3. Update the local state in AuthProvider
           await authProvider.updateProfilePhotoLocally(uploadedUrl);
           
-          // 4. Reload the profile data to ensure everything is in sync
-          await _loadUserProfile();
-          
           if (mounted) {
             Navigator.of(context).pop(); // Close progress dialog
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Profile photo updated successfully!')),
             );
           }
+
+          // 4. Reload the profile data to ensure everything is in sync
+          await _loadUserProfile();
         } else {
           throw Exception('Failed to update profile photo in backend');
         }
@@ -558,12 +558,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _navigateToProfileDetails(BuildContext context) {
-    Navigator.of(context).push(
+  void _navigateToProfileDetails(BuildContext context) async {
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProfileDetailsScreen(),
       ),
     );
+
+    if (result == true) {
+      _loadUserProfile();
+    }
   }
 
   Widget _buildSignOutButton(BuildContext context) {
