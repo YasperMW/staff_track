@@ -43,6 +43,8 @@ class CompleteUserProfile {
   final String roleName;
   final String? departmentName;
   final String? designationName;
+  final String? gradeId;
+  final String? gradeName;
 
   CompleteUserProfile({
     required this.userId,
@@ -83,6 +85,8 @@ class CompleteUserProfile {
     required this.roleName,
     this.departmentName,
     this.designationName,
+    this.gradeId,
+    this.gradeName,
   });
 
   factory CompleteUserProfile.fromJson(Map<String, dynamic> json) {
@@ -125,6 +129,8 @@ class CompleteUserProfile {
       roleName: json['role_name'] as String,
       departmentName: json['department_name'] as String?,
       designationName: json['designation_name'] as String?,
+      gradeId: json['grade_id'] as String?,
+      gradeName: json['grade_name'] as String?,
     );
   }
 

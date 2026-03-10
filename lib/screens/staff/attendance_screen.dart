@@ -74,49 +74,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: RefreshIndicator(
               onRefresh: _onRefresh,
               color: AppTheme.skyBlue,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Attendance',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Attendance',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
-                              Text(
-                                'Your attendance history',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
+                            ),
+                            Text(
+                              'Your attendance history',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
-                            ],
-                          ),
-                          _buildCheckInButton(context),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSummaryCard(),
-                      const SizedBox(height: 24),
-                      _buildFilterButton(context),
-                      const SizedBox(height: 24),
-                      _buildHistoryList(context),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                            ),
+                          ],
+                        ),
+                        _buildCheckInButton(context),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSummaryCard(),
+                    const SizedBox(height: 24),
+                    _buildFilterButton(context),
+                    const SizedBox(height: 24),
+                    _buildHistoryList(context),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
@@ -466,16 +463,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             children: [
               const Icon(Icons.access_time, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 8),
-              Text(
-                '${attendance.checkInTime != null ? DateFormat('h:mm a').format(attendance.checkInTime!) : '--:--'} - ${attendance.checkOutTime != null ? DateFormat('h:mm a').format(attendance.checkOutTime!) : '--:--'}',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
+              Flexible(
+                child: Text(
+                  '${attendance.checkInTime != null ? DateFormat('h:mm a').format(attendance.checkInTime!) : '--:--'} - ${attendance.checkOutTime != null ? DateFormat('h:mm a').format(attendance.checkOutTime!) : '--:--'}',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
+                ),
               ),
               const SizedBox(width: 16),
               const Icon(Icons.location_on_outlined, size: 18, color: AppTheme.textLightBlue),
               const SizedBox(width: 4),
-              Text(
-                attendance.location ?? 'Office',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
+              Expanded(
+                child: Text(
+                  attendance.location ?? 'Office',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6)),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ],
           ),

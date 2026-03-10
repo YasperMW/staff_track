@@ -5,6 +5,8 @@ import '../../widgets/app_header.dart';
 import '../../widgets/tile_date_picker.dart';
 import '../../widgets/single_date_picker.dart';
 import '../../services/requests_service.dart';
+import '../../services/complete_user_profile_service.dart';
+import '../../services/lookup_service.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -17,12 +19,71 @@ class _RequestsScreenState extends State<RequestsScreen> {
   List<Map<String, dynamic>> requestsHistory = [];
   List<LeaveBalance> leaveBalances = [];
   bool isLoading = false;
+  CompleteUserProfile? userProfile;
+  List<Grade> grades = [];
+  int userAnnualLeaveDays = 21; // Default fallback
 
   @override
   void initState() {
     super.initState();
-    _loadRequests();
-    _loadLeaveBalances();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _loadRequests(),
+      _loadLeaveBalances(),
+      _loadUserProfile(),
+      _loadGrades(),
+    ]);
+    _calculateUserAnnualLeaveDays();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await CompleteUserProfileService.getCompleteUserProfile();
+      if (mounted) {
+        setState(() {
+          userProfile = profile;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        print('Error loading user profile: $e');
+      }
+    }
+  }
+
+  Future<void> _loadGrades() async {
+    try {
+      final gradesList = await LookupService.getGrades();
+      if (mounted) {
+        setState(() {
+          grades = gradesList;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        print('Error loading grades: $e');
+      }
+    }
+  }
+
+  void _calculateUserAnnualLeaveDays() {
+    if (userProfile?.gradeId != null && grades.isNotEmpty) {
+      // Find user's grade based on their grade_id
+      final userGrade = grades.firstWhere(
+        (grade) => grade.id == userProfile!.gradeId,
+        orElse: () => grades.firstWhere(
+          (grade) => grade.name == 'Grade D', // Default fallback
+          orElse: () => grades.first, // Last resort fallback
+        ),
+      );
+      
+      setState(() {
+        userAnnualLeaveDays = userGrade.annualLeaveDays;
+      });
+    }
   }
 
   Future<void> _loadRequests() async {
@@ -86,7 +147,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     await Future.wait([
       _loadRequests(),
       _loadLeaveBalances(),
+      _loadUserProfile(),
+      _loadGrades(),
     ]);
+    _calculateUserAnnualLeaveDays();
   }
 
   int _parseDuration(String? duration) {
@@ -151,36 +215,33 @@ class _RequestsScreenState extends State<RequestsScreen> {
             child: RefreshIndicator(
               onRefresh: _onRefresh,
               color: AppTheme.skyBlue,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Leave & WFH requests',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
-                            ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Leave & WFH requests',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
                           ),
-                          _buildAddButton(),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSummaryGrid(context),
-                      const SizedBox(height: 24),
-                      _buildRequestStatusCards(context),
-                      const SizedBox(height: 24),
-                      _buildRequestsList(context),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                        ),
+                        _buildAddButton(),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSummaryGrid(context),
+                    const SizedBox(height: 24),
+                    _buildRequestStatusCards(context),
+                    const SizedBox(height: 24),
+                    _buildRequestsList(context),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
@@ -216,10 +277,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
       (balance) => balance.leaveType.toLowerCase().contains('annual'),
       orElse: () => LeaveBalance(
         leaveType: 'annual_leave',
-        allocatedDays: 21, // Fallback to hard-coded value
+        allocatedDays: userAnnualLeaveDays, // Use user's grade-based allocation
         usedDays: 0,
         bonusDays: 0,
-        remainingDays: 21,
+        remainingDays: userAnnualLeaveDays, // Use user's grade-based allocation
         updatedAt: '',
       ),
     );
@@ -278,7 +339,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             totalDays: annualBalance.allocatedDays,
             remainingDays: annualBalance.remainingDays,
             percentage: annualPercentage,
-            label: 'Annual Leave',
+            label: 'Annual Leave (${userProfile?.gradeName ?? 'Grade Based'})',
             icon: Icons.event_available,
             color: Colors.white,
           ),
@@ -1157,6 +1218,67 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      if (selectedType == 'Annual Leave') ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: AppTheme.skyBlue,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Your Annual Leave Balance',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.skyBlue,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Builder(
+                                      builder: (context) {
+                                        // Use the same balance calculation as the summary card
+                                        final annualBalance = leaveBalances.firstWhere(
+                                          (balance) => balance.leaveType.toLowerCase().contains('annual'),
+                                          orElse: () => LeaveBalance(
+                                            leaveType: 'annual_leave',
+                                            allocatedDays: userAnnualLeaveDays,
+                                            usedDays: 0,
+                                            bonusDays: 0,
+                                            remainingDays: userAnnualLeaveDays,
+                                            updatedAt: '',
+                                          ),
+                                        );
+                                        
+                                        return Text(
+                                          '${annualBalance.remainingDays} days remaining out of ${annualBalance.allocatedDays} allocated',
+                                          style: TextStyle(
+                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                                            fontSize: 13,
+                                          ),
+                                        );
+                                      }
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       if (selectedType == 'Leave Duty Station') ...[
                         const Text(
                           'Section A: Reason for leaving station',
