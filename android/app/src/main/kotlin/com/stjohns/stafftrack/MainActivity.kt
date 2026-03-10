@@ -1,4 +1,4 @@
-package com.hospital.hr.staff_track
+package com.stjohns.stafftrack
 
 import io.flutter.embedding.android.FlutterActivity
 
