@@ -174,9 +174,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 child: user.profileImage.isNotEmpty
                     ? ClipOval(
                         child: Image.network(
-                          user.profileImage.startsWith('http') 
+                          user.profileImage.startsWith('http') && !user.profileImage.contains('127.0.0.1') && !user.profileImage.contains('localhost')
                               ? user.profileImage 
-                              : '${AppConfig.apiBaseUrl}/${user.profileImage}',
+                              : '${AppConfig.apiBaseUrl}/uploads/${user.profileImage}',
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,

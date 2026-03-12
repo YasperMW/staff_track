@@ -32,11 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    context.read<AttendanceProvider>().loadTodayAttendance();
     
-    // Initialize FCM service with context
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FCMService.initialize(context);
+    // Use microtask to avoid "setState() or markNeedsBuild() called during build" error
+    Future.microtask(() {
+      if (mounted) {
+        context.read<AttendanceProvider>().loadTodayAttendance();
+      }
     });
   }
 
