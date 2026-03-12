@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/tile_date_picker.dart';
 import '../../widgets/single_date_picker.dart';
+import '../../widgets/leave_form_widget.dart';
 import '../../services/requests_service.dart';
 import '../../services/auth_storage.dart';
 import '../../services/complete_user_profile_service.dart';
@@ -126,24 +127,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     );
   }
 
-  Widget _buildCostField(String label, TextEditingController controller, StateSetter setSheetState) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: TextField(
-        controller: controller,
-        keyboardType: TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-        ],
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          prefixText: 'MK ',
-        ),
-      ),
-    );
-  }
-
+  
   int? _getUserApprovalLevelForRequest(AdminTeamRequest req) {
     if (_userRole == null) return null;
     final r = _userRole!.toLowerCase().trim();
@@ -351,460 +335,65 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   }
 
   Future<void> _openCreateRequestSheet() async {
-    final contactAddressController = TextEditingController();
-    
-    // Trip fields
-    final reasonForLeavingController = TextEditingController();
-    final travelPlaceController = TextEditingController();
-    final accCostController = TextEditingController();
-    final bfCostController = TextEditingController();
-    final lunchCostController = TextEditingController();
-    final supperCostController = TextEditingController();
-    final transportCostController = TextEditingController();
-    final fuelCostController = TextEditingController();
-    
+    // Find annual leave balance for the form
+    final annualBalance = _leaveBalances.firstWhere(
+      (balance) => balance.leaveType.toLowerCase().contains('annual'),
+      orElse: () => LeaveBalance(
+        leaveType: 'annual_leave',
+        allocatedDays: _userAnnualLeaveDays,
+        usedDays: 0,
+        bonusDays: 0,
+        remainingDays: _userAnnualLeaveDays,
+        updatedAt: '',
+      ),
+    );
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        String selectedType = 'Annual Leave';
-        DateTimeRange? selectedRange;
-        bool leaveGrantRequired = false;
-        DateTime? travelDate;
-        
-        bool isSubmitting = false;
-
-        String formatDate(DateTime d) {
-          return d.toIso8601String().split('T').first;
-        }
-
-        double? parseDouble(String val) => double.tryParse(val);
-
-        double calculateTotal() {
-          return (parseDouble(accCostController.text) ?? 0) +
-                 (parseDouble(bfCostController.text) ?? 0) +
-                 (parseDouble(lunchCostController.text) ?? 0) +
-                 (parseDouble(supperCostController.text) ?? 0) +
-                 (parseDouble(transportCostController.text) ?? 0) +
-                 (parseDouble(fuelCostController.text) ?? 0);
-        }
-
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: StatefulBuilder(
-            builder: (ctx, setSheetState) {
-              Future<void> pickDateRange() async {
-                final now = DateTime.now();
-                final range = await showTileDateRangePicker(
-                  context: ctx,
-                  initialStartDate: selectedRange?.start,
-                  initialEndDate: selectedRange?.end,
-                  firstDate: DateTime(now.year - 1),
-                  lastDate: DateTime(now.year + 1),
-                  title: 'Select Request Dates',
-                );
-                if (range != null) {
-                  setSheetState(() {
-                    selectedRange = range;
-                  });
-                }
-              }
-
-              Future<void> pickTravelDate() async {
-                final picked = await showSingleDatePicker(
-                  context: ctx,
-                  initialDate: travelDate ?? DateTime.now(),
-                  firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                  title: 'Select Travel Date',
-                );
-                if (picked != null) {
-                  setSheetState(() {
-                    travelDate = picked;
-                  });
-                }
-              }
-
-              Future<void> handleSubmit() async {
-                if ((selectedType == 'Leave Duty Station' ? travelDate == null : selectedRange == null) || isSubmitting) return;
-                setSheetState(() {
-                  isSubmitting = true;
-                });
-                try {
-                  String start, end;
-                  if (selectedType == 'Leave Duty Station') {
-                    start = end = formatDate(travelDate!);
-                  } else {
-                    start = formatDate(selectedRange!.start);
-                    end = formatDate(selectedRange!.end);
-                  }
-                  await RequestsService.createRequest(
-                    type: selectedType,
-                    startDate: start,
-                    endDate: end,
-                    leaveGrantRequired: leaveGrantRequired,
-                    contactAddress: contactAddressController.text,
-                    // Trip fields
-                    reasonForLeaving: reasonForLeavingController.text,
-                    travelDate: travelDate != null ? formatDate(travelDate!) : null,
-                    travelPlace: travelPlaceController.text,
-                    costAccommodation: parseDouble(accCostController.text),
-                    costBreakfast: parseDouble(bfCostController.text),
-                    costLunch: parseDouble(lunchCostController.text),
-                    costSupper: parseDouble(supperCostController.text),
-                    costPublicTransport: parseDouble(transportCostController.text),
-                    costFuelLubricants: parseDouble(fuelCostController.text),
-                    costTotal: calculateTotal(),
-                  );
-                  if (!mounted) return;
-                  Navigator.of(ctx).pop();
-                  await _loadRequests();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Request submitted for approval'),
-                    ),
-                  );
-                } catch (_) {
-                  if (!mounted) return;
-                  setSheetState(() {
-                    isSubmitting = false;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to submit request')),
-                  );
-                }
-              }
-
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Submit Request',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Request type',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Annual Leave'),
-                          selected: selectedType == 'Annual Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Annual Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Sick Leave'),
-                          selected: selectedType == 'Sick Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Sick Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Personal Leave'),
-                          selected: selectedType == 'Personal Leave',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Personal Leave';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Work From Home'),
-                          selected: selectedType == 'Work From Home',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Work From Home';
-                            });
-                          },
-                        ),
-                        ChoiceChip(
-                          label: const Text('Leave Duty Station'),
-                          selected: selectedType == 'Leave Duty Station',
-                          onSelected: (v) {
-                            if (!v) return;
-                            setSheetState(() {
-                              selectedType = 'Leave Duty Station';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Show balance for Annual Leave
-                    if (selectedType == 'Annual Leave') ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.skyBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              color: AppTheme.skyBlue,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Your Annual Leave Balance',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.skyBlue,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Builder(
-                                    builder: (context) {
-                                      // Use the same balance calculation as the summary card
-                                      final annualBalance = _leaveBalances.firstWhere(
-                                        (balance) => balance.leaveType.toLowerCase().contains('annual'),
-                                        orElse: () => LeaveBalance(
-                                          leaveType: 'annual_leave',
-                                          allocatedDays: _userAnnualLeaveDays,
-                                          usedDays: 0,
-                                          bonusDays: 0,
-                                          remainingDays: _userAnnualLeaveDays,
-                                          updatedAt: '',
-                                        ),
-                                      );
-                                      
-                                      return Text(
-                                        '${annualBalance.remainingDays} days remaining out of ${annualBalance.allocatedDays} allocated',
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                                          fontSize: 13,
-                                        ),
-                                      );
-                                    }
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (selectedType == 'Leave Duty Station') ...[
-                      const Text(
-                        'Section A: Reason for leaving station',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: reasonForLeavingController,
-                        maxLines: 2,
-                        decoration: const InputDecoration(hintText: 'Reason(s)', border: OutlineInputBorder()),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Travel Date',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: pickTravelDate,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(travelDate == null ? 'Select Date' : formatDate(travelDate!)),
-                              const Icon(Icons.calendar_today, size: 16),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Place where traveling to',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: travelPlaceController,
-                        decoration: const InputDecoration(hintText: 'Place', border: OutlineInputBorder()),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Section B: Cost of the trip (Optional - MK)',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCostField('Accommodation', accCostController, setSheetState),
-                      _buildCostField('Breakfast', bfCostController, setSheetState),
-                      _buildCostField('Lunch', lunchCostController, setSheetState),
-                      _buildCostField('Supper', supperCostController, setSheetState),
-                      _buildCostField('Public transport', transportCostController, setSheetState),
-                      _buildCostField('Fuel & lubricants', fuelCostController, setSheetState),
-                      const Divider(),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
-                            Text('MK ${calculateTotal().toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.skyBlue)),
-                          ],
-                        ),
-                      ),
-                    ] else ...[
-                      const Text(
-                        'Date range',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: pickDateRange,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.grey.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 18,
-                                color: AppTheme.textLightBlue,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                selectedRange == null
-                                    ? 'Select dates'
-                                    : selectedRange!.start == selectedRange!.end
-                                    ? formatDate(selectedRange!.start)
-                                    : '${formatDate(selectedRange!.start)} - ${formatDate(selectedRange!.end)}',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const Text(
-                            'Leave Grant Required',
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          const Spacer(),
-                          Switch(
-                            value: leaveGrantRequired,
-                            activeThumbColor: AppTheme.skyBlue,
-                            onChanged: (v) {
-                              setSheetState(() {
-                                leaveGrantRequired = v;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Contact Address while on Leave',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: contactAddressController,
-                        maxLines: 2,
-                        decoration: InputDecoration(
-                          hintText: 'Enter address',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.3),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: (selectedType == 'Leave Duty Station' ? travelDate == null : selectedRange == null) || isSubmitting
-                            ? null
-                            : handleSubmit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.skyBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Text(
-                            isSubmitting
-                                ? 'Submitting...'
-                                : 'Submit for approval',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              );
-            },
+                // Leave form widget
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: LeaveFormWidget(
+                    userRole: _userRole,
+                    isAdmin: true,
+                    leaveBalance: annualBalance,
+                    userAnnualLeaveDays: _userAnnualLeaveDays,
+                    onSubmitted: () {
+                      Navigator.of(ctx).pop();
+                      _loadRequests();
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

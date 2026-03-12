@@ -4,6 +4,7 @@ import '../../controllers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import '../../services/fcm_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -65,6 +66,11 @@ class _SplashScreenState extends State<SplashScreen>
     
     // Verify token with backend if exists
     await authProvider.verifyAndRestoreSession();
+    
+    // Initialize FCM service after auth is established
+    if (authProvider.isLoggedIn) {
+      await FCMService.initialize(context);
+    }
     
     // Mark as initialized to trigger navigation in build method
     if (mounted) {

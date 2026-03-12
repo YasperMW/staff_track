@@ -1,5 +1,6 @@
 enum AppEnvironment {
-  dev,
+  dev1,
+  dev2,
   prod,
 }
 
@@ -9,8 +10,10 @@ class AppConfig {
 
   static String get apiBaseUrl {
     switch (environment) {
-      case AppEnvironment.dev:
-        return 'http://192.168.137.1:8888';
+      case AppEnvironment.dev1:
+        return 'http://192.168.100.199:8888';
+      case AppEnvironment.dev2:
+        return 'http://192.168.100.199:8888';
       case AppEnvironment.prod:
         return 'https://staff-track-api.onrender.com';
     }

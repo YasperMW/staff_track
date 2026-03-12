@@ -164,9 +164,9 @@ class AppHeader extends StatelessWidget {
         backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
         backgroundImage: user != null && user.profileImage.isNotEmpty
             ? NetworkImage(
-                user.profileImage.startsWith('http') 
+                user.profileImage.startsWith('http') && !user.profileImage.contains('127.0.0.1') && !user.profileImage.contains('localhost')
                     ? user.profileImage 
-                    : '${AppConfig.apiBaseUrl}/${user.profileImage}'
+                    : '${AppConfig.apiBaseUrl}/uploads/${user.profileImage}'
               )
             : null,
         child: user == null || user.profileImage.isEmpty
