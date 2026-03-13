@@ -162,6 +162,35 @@ class UserProfileService {
       return false;
     }
   }
+
+  static Future<bool> updateProfile(String token, Map<String, dynamic> updateData) async {
+    try {
+      final response = await http.put(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(updateData),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      } else {
+        if (kDebugMode) {
+          print('Failed to update profile: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating profile: $e');
+      }
+      return false;
+    }
+  }
 }
 
 class UserMetrics {

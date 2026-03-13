@@ -10,6 +10,7 @@ import '../../services/user_profile_service.dart';
 import '../../services/leave_service.dart';
 import '../../services/employee_files_service.dart';
 import '../../config/app_config.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({super.key});
@@ -83,8 +84,15 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     }
 
     return Scaffold(
-      appBar: const SimpleHeader(
+      appBar: SimpleHeader(
         title: 'Complete Profile',
+        actions: [
+          IconButton(
+            onPressed: () => _navigateToEditProfile(context),
+            icon: const Icon(Icons.edit_outlined, color: AppTheme.skyBlue),
+            tooltip: 'Edit Profile',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -380,6 +388,18 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
+    }
+  }
+
+  void _navigateToEditProfile(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const EditProfileScreen(),
+      ),
+    );
+
+    if (result == true) {
+      _loadUserProfile();
     }
   }
 

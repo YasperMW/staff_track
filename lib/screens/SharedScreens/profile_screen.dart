@@ -11,6 +11,7 @@ import '../../services/user_profile_service.dart';
 import '../../services/image_service.dart';
 import '../../config/app_config.dart';
 import 'profile_details_screen.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -459,6 +460,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'View Complete Profile',
             onTap: () => _navigateToProfileDetails(context),
           ),
+          const Divider(height: 1, indent: 60),
+          _buildActionTile(
+            context: context,
+            icon: Icons.edit_outlined,
+            title: 'Edit Profile',
+            onTap: () => _navigateToEditProfile(context),
+          ),
         ],
       ),
     );
@@ -565,6 +573,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProfileDetailsScreen(),
+      ),
+    );
+
+    if (result == true) {
+      _loadUserProfile();
+    }
+  }
+
+  void _navigateToEditProfile(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const EditProfileScreen(),
       ),
     );
 
