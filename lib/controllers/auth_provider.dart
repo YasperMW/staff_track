@@ -152,6 +152,19 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update specific user data fields (e.g. name, email).
+  Future<void> updateUserData(Map<String, dynamic> userData) async {
+    if (_user != null) {
+      // Create updated user map
+      final currentUserMap = await AuthStorage.getUser() ?? {};
+      currentUserMap.addAll(userData);
+      
+      _user = appUserFromMap(currentUserMap);
+      await AuthStorage.saveUser(currentUserMap);
+      notifyListeners();
+    }
+  }
+
   /// Update just the profile photo locally.
   Future<void> updateProfilePhotoLocally(String photoUrl) async {
     if (_user != null) {
