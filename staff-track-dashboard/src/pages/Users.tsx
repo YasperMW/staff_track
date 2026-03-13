@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import type { User } from '../services/api';
 import { usersApi } from '../services/api';
 import DataTable from '../components/DataTable';
+import UserEditModal from '../components/UserEditModal';
 import type { Column, Action } from '../components/DataTable';
 import { UserPlus, Edit, Trash2, Eye, Shield, UserCheck, UserX } from 'lucide-react';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     perPage: 25,
@@ -35,8 +38,8 @@ const Users: React.FC = () => {
   };
 
   const handleEditUser = (user: User) => {
-    console.log('Edit user:', user);
-    // TODO: Open edit modal
+    setSelectedUser(user);
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteUser = (user: User) => {
@@ -57,6 +60,20 @@ const Users: React.FC = () => {
   const handleAddUser = () => {
     console.log('Add new user');
     // TODO: Open add user modal
+  };
+
+  const handleUserSave = (updatedUser: User) => {
+    // Update the user in the local state
+    setUsers(prev => prev.map(user => 
+      user.user_id === updatedUser.user_id ? updatedUser : user
+    ));
+    setIsEditModalOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedUser(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -298,6 +315,14 @@ const Users: React.FC = () => {
           onPerPageChange: (perPage) => setPagination(prev => ({ ...prev, perPage, page: 1 }))
         }}
         emptyMessage="No users found. Create your first user to get started."
+      />
+
+      {/* User Edit Modal */}
+      <UserEditModal
+        user={selectedUser}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleUserSave}
       />
     </div>
   );

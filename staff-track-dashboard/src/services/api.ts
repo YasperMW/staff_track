@@ -25,6 +25,7 @@ export interface User {
   spouse_name?: string;
   spouse_contact?: string;
   date_of_employment?: string;
+  designation_id?: string;
   designation?: string;
   department_id?: string;
   is_head_of_department: boolean;
