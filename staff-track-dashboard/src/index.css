@@ -3,6 +3,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Flutter App Color Variables */
+:root {
+  --sky-blue: #0284C7;
+  --dark-sky-blue: #0369A1;
+  --light-gold: #F59E0B;
+  --light-gold-accent: #FCD34D;
+  --pale-red: #EF4444;
+  --pale-red-accent: #F87171;
+  --background-white: #F8FAFC;
+  --surface-white: #FFFFFF;
+  --text-dark: #0F172A;
+  --text-grey: #64748B;
+  --text-light-blue: #94A3B8;
+  --surface-dark: #1E293B;
+  --background-dark: #0F172A;
+}
+
 @layer base {
   body {
     @apply bg-gray-50 font-poppins text-gray-900;
@@ -10,75 +27,189 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    background-color: var(--background-white);
+    color: var(--text-dark);
   }
   
   .dark body {
     @apply bg-gray-900 text-gray-100;
+    background-color: var(--background-dark);
+    color: var(--surface-white);
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-blue-600 transition-colors duration-200 shadow-md;
+    @apply px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-md;
+    background: linear-gradient(135deg, var(--sky-blue), var(--dark-sky-blue));
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--dark-sky-blue), var(--sky-blue));
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
   }
   
   .btn-secondary {
-    @apply bg-amber-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-amber-600 transition-colors duration-200 shadow-md;
+    @apply px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-md;
+    background: linear-gradient(135deg, var(--light-gold), var(--light-gold-accent));
+    color: white;
+  }
+  
+  .btn-secondary:hover {
+    background: linear-gradient(135deg, var(--light-gold-accent), var(--light-gold));
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
   }
   
   .btn-danger {
-    @apply bg-red-500 text-white px-6 py-4 rounded-xl font-semibold hover:bg-red-600 transition-colors duration-200 shadow-md;
+    @apply px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-md;
+    background: linear-gradient(135deg, var(--pale-red), var(--pale-red-accent));
+    color: white;
+  }
+  
+  .btn-danger:hover {
+    background: linear-gradient(135deg, var(--pale-red-accent), var(--pale-red));
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
   }
   
   .btn-outline {
-    @apply border-2 border-blue-500 text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-blue-500 hover:text-white transition-colors duration-200;
+    @apply border-2 px-6 py-4 rounded-xl font-semibold transition-all duration-200;
+    border-color: var(--sky-blue);
+    color: var(--sky-blue);
+  }
+  
+  .btn-outline:hover {
+    background: linear-gradient(135deg, var(--sky-blue), var(--dark-sky-blue));
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
   }
   
   .card {
-    @apply bg-white rounded-3xl shadow-md p-6;
+    @apply rounded-3xl shadow-md p-6;
+    background-color: var(--surface-white);
+    border: 1px solid rgba(2, 132, 199, 0.1);
   }
   
   .dark .card {
-    @apply bg-gray-800 shadow-lg;
+    background-color: var(--surface-dark);
+    border: 1px solid rgba(2, 132, 199, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(2, 132, 199, 0.15);
+    transition: all 0.3s ease;
+  }
+  
+  .dark .card:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   }
   
   .input-field {
-    @apply bg-white border border-gray-200 rounded-xl px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-all duration-200;
+    @apply rounded-xl px-4 py-3 focus:ring-2 transition-all duration-200;
+    background-color: var(--surface-white);
+    border: 1px solid #E2E8F0;
+    color: var(--text-dark);
+  }
+  
+  .input-field:focus {
+    border-color: var(--sky-blue);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
   }
   
   .dark .input-field {
-    @apply bg-gray-800 border-gray-600 text-gray-100 focus:border-blue-500;
+    background-color: var(--surface-dark);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--surface-white);
   }
   
   .gradient-card {
-    @apply bg-gradient-to-br from-blue-500 to-amber-500;
+    background: linear-gradient(135deg, var(--sky-blue), var(--light-gold));
+  }
+  
+  .gradient-card-hover {
+    background: linear-gradient(135deg, var(--sky-blue), var(--light-gold));
+    transition: all 0.3s ease;
+  }
+  
+  .gradient-card-hover:hover {
+    background: linear-gradient(135deg, var(--dark-sky-blue), var(--light-gold-accent));
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(2, 132, 199, 0.25);
   }
   
   .status-badge {
     @apply px-3 py-1 rounded-full text-xs font-semibold;
   }
   
-  .status-active {
-    @apply bg-green-100 text-green-800;
+  .status-present {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
   }
   
-  .dark .status-active {
-    @apply bg-green-900 text-green-200;
+  .status-late {
+    background: linear-gradient(135deg, var(--light-gold), var(--light-gold-accent));
+    color: white;
+  }
+  
+  .status-absent {
+    background: linear-gradient(135deg, var(--pale-red), var(--pale-red-accent));
+    color: white;
+  }
+  
+  .status-active {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
   }
   
   .status-inactive {
-    @apply bg-red-100 text-red-800;
-  }
-  
-  .dark .status-inactive {
-    @apply bg-red-900 text-red-200;
+    background: linear-gradient(135deg, var(--pale-red), var(--pale-red-accent));
+    color: white;
   }
   
   .status-pending {
-    @apply bg-yellow-100 text-yellow-800;
+    background: linear-gradient(135deg, var(--light-gold), var(--light-gold-accent));
+    color: white;
   }
   
-  .dark .status-pending {
-    @apply bg-yellow-900 text-yellow-200;
+  /* Flutter-style gradients for specific components */
+  .header-gradient {
+    background: linear-gradient(135deg, var(--sky-blue), var(--light-gold));
+  }
+  
+  .card-gradient {
+    background: linear-gradient(135deg, var(--sky-blue), #5D8BF4);
+  }
+  
+  .accent-gradient {
+    background: linear-gradient(135deg, var(--light-gold), var(--pale-red));
+  }
+  
+  .avatar-gradient {
+    background: linear-gradient(135deg, var(--sky-blue), var(--light-gold));
+  }
+  
+  /* Enhanced animations */
+  .float-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .pulse-animation {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 }

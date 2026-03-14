@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../services/api';
 import { usersApi } from '../services/api';
 import DataTable from '../components/DataTable';
@@ -16,6 +17,8 @@ const Users: React.FC = () => {
     perPage: 25,
     total: 0
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUsers();
@@ -48,8 +51,7 @@ const Users: React.FC = () => {
   };
 
   const handleViewUser = (user: User) => {
-    console.log('View user:', user);
-    // TODO: Open user details modal
+    navigate(`/users/${user.user_id}`);
   };
 
   const handleToggleUserStatus = (user: User) => {
@@ -78,30 +80,15 @@ const Users: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusColors = {
-      'active': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'inactive': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      'active': 'status-active',
+      'inactive': 'status-inactive',
+      'pending': 'status-pending',
       'blacklisted': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
     
     return (
       <span className={`status-badge ${statusColors[status as keyof typeof statusColors] || statusColors.pending}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const getRoleBadge = (roleName: string) => {
-    const roleColors = {
-      'admin': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'hr': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'manager': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-      'employee': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-    };
-    
-    return (
-      <span className={`status-badge ${roleColors[roleName.toLowerCase() as keyof typeof roleColors] || roleColors.employee}`}>
-        {roleName}
       </span>
     );
   };
@@ -125,7 +112,7 @@ const Users: React.FC = () => {
       filterable: true,
       render: (_, row) => (
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-sky-blue rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 avatar-gradient rounded-full flex items-center justify-center">
             <span className="text-white text-sm font-semibold">
               {getUserInitials(row.first_name, row.surname)}
             </span>
@@ -140,13 +127,6 @@ const Users: React.FC = () => {
           </div>
         </div>
       )
-    },
-    {
-      key: 'role_name',
-      label: 'Role',
-      sortable: true,
-      filterable: true,
-      render: (value) => getRoleBadge(value as string)
     },
     {
       key: 'department_name',

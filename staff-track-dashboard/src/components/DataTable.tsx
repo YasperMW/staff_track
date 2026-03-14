@@ -6,10 +6,7 @@ import {
   Filter, 
   ChevronLeft, 
   ChevronRight,
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2
+  MoreVertical
 } from 'lucide-react';
 
 export interface Column<T> {
@@ -234,7 +231,76 @@ function DataTable<T extends Record<string, any>>({
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          {/* Responsive Table */}
+          <div className="block lg:hidden">
+            {/* Mobile Card View */}
+            <div className="space-y-4">
+              {processedData.map((row, index) => (
+                <div key={row.id || row.user_id || index} className="card p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.has(row.id || row.user_id)}
+                        onChange={() => toggleRowSelection(row.id || row.user_id)}
+                        className="rounded border-gray-300"
+                      />
+                      {columns.find(col => col.key === 'first_name')?.render?.(row.first_name, row) || (
+                        <div>
+                          <p className="font-medium text-text-dark dark:text-text-dark-light">
+                            {row.first_name} {row.surname}
+                          </p>
+                          <p className="text-sm text-text-grey dark:text-text-grey-dark">
+                            {row.email}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {actions && (
+                      <div className="flex items-center space-x-2">
+                        {(() => {
+                          const rowActions = typeof actions === 'function' ? actions(row) : actions;
+                          return rowActions?.map((action, actionIndex) => {
+                            const label = typeof action.label === 'function' ? action.label(row) : action.label;
+                            const icon = typeof action.icon === 'function' ? action.icon(row) : action.icon;
+                            return (
+                              <button
+                                key={actionIndex}
+                                onClick={() => action.onClick(row)}
+                                className={`p-2 rounded-lg transition-colors ${getActionVariant(action.variant)}`}
+                                title={label}
+                              >
+                                {icon}
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {columns.filter(col => col.key !== 'first_name').map(column => (
+                      <div key={String(column.key)} className="flex justify-between">
+                        <span className="text-sm font-medium text-text-grey dark:text-text-grey-dark">
+                          {column.label}:
+                        </span>
+                        <span className="text-sm text-text-dark dark:text-text-dark-light text-right">
+                          {column.render ? 
+                            column.render(row[column.key], row) : 
+                            row[column.key]
+                          }
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden lg:block">
+            {/* Desktop Table View */}
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">

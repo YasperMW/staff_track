@@ -11,6 +11,21 @@ import {
   RefreshCw,
   MapPin,
   User,
+  Calendar,
+  Activity,
+  Target,
+  Zap,
+  Eye,
+  BarChart3,
+  PieChartIcon,
+  Filter,
+  Search,
+  Download,
+  Settings,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  MoreVertical,
 } from 'lucide-react';
 import {
   BarChart,
@@ -44,7 +59,7 @@ interface TeamAttendanceMember {
   name: string;
   status: string;
   check_in_time?: string;
-  department: string;
+  department: string | { name: string };
 }
 
 const Dashboard: React.FC = () => {
@@ -63,6 +78,12 @@ const Dashboard: React.FC = () => {
   const [teamAttendance, setTeamAttendance] = useState<TeamAttendanceMember[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [animatedStats, setAnimatedStats] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -74,6 +95,15 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    // Trigger animations after data loads
+    setTimeout(() => setAnimatedStats(true), 500);
+    
+    // Set up real-time updates every 30 seconds
+    const interval = setInterval(() => {
+      loadDashboardData();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadDashboardData = async () => {
@@ -136,6 +166,7 @@ const Dashboard: React.FC = () => {
       console.error('Error loading dashboard data:', error);
     } finally {
       setIsLoading(false);
+      setLastUpdated(new Date());
     }
   };
 
@@ -270,13 +301,13 @@ const Dashboard: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
-        return 'text-green-600 bg-green-100';
+        return 'status-present';
       case 'absent':
-        return 'text-red-600 bg-red-100';
+        return 'status-absent';
       case 'late':
-        return 'text-yellow-600 bg-yellow-100';
+        return 'status-late';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -304,286 +335,626 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center space-x-4 mb-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Admin Dashboard
-            </h1>
-            {user && (
-              <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-full">
-                <User className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-500">
-                  Welcome, {user.first_name} {user.surname}
-                </span>
+      {/* Enhanced Header - Mobile Optimized */}
+      <div className="header-gradient rounded-2xl p-4 md:p-8 text-white shadow-2xl">
+        <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
+          <div className="mb-4 md:mb-0">
+            <div className="flex items-center space-x-3 md:space-x-4 mb-3">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <User className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-            )}
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold">Admin Dashboard</h1>
+                <p className="text-blue-100 text-sm md:text-base">Welcome back, {user?.first_name || 'Admin'}!</p>
+              </div>
+            </div>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 text-blue-100 space-y-2 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" />
+                <span className="text-xs md:text-sm">{formatDate(currentTime)}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs md:text-sm font-mono">{formatTime(currentTime)}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Activity className="w-4 h-4" />
+                <span className="text-xs md:text-sm">Updated {formatTime(lastUpdated)}</span>
+              </div>
+            </div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400">{formatDate(currentTime)}</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={loadDashboardData}
-            disabled={isLoading}
-            className="flex items-center space-x-2 px-4 py-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-          <a
-            href="/profile"
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
-          >
-            <User className="w-4 h-4" />
-            <span>Profile</span>
-          </a>
+          
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="flex bg-white bg-opacity-20 rounded-xl p-1 backdrop-blur-sm">
+              {(['today', 'week', 'month'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setSelectedTimeRange(range)}
+                  className={`px-2 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
+                    selectedTimeRange === range
+                      ? 'bg-white text-blue-600'
+                      : 'text-blue-100 hover:bg-white hover:bg-opacity-10'
+                  }`}
+                >
+                  {range.charAt(0).toUpperCase() + range.slice(1)}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all backdrop-blur-sm ${
+                autoRefresh 
+                  ? 'bg-green-500 bg-opacity-30 text-white' 
+                  : 'bg-white bg-opacity-20 text-blue-100 hover:bg-opacity-30'
+              }`}
+              title={autoRefresh ? 'Auto-refresh enabled' : 'Auto-refresh disabled'}
+            >
+              <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${autoRefresh ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center hover:bg-opacity-30 transition-all backdrop-blur-sm"
+            >
+              <Bell className="w-4 h-4 md:w-5 md:h-5" />
+              {recentAnnouncements.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              )}
+            </button>
+            
+            <button
+              onClick={loadDashboardData}
+              disabled={isLoading}
+              className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center hover:bg-opacity-30 transition-all backdrop-blur-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Clock In Card */}
-      <div className="bg-gradient-to-br from-blue-500 to-amber-500 rounded-3xl p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16" />
+      {/* Enhanced Clock In Card - Mobile Optimized */}
+      <div className="relative bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl md:rounded-3xl p-4 md:p-8 text-white shadow-2xl overflow-hidden group">
+        <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-white opacity-10 rounded-full -mr-16 md:-mr-20 -mt-16 md:-mt-20 group-hover:scale-110 transition-transform duration-500" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-white opacity-10 rounded-full -ml-12 md:-ml-16 -mb-12 md:-mb-16 group-hover:scale-110 transition-transform duration-500" />
+        
         <div className="relative z-10">
-          <div className="flex items-center space-x-2 mb-6">
-            <MapPin className="w-4 h-4 opacity-80" />
-            <span className="text-sm opacity-80">Office - Main Building</span>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
+            <div className="flex items-center space-x-3 mb-3 md:mb-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <div>
+                <p className="text-xs md:text-sm opacity-90">Current Location</p>
+                <p className="font-semibold text-sm md:text-base">Office - Main Building</p>
+              </div>
+            </div>
+            <div className="px-2 py-1 md:px-3 md:py-1 bg-white bg-opacity-20 rounded-full text-xs md:text-xs font-semibold backdrop-blur-sm">
+              {getAttendanceStatus()}
+            </div>
           </div>
           
-          <div className="mb-6">
-            <p className="text-sm opacity-80 mb-2">{getAttendanceStatus()}</p>
-            <p className="text-5xl font-bold">{formatTime(currentTime)}</p>
+          <div className="mb-4 md:mb-8">
+            <p className="text-3xl md:text-6xl font-bold mb-2 font-mono tracking-wider">{formatTime(currentTime)}</p>
+            <p className="text-sm md:text-lg opacity-90">{formatDate(currentTime)}</p>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+            <div className="text-center">
+              <p className="text-lg md:text-2xl font-bold">{stats.presentToday}</p>
+              <p className="text-xs md:text-xs opacity-80">Present</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg md:text-2xl font-bold">{stats.lateToday}</p>
+              <p className="text-xs md:text-xs opacity-80">Late</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg md:text-2xl font-bold">{stats.absentToday}</p>
+              <p className="text-xs md:text-xs opacity-80">Absent</p>
+            </div>
           </div>
           
           <button 
             onClick={handleClockAction}
             disabled={isLoading}
-            className="w-full bg-white text-blue-500 px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-white text-purple-600 px-4 py-3 md:px-6 md:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 text-sm md:text-base"
           >
-            {getButtonText()}
+            <Zap className="w-4 h-4 md:w-5 md:h-5" />
+            <span>{getButtonText()}</span>
           </button>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card p-6">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
+      {/* Enhanced Quick Actions - Mobile Optimized */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="card p-4 md:p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100">Quick Actions</h3>
+            <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Zap className="w-3 h-3 md:w-4 md:h-4 text-blue-600" />
+            </div>
+          </div>
+          <div className="space-y-2 md:space-y-3">
             <button 
               onClick={handleNavigateToRequests}
-              className="w-full btn-outline flex items-center justify-center space-x-2"
+              className="w-full btn-outline flex items-center justify-between group hover:bg-blue-50 hover:border-blue-300 transition-all py-2 md:py-3"
             >
-              <AlertTriangle className="w-4 h-4" />
-              <span>View Pending Requests</span>
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+                <span className="font-medium text-sm md:text-base">Pending Requests</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">
+                  {stats.pendingLeave + stats.pendingWFH + stats.pendingShiftChange}
+                </span>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+              </div>
             </button>
             <button 
               onClick={handleNavigateToAttendance}
-              className="w-full btn-outline flex items-center justify-center space-x-2"
+              className="w-full btn-outline flex items-center justify-between group hover:bg-green-50 hover:border-green-300 transition-all py-2 md:py-3"
             >
-              <Clock className="w-4 h-4" />
-              <span>Attendance Report</span>
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <Clock className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-sm md:text-base">Attendance Report</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
             </button>
             <button 
               onClick={handleNavigateToAnnouncements}
-              className="w-full btn-outline flex items-center justify-center space-x-2"
+              className="w-full btn-outline flex items-center justify-between group hover:bg-purple-50 hover:border-purple-300 transition-all py-2 md:py-3"
             >
-              <Bell className="w-4 h-4" />
-              <span>Manage Announcements</span>
+              <div className="flex items-center space-x-2 md:space-x-3">
+                <Bell className="w-4 h-4 text-purple-500" />
+                <span className="font-medium text-sm md:text-base">Manage Announcements</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-500" />
             </button>
+          </div>
+        </div>
+        
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Analytics</h3>
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-green-600" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Trend</span>
+              <div className="flex items-center space-x-1 text-green-600">
+                <ArrowUp className="w-4 h-4" />
+                <span className="text-sm font-semibold">12%</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency Rate</span>
+              <div className="flex items-center space-x-1 text-blue-600">
+                <span className="text-sm font-semibold">94%</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Active Projects</span>
+              <div className="flex items-center space-x-1 text-purple-600">
+                <span className="text-sm font-semibold">8</span>
+              </div>
+            </div>
+            <button className="w-full btn-primary flex items-center justify-center space-x-2">
+              <Eye className="w-4 h-4" />
+              <span>View Detailed Analytics</span>
+            </button>
+          </div>
+        </div>
+        
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Performance</h3>
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Target className="w-4 h-4 text-purple-600" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Productivity</span>
+                <span className="text-sm font-semibold">87%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-purple-500 h-2 rounded-full" style={{ width: '87%' }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Attendance</span>
+                <span className="text-sm font-semibold">92%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '92%' }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Satisfaction</span>
+                <span className="text-sm font-semibold">95%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-blue-500 h-2 rounded-full" style={{ width: '95%' }} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Staff Present"
-          value={`${stats.presentToday}/${stats.totalStaff}`}
-          change={12}
-          changeType="increase"
-          icon={<Users className="w-6 h-6" />}
-          color="#3B82F6"
-          miniChart={[{ value: 45 }, { value: 52 }, { value: 48 }, { value: 58 }, { value: 62 }, { value: 55 }, { value: 58 }]}
-        />
+        <div className={`card p-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${animatedStats ? 'animate-fade-in-up' : 'opacity-0'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 avatar-gradient rounded-xl flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center space-x-1 text-green-600">
+              <ArrowUp className="w-4 h-4" />
+              <span className="text-sm font-semibold">12%</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.presentToday}/{stats.totalStaff}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Staff Present</p>
+          </div>
+          <div className="mt-4 h-12">
+            <svg width="100%" height="100%" className="overflow-visible">
+              <polyline
+                points="0,30 20,25 40,28 60,20 80,15 100,18 120,10"
+                fill="none"
+                stroke="#3B82F6"
+                strokeWidth="2"
+                className="transition-all duration-500"
+              />
+            </svg>
+          </div>
+        </div>
         
-        <StatsCard
-          title="Late Arrivals"
-          value={stats.lateToday}
-          change={-8}
-          changeType="decrease"
-          icon={<Clock className="w-6 h-6" />}
-          color="#F59E0B"
-          miniChart={[{ value: 12 }, { value: 15 }, { value: 10 }, { value: 8 }, { value: 11 }, { value: 9 }, { value: 8 }]}
-        />
+        <div className={`card p-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${animatedStats ? 'animate-fade-in-up animation-delay-100' : 'opacity-0'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center space-x-1 text-green-600">
+              <ArrowDown className="w-4 h-4" />
+              <span className="text-sm font-semibold">8%</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.lateToday}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Late Arrivals</p>
+          </div>
+          <div className="mt-4 h-12">
+            <svg width="100%" height="100%" className="overflow-visible">
+              <polyline
+                points="0,20 20,25 40,22 60,28 80,24 100,26 120,30"
+                fill="none"
+                stroke="#F59E0B"
+                strokeWidth="2"
+                className="transition-all duration-500"
+              />
+            </svg>
+          </div>
+        </div>
         
-        <StatsCard
-          title="Absent"
-          value={stats.absentToday}
-          change={5}
-          changeType="increase"
-          icon={<UserX className="w-6 h-6" />}
-          color="#EF4444"
-          miniChart={[{ value: 3 }, { value: 5 }, { value: 4 }, { value: 6 }, { value: 5 }, { value: 7 }, { value: 5 }]}
-        />
+        <div className={`card p-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${animatedStats ? 'animate-fade-in-up animation-delay-200' : 'opacity-0'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-red-600 rounded-xl flex items-center justify-center">
+              <UserX className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center space-x-1 text-red-600">
+              <ArrowUp className="w-4 h-4" />
+              <span className="text-sm font-semibold">5%</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.absentToday}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Absent</p>
+          </div>
+          <div className="mt-4 h-12">
+            <svg width="100%" height="100%" className="overflow-visible">
+              <polyline
+                points="0,25 20,22 40,28 60,24 80,30 100,26 120,28"
+                fill="none"
+                stroke="#EF4444"
+                strokeWidth="2"
+                className="transition-all duration-500"
+              />
+            </svg>
+          </div>
+        </div>
         
-        <StatsCard
-          title="Efficiency"
-          value="94%"
-          change={3}
-          changeType="increase"
-          icon={<TrendingUp className="w-6 h-6" />}
-          color="#10B981"
-          miniChart={[{ value: 88 }, { value: 90 }, { value: 92 }, { value: 91 }, { value: 93 }, { value: 94 }, { value: 94 }]}
-        />
+        <div className={`card p-6 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 ${animatedStats ? 'animate-fade-in-up animation-delay-300' : 'opacity-0'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center space-x-1 text-green-600">
+              <ArrowUp className="w-4 h-4" />
+              <span className="text-sm font-semibold">3%</span>
+            </div>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">94%</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Efficiency</p>
+          </div>
+          <div className="mt-4 h-12">
+            <svg width="100%" height="100%" className="overflow-visible">
+              <polyline
+                points="0,30 20,25 40,20 60,22 80,15 100,18 120,10"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2"
+                className="transition-all duration-500"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
 
-      {/* Charts Row */}
+      {/* Enhanced Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Trend */}
-        <LineChart
-          title="Weekly Attendance Trend"
-          subtitle="Staff presence over the last 7 days"
-          data={[
-            { label: 'Mon', value: 45 },
-            { label: 'Tue', value: 52 },
-            { label: 'Wed', value: 48 },
-            { label: 'Thu', value: 58 },
-            { label: 'Fri', value: 62 },
-            { label: 'Sat', value: 35 },
-            { label: 'Sun', value: 28 }
-          ]}
-          height={200}
-          color="#3B82F6"
-        />
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Attendance Trend</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Staff presence over the last 7 days</p>
+            </div>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MoreVertical className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+          <LineChart
+            data={[
+              { label: 'Mon', value: 45 },
+              { label: 'Tue', value: 52 },
+              { label: 'Wed', value: 48 },
+              { label: 'Thu', value: 58 },
+              { label: 'Fri', value: 62 },
+              { label: 'Sat', value: 35 },
+              { label: 'Sun', value: 28 }
+            ]}
+            height={200}
+            color="#3B82F6"
+          />
+        </div>
         
-        {/* Department Distribution */}
-        <PieChart
-          title="Staff Distribution by Department"
-          subtitle="Current staffing across departments"
-          data={[
-            { label: 'Emergency', value: 25, color: '#3B82F6' },
-            { label: 'ICU', value: 18, color: '#10B981' },
-            { label: 'Surgery', value: 22, color: '#F59E0B' },
-            { label: 'Pediatrics', value: 15, color: '#8B5CF6' },
-            { label: 'Other', value: 20, color: '#6B7280' }
-          ]}
-          size={200}
-        />
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Department Distribution</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Current staffing across departments</p>
+            </div>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MoreVertical className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+          <PieChart
+            data={[
+              { label: 'Emergency', value: 25, color: '#3B82F6' },
+              { label: 'ICU', value: 18, color: '#10B981' },
+              { label: 'Surgery', value: 22, color: '#F59E0B' },
+              { label: 'Pediatrics', value: 15, color: '#8B5CF6' },
+              { label: 'Other', value: 20, color: '#6B7280' }
+            ]}
+            size={200}
+          />
+        </div>
       </div>
 
-      {/* Request Analytics */}
+      {/* Enhanced Request Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <BarChart
-          title="Pending Requests by Type"
-          subtitle="Current pending requests"
-          data={[
-            { label: 'Leave', value: stats.pendingLeave, color: '#3B82F6' },
-            { label: 'WFH', value: stats.pendingWFH, color: '#10B981' },
-            { label: 'Shift Change', value: stats.pendingShiftChange, color: '#F59E0B' }
-          ]}
-          height={150}
-        />
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pending Requests</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Current pending requests</p>
+            </div>
+            <div className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">
+              {stats.pendingLeave + stats.pendingWFH + stats.pendingShiftChange}
+            </div>
+          </div>
+          <BarChart
+            data={[
+              { label: 'Leave', value: stats.pendingLeave, color: '#3B82F6' },
+              { label: 'WFH', value: stats.pendingWFH, color: '#10B981' },
+              { label: 'Shift Change', value: stats.pendingShiftChange, color: '#F59E0B' }
+            ]}
+            height={150}
+          />
+        </div>
         
-        <ProgressRing
-          title="Attendance Rate"
-          subtitle="Today's staff presence"
-          value={stats.presentToday}
-          maxValue={stats.totalStaff}
-          size={150}
-          color="#3B82F6"
-        />
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Attendance Rate</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Today's staff presence</p>
+            </div>
+          </div>
+          <ProgressRing
+            value={stats.presentToday}
+            maxValue={stats.totalStaff}
+            size={150}
+            color="#3B82F6"
+          />
+        </div>
         
-        <BarChart
-          title="Weekly Activity"
-          subtitle="Total activities this week"
-          data={[
-            { label: 'Check-ins', value: 156, color: '#10B981' },
-            { label: 'Check-outs', value: 142, color: '#F59E0B' },
-            { label: 'Overtime', value: 28, color: '#8B5CF6' }
-          ]}
-          height={150}
-        />
+        <div className="card p-6 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Activity</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total activities this week</p>
+            </div>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Download className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+          <BarChart
+            data={[
+              { label: 'Check-ins', value: 156, color: '#10B981' },
+              { label: 'Check-outs', value: 142, color: '#F59E0B' },
+              { label: 'Overtime', value: 28, color: '#8B5CF6' }
+            ]}
+            height={150}
+          />
+        </div>
       </div>
 
-      {/* Activity Heatmap */}
-      <ActivityHeatmap
-        title="Staff Activity Heatmap"
-        subtitle="Daily activity patterns over the last 4 weeks"
-        data={[
-          [5, 8, 12, 15, 18, 8, 3],    // Week 1
-          [7, 10, 14, 16, 20, 12, 5],   // Week 2
-          [6, 9, 11, 18, 22, 10, 4],    // Week 3
-          [8, 12, 15, 20, 19, 11, 6],   // Week 4
-        ]}
-      />
+      {/* Enhanced Activity Heatmap */}
+      <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Staff Activity Heatmap</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Daily activity patterns over the last 4 weeks</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Filter className="w-4 h-4 text-gray-500" />
+            </button>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Download className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+        </div>
+        <ActivityHeatmap
+          data={[
+            [5, 8, 12, 15, 18, 8, 3],    // Week 1
+            [7, 10, 14, 16, 20, 12, 5],   // Week 2
+            [6, 9, 11, 18, 22, 10, 4],    // Week 3
+            [8, 12, 15, 20, 19, 11, 6],   // Week 4
+          ]}
+        />
+      </div>
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Announcements */}
-        <div className="card">
+        {/* Enhanced Recent Announcements */}
+        <div className="card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Announcements</h3>
-            <span className="px-3 py-1 bg-blue-50 text-blue-500 rounded-full text-xs font-semibold">
-              Latest 3
-            </span>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Announcements</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Latest updates and notifications</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="px-3 py-1 bg-gradient-to-r from-sky-blue to-light-gold bg-opacity-20 text-white rounded-full text-xs font-semibold" 
+                    style={{ background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(245, 158, 11, 0.2))' }}>
+                {recentAnnouncements.length} New
+              </span>
+              <button 
+                onClick={handleNavigateToAnnouncements}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {recentAnnouncements.length === 0 ? (
             <div className="text-center py-8">
-              <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell className="w-6 h-6 text-gray-400" />
+              </div>
               <p className="text-gray-500 dark:text-gray-400">No announcements yet</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Check back later for updates</p>
             </div>
           ) : (
             <div className="space-y-4 mb-6">
               {recentAnnouncements.map((announcement) => (
-                <div key={announcement.id} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <div className={`p-2 rounded-lg ${getAnnouncementColor(announcement.type)}`}>
+                <div 
+                  key={announcement.id} 
+                  className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+                  onClick={handleNavigateToAnnouncements}
+                >
+                  <div className={`p-3 rounded-xl ${getAnnouncementColor(announcement.type)} group-hover:scale-110 transition-transform`}>
                     {getAnnouncementIcon(announcement.type)}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{announcement.title}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 text-sm group-hover:text-blue-600 transition-colors">
+                      {announcement.title}
+                    </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{announcement.target_audience}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${getAnnouncementColor(announcement.type)}`}>
-                    {announcement.type}
-                  </span>
+                  <div className="text-right">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getAnnouncementColor(announcement.type)}`}>
+                      {announcement.type}
+                    </span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {new Date(announcement.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          <button onClick={handleNavigateToAnnouncements} className="btn-primary w-full">Manage Announcements</button>
+          <button onClick={handleNavigateToAnnouncements} className="btn-primary w-full flex items-center justify-center space-x-2">
+            <Eye className="w-4 h-4" />
+            <span>View All Announcements</span>
+          </button>
         </div>
 
-        {/* Team Attendance */}
-        <div className="card">
+        {/* Enhanced Team Attendance */}
+        <div className="card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">My Team Attendance</h3>
-            <button onClick={handleNavigateToAttendance} className="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center space-x-1">
-              <span>Live View</span>
-              <TrendingUp className="w-4 h-4" />
-            </button>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Attendance</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Real-time team status</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={handleNavigateToAttendance}
+                className="text-white hover:text-blue-100 text-sm font-medium flex items-center space-x-1 px-3 py-1 hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+              >
+                <Activity className="w-4 h-4" />
+                <span>Live View</span>
+              </button>
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {teamAttendance.length === 0 ? (
             <div className="text-center py-8">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-gray-400" />
+              </div>
               <p className="text-gray-500 dark:text-gray-400">No team attendance data available</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Team members will appear here</p>
             </div>
           ) : (
             <div className="space-y-3">
               {teamAttendance.slice(0, 5).map((member) => (
-                <div key={member.user_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div 
+                  key={member.user_id} 
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer group"
+                  onClick={handleNavigateToAttendance}
+                >
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </span>
+                    <div className="relative">
+                      <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {member.name ? member.name.split(' ').map(n => n[0]).join('') : '??'}
+                      </div>
+                      <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
+                        member.status.toLowerCase() === 'present' ? 'bg-green-500' :
+                        member.status.toLowerCase() === 'late' ? 'bg-amber-500' :
+                        member.status.toLowerCase() === 'absent' ? 'bg-red-500' :
+                        'bg-gray-400'
+                      }`} />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{member.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{member.department}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm group-hover:text-blue-600 transition-colors">
+                        {member.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {typeof member.department === 'object' ? member.department.name : member.department}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -591,11 +962,24 @@ const Dashboard: React.FC = () => {
                       {member.status}
                     </span>
                     {member.check_in_time && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{member.check_in_time}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        {member.check_in_time}
+                      </p>
                     )}
                   </div>
                 </div>
               ))}
+              
+              {teamAttendance.length > 5 && (
+                <button 
+                  onClick={handleNavigateToAttendance}
+                  className="w-full text-center py-3 text-sm text-white hover:text-blue-100 font-medium hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+                >
+                  View {teamAttendance.length - 5} more team members
+                  <ChevronRight className="w-4 h-4 inline ml-1" />
+                </button>
+              )}
             </div>
           )}
         </div>
