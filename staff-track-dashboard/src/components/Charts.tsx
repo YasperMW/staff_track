@@ -14,7 +14,7 @@ export const BarChart: React.FC<ChartProps & {
   const maxValue = Math.max(...data.map(d => d.value));
   
   return (
-    <div className={`card ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
@@ -36,8 +36,11 @@ export const BarChart: React.FC<ChartProps & {
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full transition-all duration-500 ${item.color || 'bg-blue-500'}`}
-                  style={{ width: `${(item.value / maxValue) * 100}%` }}
+                  className={`h-2 rounded-full transition-all duration-500 ${item.color || 'bg-gradient-to-r from-sky-blue to-light-gold'}`}
+                  style={{ 
+                    width: `${(item.value / maxValue) * 100}%`,
+                    background: item.color || 'linear-gradient(135deg, #0284C7, #F59E0B)'
+                  }}
                 />
               </div>
             </div>
@@ -53,7 +56,7 @@ export const LineChart: React.FC<ChartProps & {
   data: Array<{ label: string; value: number }>;
   height?: number;
   color?: string;
-}> = ({ title, subtitle, data, height = 200, color = '#3B82F6', className = '' }) => {
+}> = ({ title, subtitle, data, height = 200, color = '#0284C7', className = '' }) => {
   const maxValue = Math.max(...data.map(d => d.value));
   const points = data.map((point, index) => {
     const x = (index / (data.length - 1)) * 100;
@@ -62,7 +65,7 @@ export const LineChart: React.FC<ChartProps & {
   }).join(' ');
 
   return (
-    <div className={`card ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
@@ -115,7 +118,7 @@ export const LineChart: React.FC<ChartProps & {
         {/* X-axis labels */}
         <div className="flex justify-between mt-2">
           {data.map((point, index) => (
-            <span key={index} className="text-xs text-text-grey dark:text-text-grey-dark">
+            <span key={index} className="text-xs text-gray-600 dark:text-gray-400">
               {point.label}
             </span>
           ))}
@@ -148,7 +151,7 @@ export const PieChart: React.FC<ChartProps & {
   };
   
   return (
-    <div className={`card ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
@@ -190,15 +193,15 @@ export const PieChart: React.FC<ChartProps & {
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-sm text-text-dark dark:text-text-dark-light">
+              <span className="text-sm text-gray-900 dark:text-gray-100">
                 {item.label}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-sm font-medium text-text-dark dark:text-text-dark-light">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {item.value}
               </span>
-              <span className="text-xs text-text-grey dark:text-text-grey-dark ml-1">
+              <span className="text-xs text-gray-600 dark:text-gray-400 ml-1">
                 ({((item.value / total) * 100).toFixed(1)}%)
               </span>
             </div>
@@ -217,13 +220,13 @@ export const ProgressRing: React.FC<ChartProps & {
   strokeWidth?: number;
   color?: string;
 }> = ({ title, subtitle, value, maxValue, size = 120, strokeWidth = 8, color = '#3B82F6', className = '' }) => {
-  const percentage = (value / maxValue) * 100;
+  const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
   
   return (
-    <div className={`card flex flex-col items-center ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4 text-center">
           {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
@@ -262,10 +265,10 @@ export const ProgressRing: React.FC<ChartProps & {
         {/* Center text */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <span className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">
               {percentage.toFixed(0)}%
             </span>
-            <p className="text-xs text-text-grey dark:text-text-grey-dark">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               {value} / {maxValue}
             </p>
           </div>
@@ -289,7 +292,7 @@ export const StatsCard: React.FC<{
   const changeIcon = changeType === 'increase' ? '↑' : '↓';
   
   return (
-    <div className="card">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
         <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
           <div style={{ color }}>
@@ -305,10 +308,10 @@ export const StatsCard: React.FC<{
       </div>
       
       <div>
-        <p className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
+        <p className="text-2xl font-bold text-gray-900 dark:text-white">
           {value}
         </p>
-        <p className="text-sm text-text-grey dark:text-text-grey-dark">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {title}
         </p>
       </div>
@@ -346,14 +349,14 @@ export const ActivityHeatmap: React.FC<ChartProps & {
   const getIntensity = (value: number) => {
     if (value === 0) return 'bg-gray-100 dark:bg-gray-800';
     const intensity = value / maxValue;
-    if (intensity < 0.25) return 'bg-blue-500 bg-opacity-20';
-    if (intensity < 0.5) return 'bg-blue-500 bg-opacity-40';
-    if (intensity < 0.75) return 'bg-blue-500 bg-opacity-60';
-    return 'bg-blue-500 bg-opacity-80';
+    if (intensity < 0.25) return 'bg-blue-200';
+    if (intensity < 0.5) return 'bg-blue-400';
+    if (intensity < 0.75) return 'bg-blue-600';
+    return 'bg-blue-800';
   };
   
   return (
-    <div className={`card ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300 ${className}`}>
       {(title || subtitle) && (
         <div className="mb-4">
           {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
@@ -383,21 +386,21 @@ export const ActivityHeatmap: React.FC<ChartProps & {
       <div className="flex items-center justify-between mt-4">
         <div className="flex space-x-1">
           {labels.map((label, index) => (
-            <span key={index} className="text-xs text-text-grey dark:text-text-grey-dark">
+            <span key={index} className="text-xs text-gray-600 dark:text-gray-400">
               {label.charAt(0)}
             </span>
           ))}
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-text-grey dark:text-text-grey-dark">Less</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">Less</span>
           <div className="flex space-x-1">
             <div className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded"></div>
-            <div className="w-3 h-3 bg-sky-blue bg-opacity-20 rounded"></div>
-            <div className="w-3 h-3 bg-sky-blue bg-opacity-40 rounded"></div>
-            <div className="w-3 h-3 bg-sky-blue bg-opacity-60 rounded"></div>
-            <div className="w-3 h-3 bg-sky-blue bg-opacity-80 rounded"></div>
+            <div className="w-3 h-3 bg-blue-200 rounded"></div>
+            <div className="w-3 h-3 bg-blue-400 rounded"></div>
+            <div className="w-3 h-3 bg-blue-600 rounded"></div>
+            <div className="w-3 h-3 bg-blue-800 rounded"></div>
           </div>
-          <span className="text-xs text-text-grey dark:text-text-grey-dark">More</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400">More</span>
         </div>
       </div>
     </div>

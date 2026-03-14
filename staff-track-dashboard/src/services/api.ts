@@ -46,6 +46,20 @@ export interface User {
   department_name?: string;
 }
 
+export interface UserDocument {
+  document_id: string;
+  user_id: string;
+  document_type: string;
+  file_path: string;
+  file_name: string;
+  upload_date: string;
+}
+
+export interface UserDetailsResponse {
+  user: User;
+  documents: UserDocument[];
+}
+
 export interface Role {
   role_id: string;
   name: string;
@@ -213,6 +227,11 @@ export const usersApi = {
 
   getUsersByDepartment: async (departmentName: string): Promise<PaginatedResponse<User>> => {
     const response = await api.get(`/users/users/by-department/${departmentName}`);
+    return response.data;
+  },
+
+  getUserDetails: async (userId: string): Promise<UserDetailsResponse> => {
+    const response = await api.get(`/users/users/${userId}`);
     return response.data;
   },
 

@@ -1,0 +1,117 @@
+/* Dashboard Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+/* Enhanced Card Styles */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-md transition-all duration-300;
+}
+
+.card:hover {
+  @apply shadow-lg transform -translate-y-1;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-blue-600 transition-all duration-200 transform hover:scale-105 active:scale-95;
+}
+
+.btn-outline {
+  @apply border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200;
+}
+
+/* Status Badge Styles */
+.status-badge {
+  @apply px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+/* Text Colors for Dark Mode */
+.text-text-dark {
+  @apply text-gray-900 dark:text-white;
+}
+
+.text-text-dark-light {
+  @apply text-gray-800 dark:text-gray-200;
+}
+
+.text-text-grey {
+  @apply text-gray-600 dark:text-gray-400;
+}
+
+.text-text-grey-dark {
+  @apply text-gray-500 dark:text-gray-500;
+}
+
+/* Sky Blue Color */
+.bg-sky-blue {
+  background-color: #0EA5E9;
+}
+
+.bg-sky-blue\/20 {
+  background-color: rgba(14, 165, 233, 0.2);
+}
+
+.bg-sky-blue\/40 {
+  background-color: rgba(14, 165, 233, 0.4);
+}
+
+.bg-sky-blue\/60 {
+  background-color: rgba(14, 165, 233, 0.6);
+}
+
+.bg-sky-blue\/80 {
+  background-color: rgba(14, 165, 233, 0.8);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card {
+    @apply rounded-lg;
+  }
+  
+  .btn-primary, .btn-outline {
+    @apply px-3 py-2 text-sm;
+  }
+}
+
+/* Loading States */
+.loading-skeleton {
+  @apply bg-gray-200 dark:bg-gray-700 rounded animate-pulse;
+}
+
+/* Focus States */
+.card:focus-within {
+  @apply ring-2 ring-blue-500 ring-opacity-50;
+}
+
+.btn-primary:focus {
+  @apply ring-2 ring-blue-500 ring-opacity-50 ring-offset-2;
+}
+
+.btn-outline:focus {
+  @apply ring-2 ring-gray-500 ring-opacity-50 ring-offset-2;
+}

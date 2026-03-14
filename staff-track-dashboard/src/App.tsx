@@ -4,8 +4,9 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/DashboardSimple';
+import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import UserDetails from './pages/UserDetails';
 import Departments from './pages/Departments';
 import Roles from './pages/Roles';
 import Attendance from './pages/Attendance';
@@ -44,6 +45,7 @@ function App() {
                 }
               >
                 <Route index element={<Users />} />
+                <Route path=":userId" element={<UserDetails />} />
               </Route>
               <Route
                 path="/departments"

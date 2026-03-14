@@ -26,7 +26,7 @@ const DashboardSimple: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total Staff</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">45</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">5</p>
             </div>
           </div>
         </div>
