@@ -12,6 +12,7 @@ import '../../services/image_service.dart';
 import '../../config/app_config.dart';
 import 'profile_details_screen.dart';
 import 'edit_profile_screen.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -431,7 +432,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             context: context,
             icon: Icons.notifications_none,
             title: 'Notifications',
-            trailing: 'On',
+            trailing: 'Manage',
+            onTap: () => _navigateToNotificationSettings(context),
           ),
           const Divider(height: 1, indent: 60),
           _buildOptionTile(
@@ -479,6 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? trailing,
     Widget? trailingWidget,
     bool showChevron = true,
+    VoidCallback? onTap,
   }) {
     return ListTile(
       leading: Icon(icon, color: AppTheme.textLightBlue),
@@ -514,7 +517,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ],
       ),
-      onTap: () {},
+      onTap: onTap ?? () {},
     );
   }
 
@@ -573,6 +576,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProfileDetailsScreen(),
+      ),
+    );
+
+    if (result == true) {
+      _loadUserProfile();
+    }
+  }
+
+  void _navigateToNotificationSettings(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const NotificationSettingsScreen(),
       ),
     );
 

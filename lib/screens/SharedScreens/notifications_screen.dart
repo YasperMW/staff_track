@@ -145,14 +145,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       size: 20,
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
-                      style: TextStyle(
-                        color: AppTheme.skyBlue,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          color: AppTheme.skyBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     TextButton(
                       onPressed: _markAllAsRead,
                       child: Text(

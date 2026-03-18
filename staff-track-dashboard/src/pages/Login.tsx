@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { Building2, Mail, Lock, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Moon, Sun } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -84,7 +84,11 @@ const Login: React.FC = () => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-sky-blue to-light-gold rounded-3xl mb-4">
-            <Building2 className="w-10 h-10 text-white" />
+            <img 
+              src="/src/assets/logo.png" 
+              alt="Staff Track Logo" 
+              className="w-12 h-12 rounded-2xl object-contain"
+            />
           </div>
           <h1 className="text-3xl font-bold text-text-dark dark:text-text-dark-light mb-2">Staff Track</h1>
           <p className="text-text-grey dark:text-text-grey-dark">Admin Dashboard Portal</p>
@@ -177,7 +181,7 @@ const Login: React.FC = () => {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-sm text-text-grey dark:text-text-grey-dark">
-              Hospital Management System © 2024
+              Hospital Management System © 2026
             </p>
           </div>
         </div>

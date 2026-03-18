@@ -11,7 +11,7 @@ class AppConfig {
   static String get apiBaseUrl {
     switch (environment) {
       case AppEnvironment.dev1:
-        return 'http://192.168.100.199:8888';
+        return 'http://192.168.235.134:8888';
       case AppEnvironment.dev2:
         return 'http://192.168.100.199:8888';
       case AppEnvironment.prod:
