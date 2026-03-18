@@ -12,6 +12,14 @@ import 'auth_storage.dart';
 import 'navigation_service.dart';
 import '../screens/SharedScreens/notifications_screen.dart';
 
+enum NotificationPermissionStatus {
+  granted,
+  denied,
+  permanentlyDenied,
+  limited,
+  unknown,
+}
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -28,6 +36,146 @@ class FCMService {
   static String? _lastSentToken;
   static bool _isRequesting = false;
   static BuildContext? _appContext;
+  static bool _hasShownPermissionDialog = false;
+
+  /// Check current notification permission status
+  static Future<NotificationPermissionStatus> getNotificationPermissionStatus() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final status = await Permission.notification.status;
+      if (status.isGranted) {
+        return NotificationPermissionStatus.granted;
+      } else if (status.isDenied) {
+        return NotificationPermissionStatus.denied;
+      } else if (status.isPermanentlyDenied) {
+        return NotificationPermissionStatus.permanentlyDenied;
+      } else if (status.isLimited) {
+        return NotificationPermissionStatus.limited;
+      } else {
+        return NotificationPermissionStatus.unknown;
+      }
+    } else {
+      // iOS permissions are handled by Firebase
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        return NotificationPermissionStatus.granted;
+      } else if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        return NotificationPermissionStatus.denied;
+      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+        return NotificationPermissionStatus.limited;
+      } else {
+        return NotificationPermissionStatus.denied;
+      }
+    }
+  }
+
+  /// Request notification permissions with user-friendly dialog
+  static Future<bool> requestNotificationPermissions({bool showRationale = false}) async {
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.notification.status;
+        
+        // Show rationale dialog if permission was denied before
+        if (showRationale && (status.isDenied || status.isPermanentlyDenied) && !_hasShownPermissionDialog) {
+          await _showPermissionRationaleDialog();
+          _hasShownPermissionDialog = true;
+        }
+        
+        if (status.isPermanentlyDenied) {
+          // Open app settings for permanently denied permissions
+          await _openAppSettings();
+          return false;
+        }
+        
+        final newStatus = await Permission.notification.request();
+        return newStatus.isGranted;
+      } else {
+        // iOS - use Firebase permission request
+        final settings = await _firebaseMessaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return settings.authorizationStatus == AuthorizationStatus.authorized;
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permissions: $e');
+      return false;
+    }
+  }
+
+  /// Show educational dialog about notification permissions
+  static Future<void> _showPermissionRationaleDialog() async {
+    if (_appContext == null) return;
+    
+    return showDialog<void>(
+      context: _appContext!,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enable Notifications'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Stay updated with important alerts:'),
+              SizedBox(height: 8),
+              Text('• Check-in/out reminders'),
+              Text('• Attendance alerts'),
+              Text('• Important announcements'),
+              Text('• Request status updates'),
+              SizedBox(height: 12),
+              Text('Don\'t miss important work-related notifications!'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Not Now'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                requestNotificationPermissions();
+              },
+              child: const Text('Enable'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Open app settings for notification permissions
+  static Future<void> _openAppSettings() async {
+    if (_appContext == null) return;
+    
+    return showDialog<void>(
+      context: _appContext!,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Notifications Disabled'),
+          content: const Text(
+            'To receive important work notifications, please enable them in your device settings:\n\n'
+            'Settings → Apps → Staff Track → Notifications → Allow',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                openAppSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   static Future<void> initialize(BuildContext context) async {
     _appContext = context;
@@ -36,16 +184,22 @@ class FCMService {
       return;
     }
 
-    // 1. Request permissions (Android 13+ and iOS)
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      await Permission.notification.request();
-    }
+    // 1. Check and request permissions with proper flow
+    final permissionStatus = await getNotificationPermissionStatus();
+    debugPrint('FCM: Initial permission status: $permissionStatus');
     
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    if (permissionStatus == NotificationPermissionStatus.denied || 
+        permissionStatus == NotificationPermissionStatus.permanentlyDenied) {
+      // Try to request permissions with rationale
+      final granted = await requestNotificationPermissions(showRationale: true);
+      if (!granted) {
+        debugPrint('FCM: Notification permissions not granted');
+        return;
+      }
+    } else if (permissionStatus == NotificationPermissionStatus.limited) {
+      // Try to upgrade limited permissions to full
+      await requestNotificationPermissions();
+    }
 
     // 2. Set background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -92,13 +246,128 @@ class FCMService {
       _handleNotificationClick(initialMessage.data.toString());
     }
 
-    // 8. Get and save FCM token
-    await updateToken();
+    // 8. Get and save FCM token (only if permissions granted)
+    final currentStatus = await getNotificationPermissionStatus();
+    if (currentStatus == NotificationPermissionStatus.granted) {
+      await updateToken();
+      
+      // 9. Listen for token refresh
+      _firebaseMessaging.onTokenRefresh.listen((newToken) {
+        _sendTokenToBackend(newToken);
+      });
+    } else {
+      debugPrint('FCM: Skipping token registration due to insufficient permissions');
+    }
+  }
+
+  /// Retry FCM initialization after permissions are granted
+  static Future<void> retryInitialization() async {
+    if (_appContext == null) {
+      debugPrint('FCM: Cannot retry - no context available');
+      return;
+    }
     
-    // 9. Listen for token refresh
-    _firebaseMessaging.onTokenRefresh.listen((newToken) {
-      _sendTokenToBackend(newToken);
-    });
+    debugPrint('FCM: Retrying initialization...');
+    
+    // Check if permissions are now granted
+    final status = await getNotificationPermissionStatus();
+    if (status == NotificationPermissionStatus.granted) {
+      // Re-initialize FCM components
+      await updateToken();
+      debugPrint('FCM: Successfully re-initialized after permission grant');
+    } else {
+      debugPrint('FCM: Retry failed - permissions still not granted: $status');
+    }
+  }
+
+  /// Check if notifications are enabled and show appropriate UI
+  static Future<bool> checkAndRequestPermissions({BuildContext? context}) async {
+    final ctx = context ?? _appContext;
+    if (ctx == null) return false;
+    
+    final status = await getNotificationPermissionStatus();
+    
+    switch (status) {
+      case NotificationPermissionStatus.granted:
+        return true;
+        
+      case NotificationPermissionStatus.denied:
+        await _showPermissionRationaleDialog();
+        return false;
+        
+      case NotificationPermissionStatus.permanentlyDenied:
+        await _openAppSettings();
+        return false;
+        
+      case NotificationPermissionStatus.limited:
+        await requestNotificationPermissions();
+        return false;
+        
+      case NotificationPermissionStatus.unknown:
+        await requestNotificationPermissions(showRationale: true);
+        return false;
+    }
+  }
+
+  /// Get notification settings for debugging
+  static Future<Map<String, dynamic>> getNotificationSettings() async {
+    try {
+      final firebaseSettings = await _firebaseMessaging.getNotificationSettings();
+      final permissionStatus = await getNotificationPermissionStatus();
+      
+      return {
+        'firebaseAuthorization': firebaseSettings.authorizationStatus.toString(),
+        'permissionStatus': permissionStatus.toString(),
+        'platform': defaultTargetPlatform.toString(),
+        'tokenRegistered': _lastSentToken != null,
+        'hasContext': _appContext != null,
+      };
+    } catch (e) {
+      debugPrint('Error getting notification settings: $e');
+      return {'error': e.toString()};
+    }
+  }
+
+  /// Test notification permissions and FCM setup
+  static Future<Map<String, dynamic>> testNotificationSetup() async {
+    final results = <String, dynamic>{};
+    
+    try {
+      // 1. Check permissions
+      final permissionStatus = await getNotificationPermissionStatus();
+      results['permissionStatus'] = permissionStatus.toString();
+      results['permissionsGranted'] = permissionStatus == NotificationPermissionStatus.granted;
+      
+      // 2. Try to get FCM token
+      if (permissionStatus == NotificationPermissionStatus.granted) {
+        final token = await _firebaseMessaging.getToken();
+        results['fcmToken'] = token != null ? '${token!.substring(0, 20)}...' : 'null';
+        results['tokenAvailable'] = token != null;
+        
+        // 3. Test local notification
+        await _showLocalNotification(RemoteMessage(
+          messageId: 'test_${DateTime.now().millisecondsSinceEpoch}',
+          notification: const RemoteNotification(
+            title: 'Test Notification',
+            body: 'FCM setup test successful!',
+          ),
+          data: {'test': 'local_notification'},
+        ));
+        results['localNotificationTest'] = 'success';
+      } else {
+        results['fcmToken'] = 'skipped (no permission)';
+        results['tokenAvailable'] = false;
+        results['localNotificationTest'] = 'skipped (no permission)';
+      }
+      
+      results['overall'] = permissionStatus == NotificationPermissionStatus.granted ? 'success' : 'permission_denied';
+      
+    } catch (e) {
+      results['error'] = e.toString();
+      results['overall'] = 'error';
+    }
+    
+    return results;
   }
 
   static Future<void> updateToken() async {
@@ -162,6 +431,7 @@ class FCMService {
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
+      icon: '@mipmap/ic_launcher', // Use app launcher icon
     );
 
     const NotificationDetails platformDetails = NotificationDetails(

@@ -51,7 +51,7 @@ const Layout: React.FC = () => {
       path: '/departments',
     },
     {
-      label: 'Roles & Permissions',
+      label: 'Roles',
       icon: Shield,
       path: '/roles',
     },
@@ -107,9 +107,11 @@ const Layout: React.FC = () => {
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-amber-500 rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src="/src/assets/logo.png" 
+              alt="Staff Track Logo" 
+              className="w-10 h-10 rounded-xl object-contain"
+            />
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white">Staff Track</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Admin Portal</p>
