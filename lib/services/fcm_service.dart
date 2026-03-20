@@ -20,23 +20,73 @@ enum NotificationPermissionStatus {
   unknown,
 }
 
+/// Background message handler - MUST be top-level function
+/// This runs when app is terminated or in background
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase for background isolate
   await Firebase.initializeApp();
-  debugPrint("Handling a background message: ${message.messageId}");
+  debugPrint("Background message received: ${message.messageId}");
+
+  // Create notification channel if needed (Android 8.0+)
+  final FlutterLocalNotificationsPlugin notifications = FlutterLocalNotificationsPlugin();
+
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'staff_track_channel',
+    'Staff Track Notifications',
+    description: 'Notifications for staff track app',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+    enableLights: true,
+  );
+
+  await notifications
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Show the notification
+  final RemoteNotification? notification = message.notification;
+  final AndroidNotification? android = message.notification?.android;
+
+  if (notification != null && android != null) {
+    await notifications.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'staff_track_channel',
+          'Staff Track Notifications',
+          channelDescription: 'Notifications for staff track app',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+          icon: '@mipmap/launcher_icon',
+        ),
+      ),
+      payload: message.data.toString(),
+    );
+  }
 }
 
 class FCMService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+
+  // Standard notification channel
   static const String _channelId = 'staff_track_channel';
   static const String _channelName = 'Staff Track Notifications';
-  
+
+  // High-priority channel for instant/critical notifications
+  static const String _highPriorityChannelId = 'staff_track_urgent';
+  static const String _highPriorityChannelName = 'Urgent Alerts';
+
   static String? _lastSentToken;
   static bool _isRequesting = false;
   static BuildContext? _appContext;
   static bool _hasShownPermissionDialog = false;
+  static bool _batteryOptimizationRequested = false;
 
   /// Check current notification permission status
   static Future<NotificationPermissionStatus> getNotificationPermissionStatus() async {
@@ -73,19 +123,19 @@ class FCMService {
     try {
       if (defaultTargetPlatform == TargetPlatform.android) {
         final status = await Permission.notification.status;
-        
+
         // Show rationale dialog if permission was denied before
         if (showRationale && (status.isDenied || status.isPermanentlyDenied) && !_hasShownPermissionDialog) {
           await _showPermissionRationaleDialog();
           _hasShownPermissionDialog = true;
         }
-        
+
         if (status.isPermanentlyDenied) {
           // Open app settings for permanently denied permissions
           await _openAppSettings();
           return false;
         }
-        
+
         final newStatus = await Permission.notification.request();
         return newStatus.isGranted;
       } else {
@@ -99,6 +149,69 @@ class FCMService {
       }
     } catch (e) {
       debugPrint('Error requesting notification permissions: $e');
+      return false;
+    }
+  }
+
+  /// Request battery optimization exemption for instant notification delivery
+  /// This allows the app to receive notifications without delay on Android 6+
+  static Future<bool> requestBatteryOptimizationExemption({BuildContext? context}) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+
+      if (status.isGranted) {
+        debugPrint('FCM: Battery optimization exemption already granted');
+        return true;
+      }
+
+      // Only request once per session
+      if (_batteryOptimizationRequested) return false;
+      _batteryOptimizationRequested = true;
+
+      // Show explanation dialog before requesting
+      final ctx = context ?? _appContext;
+      if (ctx != null) {
+        final shouldRequest = await showDialog<bool>(
+          context: ctx,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Enable Instant Notifications'),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('For instant delivery of important notifications (check-in reminders, urgent alerts), we need to exclude the app from battery optimization.'),
+                  SizedBox(height: 12),
+                  Text('This ensures you receive time-sensitive notifications immediately, even when the app is in the background.'),
+                  SizedBox(height: 12),
+                  Text('Tap "Allow" and select "All apps" → "Staff Track" → "Don\'t optimize"', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Later'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        ) ?? false;
+
+        if (!shouldRequest) return false;
+      }
+
+      final result = await Permission.ignoreBatteryOptimizations.request();
+      debugPrint('FCM: Battery optimization request result: $result');
+      return result.isGranted;
+    } catch (e) {
+      debugPrint('FCM: Error requesting battery optimization exemption: $e');
       return false;
     }
   }
@@ -179,7 +292,7 @@ class FCMService {
 
   static Future<void> initialize(BuildContext context) async {
     _appContext = context;
-    
+
     if (kIsWeb || !(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       return;
     }
@@ -187,8 +300,8 @@ class FCMService {
     // 1. Check and request permissions with proper flow
     final permissionStatus = await getNotificationPermissionStatus();
     debugPrint('FCM: Initial permission status: $permissionStatus');
-    
-    if (permissionStatus == NotificationPermissionStatus.denied || 
+
+    if (permissionStatus == NotificationPermissionStatus.denied ||
         permissionStatus == NotificationPermissionStatus.permanentlyDenied) {
       // Try to request permissions with rationale
       final granted = await requestNotificationPermissions(showRationale: true);
@@ -201,14 +314,18 @@ class FCMService {
       await requestNotificationPermissions();
     }
 
-    // 2. Set background message handler
+    // 2. Set background message handler (must be called before Firebase init)
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // 3. Initialize local notifications for foreground messages
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
+    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
+    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: true,
+    );
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
-    
+
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -216,42 +333,68 @@ class FCMService {
       },
     );
 
-    // 4. Create Android Notification Channel
+    // 4. Create Android Notification Channels
     if (defaultTargetPlatform == TargetPlatform.android) {
-      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      // Standard channel for regular notifications
+      const AndroidNotificationChannel standardChannel = AndroidNotificationChannel(
         _channelId,
         _channelName,
-        description: 'Notifications for staff track app',
-        importance: Importance.max,
+        description: 'General notifications for staff track app',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
       );
 
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+      // High-priority channel for instant/critical notifications
+      const AndroidNotificationChannel urgentChannel = AndroidNotificationChannel(
+        _highPriorityChannelId,
+        _highPriorityChannelName,
+        description: 'Urgent alerts requiring immediate attention (check-ins, important reminders)',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        showBadge: true,
+      );
+
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      await androidPlugin?.createNotificationChannel(standardChannel);
+      await androidPlugin?.createNotificationChannel(urgentChannel);
+
+      debugPrint('FCM: Notification channels created');
     }
 
-    // 5. Handle foreground messages
+    // 5. Request battery optimization exemption for instant delivery (Android 6+)
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await requestBatteryOptimizationExemption();
+    }
+
+    // 6. Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
 
-    // 6. Handle notification clicks when app is in background/terminated
+    // 7. Handle notification clicks when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _handleNotificationClick(message.data.toString());
     });
 
-    // 7. Check if app was opened from a notification when terminated
+    // 8. Check if app was opened from a notification when terminated
     final initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
       _handleNotificationClick(initialMessage.data.toString());
     }
 
-    // 8. Get and save FCM token (only if permissions granted)
+    // 9. Get and save FCM token (only if permissions granted)
     final currentStatus = await getNotificationPermissionStatus();
     if (currentStatus == NotificationPermissionStatus.granted) {
       await updateToken();
-      
-      // 9. Listen for token refresh
+
+      // 10. Listen for token refresh
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
         _sendTokenToBackend(newToken);
       });
@@ -424,19 +567,37 @@ class FCMService {
   }
 
   static Future<void> _showLocalNotification(RemoteMessage message) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: 'Notifications for staff track app',
-      importance: Importance.max,
-      priority: Priority.high,
+    // Check if this is an urgent notification (check-in reminders, etc.)
+    final bool isUrgent = _isUrgentNotification(message.data);
+    final String channelId = isUrgent ? _highPriorityChannelId : _channelId;
+    final String channelName = isUrgent ? _highPriorityChannelName : _channelName;
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: isUrgent
+          ? 'Urgent alerts requiring immediate attention'
+          : 'General notifications for staff track app',
+      importance: isUrgent ? Importance.max : Importance.high,
+      priority: isUrgent ? Priority.max : Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher', // Use app launcher icon
+      enableLights: true,
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/launcher_icon',
+      category: isUrgent ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.message,
+      fullScreenIntent: isUrgent, // Show full-screen for urgent notifications
+      visibility: NotificationVisibility.public,
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(
+    final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentSound: true,
+        presentBadge: true,
+        interruptionLevel: isUrgent ? InterruptionLevel.timeSensitive : InterruptionLevel.active,
+      ),
     );
 
     await _localNotifications.show(
@@ -445,6 +606,66 @@ class FCMService {
       message.notification?.body ?? 'You have a new notification',
       platformDetails,
       payload: message.data.toString(),
+    );
+  }
+
+  /// Determine if a notification should be treated as urgent
+  static bool _isUrgentNotification(Map<String, dynamic> data) {
+    // Check for urgent notification types
+    final type = data['type']?.toString().toLowerCase() ?? '';
+    final priority = data['priority']?.toString().toLowerCase() ?? '';
+
+    final urgentTypes = [
+      'check_in_reminder',
+      'check_out_reminder',
+      'attendance_alert',
+      'urgent',
+      'urgent_request',
+    ];
+
+    final urgentPriorities = ['high', 'urgent', 'critical'];
+
+    return urgentTypes.contains(type) || urgentPriorities.contains(priority);
+  }
+
+  /// Show a local notification programmatically (for testing or in-app alerts)
+  static Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+    bool isUrgent = false,
+  }) async {
+    final String channelId = isUrgent ? _highPriorityChannelId : _channelId;
+    final String channelName = isUrgent ? _highPriorityChannelName : _channelName;
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: isUrgent
+          ? 'Urgent alerts requiring immediate attention'
+          : 'General notifications for staff track app',
+      importance: isUrgent ? Importance.max : Importance.high,
+      priority: isUrgent ? Priority.max : Priority.high,
+      showWhen: true,
+      icon: '@mipmap/launcher_icon',
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentSound: true,
+        presentBadge: true,
+      ),
+    );
+
+    await _localNotifications.show(
+      id,
+      title,
+      body,
+      platformDetails,
+      payload: data?.toString(),
     );
   }
 
