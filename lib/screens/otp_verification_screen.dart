@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/otp_service.dart';
 import '../services/image_service.dart';
-import '../services/user_profile_service.dart';
 import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 

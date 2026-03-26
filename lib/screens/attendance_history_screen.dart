@@ -639,7 +639,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                     Icon(Icons.schedule, color: Colors.blue, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      '${_formatWorkHours(attendance.workHours!)}',
+                      _formatWorkHours(attendance.workHours!),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,

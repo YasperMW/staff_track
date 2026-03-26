@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import '../../models/models.dart';
 import '../../services/announcements_service.dart';
 import '../../services/holidays_service.dart';
-import '../../services/notifications_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/single_date_picker.dart';

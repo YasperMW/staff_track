@@ -484,7 +484,7 @@ class FCMService {
       // 2. Try to get FCM token
       if (permissionStatus == NotificationPermissionStatus.granted) {
         final token = await _firebaseMessaging.getToken();
-        results['fcmToken'] = token != null ? '${token!.substring(0, 20)}...' : 'null';
+        results['fcmToken'] = token != null ? '${token.substring(0, 20)}...' : 'null';
         results['tokenAvailable'] = token != null;
         
         // 3. Test local notification

@@ -508,7 +508,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required void Function(T?) onChanged,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(

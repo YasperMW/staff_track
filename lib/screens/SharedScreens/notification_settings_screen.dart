@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../services/fcm_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -193,7 +192,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -269,12 +268,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                           children: [
                             Text(
                               'Troubleshooting',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Text('• Ensure app has notification permissions'),
                             Text('• Check battery optimization settings'),
                             Text('• Verify Do Not Disturb is off'),
