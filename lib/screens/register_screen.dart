@@ -6,7 +6,6 @@ import 'dart:io';
 
 import '../controllers/register_controller.dart';
 import '../services/image_service.dart';
-import '../services/user_profile_service.dart';
 import '../services/lookup_service.dart';
 import '../widgets/single_date_picker.dart';
 import '../../theme/app_theme.dart';

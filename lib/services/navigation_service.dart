@@ -1,15 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/SharedScreens/notifications_screen.dart';
-import '../screens/admin/admin_requests_screen.dart';
-import '../screens/admin/announcements_management_screen.dart';
-import '../screens/admin/admin_attendance_screen.dart';
 import '../screens/check_in_out_screen.dart';
-import '../screens/admin/admin_dashboard_screen.dart';
-import '../screens/staff/announcements_screen.dart';
-import '../screens/staff/attendance_screen.dart';
-import '../screens/staff/requests_screen.dart';
-import '../screens/staff/dashboard_screen.dart';
 import '../screens/attendance_history_screen.dart';
 
 class NotificationNavigationService {
