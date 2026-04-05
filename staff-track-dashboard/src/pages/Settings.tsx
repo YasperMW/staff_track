@@ -91,8 +91,7 @@ const Settings: React.FC = () => {
     dateFormat: 'MM/DD/YYYY',
     timeFormat: '12-hour',
     defaultPage: 'dashboard',
-    autoSave: true,
-    compactMode: false
+    autoSave: true
   });
 
   // Password visibility states
@@ -494,22 +493,6 @@ const Settings: React.FC = () => {
                 >
                   {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-text-dark dark:text-text-dark-light">Compact Mode</p>
-                  <p className="text-sm text-text-grey dark:text-text-grey-dark">Reduce spacing</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={system.compactMode}
-                    onChange={(e) => setSystem({...system, compactMode: e.target.checked})}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-blue dark:peer-focus:ring-sky-blue dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-blue"></div>
-                </label>
               </div>
             </div>
           </div>

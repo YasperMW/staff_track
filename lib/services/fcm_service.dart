@@ -352,7 +352,6 @@ class FCMService {
         _highPriorityChannelName,
         description: 'Urgent alerts requiring immediate attention (check-ins, important reminders)',
         importance: Importance.max,
-        priority: Priority.high,
         playSound: true,
         enableVibration: true,
         enableLights: true,

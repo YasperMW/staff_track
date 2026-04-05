@@ -66,7 +66,6 @@ class RegisterService {
     required String spouseContact,
     required String dateOfEmployment,
     required String designationId,
-    required String role,
     required String department,
     required String departmentId,
     required bool isHeadOfDepartment,
@@ -96,7 +95,6 @@ class RegisterService {
         'spouse_contact': spouseContact,
         'date_of_employment': dateOfEmployment,
         'designation_id': designationId,
-        'role': role,
         'department': department,
         'department_id': departmentId,
         'is_head_of_department': isHeadOfDepartment,
@@ -141,27 +139,9 @@ class RegisterService {
     }
   }
 
-  List<String> getRoles() {
-    // Use API call directly - return empty list for now since it's async
-    return [];
-  }
-
   List<String> getDepartments() {
     // Use API call directly - return empty list for now since it's async
     return [];
-  }
-
-  // Future methods for API integration
-  static Future<List<String>> getRolesFromAPI() async {
-    try {
-      final roles = await LookupService.getRoles();
-      return roles.map((role) => role.name).toList();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error fetching roles from API: $e');
-      }
-      return [];
-    }
   }
 
   static Future<List<String>> getDepartmentsFromAPI() async {

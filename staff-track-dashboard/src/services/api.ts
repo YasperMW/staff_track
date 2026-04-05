@@ -149,8 +149,10 @@ const createApiInstance = (): AxiosInstance => {
       console.error('API Error:', error.response?.status, error.response?.data);
       
       // Only redirect to login on 401 errors for protected endpoints
-      // Don't redirect for token verification endpoint itself
-      if (error.response?.status === 401 && !error.config?.url?.includes('/verify-token')) {
+      // Don't redirect for token verification endpoint itself or login endpoint
+      if (error.response?.status === 401 && 
+          !error.config?.url?.includes('/verify-token') && 
+          !error.config?.url?.includes('/auth/login')) {
         // Token expired or invalid
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
@@ -314,6 +316,12 @@ export const attendanceApi = {
     return response.data;
   },
 
+  getRecentCheckIns: async (limit?: number): Promise<any> => {
+    const url = limit ? `/attendance/recent-check-ins?limit=${limit}` : '/attendance/recent-check-ins';
+    const response = await api.get(url);
+    return response.data;
+  },
+
   checkIn: async (locationData: any): Promise<ApiResponse<any>> => {
     const response = await api.post('/attendance/checkin', locationData);
     return response.data;
@@ -356,7 +364,7 @@ export const announcementsApi = {
     return response.data;
   },
 
-  createAnnouncement: async (announcementData: any): Promise<ApiResponse<any>> => {
+  createAnnouncement: async (announcementData: any): Promise<any> => {
     const response = await api.post('/api/announcements', announcementData);
     return response.data;
   },
@@ -391,6 +399,125 @@ export const designationsApi = {
 
   deleteDesignation: async (designationId: string): Promise<ApiResponse<null>> => {
     const response = await api.delete(`/lookup/designations/${designationId}`);
+    return response.data;
+  },
+};
+
+// Notifications API
+export interface BroadcastNotificationRequest {
+  title: string;
+  body: string;
+  notification_type: string;
+  target: 'all' | 'department' | 'role';
+  target_value?: string;
+  data?: Record<string, string>;
+}
+
+export interface NotificationType {
+  value: string;
+  label: string;
+  description: string;
+}
+
+export interface BroadcastTypesResponse {
+  notification_types: NotificationType[];
+  targets: { value: string; label: string }[];
+}
+
+export interface BroadcastResponse {
+  message: string;
+  target_users: number;
+  tokens_targeted: number;
+  push_sent: number;
+  push_failed: number;
+  in_app_created: number;
+}
+
+export const notificationsApi = {
+  getBroadcastTypes: async (): Promise<BroadcastTypesResponse> => {
+    const response = await api.get('/notifications/broadcast/types');
+    return response.data;
+  },
+
+  sendBroadcast: async (notification: BroadcastNotificationRequest): Promise<BroadcastResponse> => {
+    const response = await api.post('/notifications/broadcast', notification);
+    return response.data;
+  },
+
+  testPushNotification: async (title?: string, body?: string): Promise<ApiResponse<any>> => {
+    const params = new URLSearchParams();
+    if (title) params.append('title', title);
+    if (body) params.append('body', body);
+    const response = await api.post(`/notifications/test-push?${params.toString()}`);
+    return response.data;
+  },
+};
+
+// Reports API
+export interface MonthlyReportRequest {
+  year: number;
+  month: number;
+  department_id?: string;
+  user_id?: string;
+}
+
+export interface MonthlyReportData {
+  employee_name: string;
+  employee_number: string;
+  department: string;
+  total_days: number;
+  present_days: number;
+  absent_days: number;
+  late_days: number;
+  early_checkout_days: number;
+  total_hours: number;
+  average_hours: number;
+  attendance_records: Array<{
+    date: string;
+    check_in_time: string;
+    check_out_time?: string;
+    status: string;
+    work_hours: number;
+    shift_type?: string;
+  }>;
+}
+
+export interface MonthlyReportResponse {
+  year: number;
+  month: number;
+  total_employees: number;
+  data: MonthlyReportData[];
+}
+
+export interface DepartmentOption {
+  department_id: string;
+  name: string;
+}
+
+export interface EmployeeOption {
+  user_id: string;
+  name: string;
+  employee_number: string;
+  department: string;
+}
+
+export const reportsApi = {
+  getMonthlyReport: async (request: MonthlyReportRequest, format: 'json' | 'pdf' = 'json'): Promise<MonthlyReportResponse | Blob> => {
+    const params = new URLSearchParams({ format });
+    const response = await api.post(`/reports/monthly-attendance?${params.toString()}`, request, {
+      responseType: format === 'pdf' ? 'blob' : 'json'
+    });
+    return response.data;
+  },
+
+  getDepartments: async (): Promise<DepartmentOption[]> => {
+    const response = await api.get('/reports/departments');
+    return response.data;
+  },
+
+  getEmployees: async (departmentId?: string): Promise<EmployeeOption[]> => {
+    const params = departmentId ? `?department_id=${departmentId}` : '';
+    const response = await api.get(`/reports/employees${params}`);
     return response.data;
   },
 };

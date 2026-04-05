@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { useTheme } from '../contexts/ThemeContext';
 import {
   User,
   Mail,
@@ -10,13 +9,10 @@ import {
   Calendar,
   Briefcase,
   Award,
-  Clock,
   Edit,
   Camera,
   Shield,
   Download,
-  Upload,
-  Settings,
   Activity,
   Users,
   Target,
@@ -53,8 +49,7 @@ interface ProfileData {
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
-  const { success, error, warning, info } = useToast();
-  const { theme } = useTheme();
+  const { info } = useToast();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,9 +64,9 @@ const Profile: React.FC = () => {
       setLoading(true);
       // Mock profile data - replace with actual API call
       const mockProfile: ProfileData = {
-        id: user?.id || '1',
-        firstName: user?.firstName || 'John',
-        lastName: user?.lastName || 'Doe',
+        id: user?.user_id || '1',
+        firstName: user?.first_name || 'John',
+        lastName: user?.surname || 'Doe',
         email: user?.email || 'john.doe@hospital.com',
         phone: '+1 234 567 8900',
         employeeNumber: 'EMP001',
@@ -108,26 +103,12 @@ const Profile: React.FC = () => {
           teamSize: 25
         }
       };
-      
+
       setProfile(mockProfile);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      error('Failed to load profile data');
+    } catch (err) {
+      console.error('Error loading profile:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!profile) return;
-    
-    try {
-      // TODO: Implement actual API call
-      success('Profile updated successfully');
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      error('Failed to update profile');
     }
   };
 

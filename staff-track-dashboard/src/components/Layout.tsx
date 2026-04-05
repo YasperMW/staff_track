@@ -10,6 +10,7 @@ import {
   Calendar,
   FileText,
   Bell,
+  Send,
   Settings,
   LogOut,
   Menu,
@@ -17,6 +18,7 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  BarChart3,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -61,6 +63,11 @@ const Layout: React.FC = () => {
       path: '/attendance',
     },
     {
+      label: 'Reports',
+      icon: BarChart3,
+      path: '/reports',
+    },
+    {
       label: 'Requests',
       icon: FileText,
       path: '/requests',
@@ -69,6 +76,11 @@ const Layout: React.FC = () => {
       label: 'Announcements',
       icon: Bell,
       path: '/announcements',
+    },
+    {
+      label: 'Push Notifications',
+      icon: Send,
+      path: '/notifications',
     },
     {
       label: 'Settings',

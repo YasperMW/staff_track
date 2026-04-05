@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import DataTable from '../components/DataTable';
+import CreateAnnouncementModal from '../components/CreateAnnouncementModal';
 import type { Column, Action } from '../components/DataTable';
 import { announcementsApi } from '../services/api';
 import { 
@@ -43,6 +44,7 @@ const Announcements: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'published' | 'draft' | 'scheduled'>('all');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     published: 0,
@@ -99,26 +101,55 @@ const Announcements: React.FC = () => {
     }
   };
 
-  const handlePublish = (announcement: Announcement) => {
-    success(`"${announcement.title}" published successfully`);
-    loadAnnouncements();
+  const handlePublish = async (announcement: Announcement) => {
+    try {
+      await announcementsApi.updateAnnouncement(announcement.id, { is_active: true });
+      success(`"${announcement.title}" published successfully`);
+      loadAnnouncements();
+    } catch (err: any) {
+      error('Failed to publish announcement');
+    }
   };
 
-  const handleArchive = (announcement: Announcement) => {
-    info(`"${announcement.title}" archived`);
-    loadAnnouncements();
+  const handleArchive = async (announcement: Announcement) => {
+    try {
+      await announcementsApi.updateAnnouncement(announcement.id, { is_active: false });
+      info(`"${announcement.title}" archived`);
+      loadAnnouncements();
+    } catch (err: any) {
+      error('Failed to archive announcement');
+    }
   };
 
   const handleEdit = (announcement: Announcement) => {
     info(`Editing "${announcement.title}"`);
+    // TODO: Implement edit modal
   };
 
   const handleView = (announcement: Announcement) => {
     info(`Viewing "${announcement.title}"`);
+    // TODO: Implement view modal
   };
 
-  const handleSendNotification = (announcement: Announcement) => {
-    success(`Notification sent for "${announcement.title}"`);
+  const handleSendNotification = async (announcement: Announcement) => {
+    try {
+      // TODO: Implement send notification endpoint
+      success(`Notification sent for "${announcement.title}"`);
+    } catch (err: any) {
+      error('Failed to send notification');
+    }
+  };
+
+  const handleDelete = async (announcement: Announcement) => {
+    if (confirm(`Are you sure you want to delete "${announcement.title}"?`)) {
+      try {
+        await announcementsApi.deleteAnnouncement(announcement.id);
+        success(`"${announcement.title}" deleted successfully`);
+        loadAnnouncements();
+      } catch (err: any) {
+        error('Failed to delete announcement');
+      }
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -315,6 +346,12 @@ const Announcements: React.FC = () => {
           icon: <Trash2 className="w-4 h-4" />,
           onClick: handleArchive,
           variant: 'danger'
+        },
+        {
+          label: 'Delete',
+          icon: <Trash2 className="w-4 h-4" />,
+          onClick: handleDelete,
+          variant: 'danger'
         }
       );
     }
@@ -349,7 +386,10 @@ const Announcements: React.FC = () => {
               <option value="scheduled">Scheduled</option>
             </select>
           </div>
-          <button className="btn-primary flex items-center space-x-2">
+          <button 
+            className="btn-primary flex items-center space-x-2"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             <Plus className="w-4 h-4" />
             <span>New Announcement</span>
           </button>
@@ -450,6 +490,16 @@ const Announcements: React.FC = () => {
         actions={getActions}
         loading={loading}
         emptyMessage="No announcements found matching the selected filter."
+      />
+
+      {/* Create Announcement Modal */}
+      <CreateAnnouncementModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadAnnouncements();
+        }}
       />
     </div>
   );
