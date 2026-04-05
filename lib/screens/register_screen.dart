@@ -28,7 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _showScrollHint = false;
 
   // API data
-  List<String> _roles = [];
   List<Department> _departments = [];
   List<Grade> _grades = [];
 
@@ -44,15 +43,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _loadLookupData() async {
     try {
-      final roles = await LookupService.getRoles();
       final departments = await LookupService.getDepartments();
       final grades = await LookupService.getGrades();
-      
+
       setState(() {
-        _roles = roles.map((role) => role.name).toList();
         _departments = departments;
         _grades = grades;
-        _selectedRole = _roles.isNotEmpty ? _roles.first : null;
         _selectedDepartment = _departments.isNotEmpty ? _departments.first.name : null;
         _selectedDepartmentId = _departments.isNotEmpty ? _departments.first.departmentId : null;
         if (kDebugMode) {
@@ -120,7 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  String? _selectedRole;
   String? _selectedDepartment;
   String? _selectedDepartmentId;
   String? _selectedGrade;
@@ -224,7 +219,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..updateSpouseContact(_spouseContactController.text)
       ..updateDateOfEmployment(_dateOfEmploymentController.text)
       ..updateDesignationId(_designationController.text)
-      ..updateRole(_selectedRole ?? '')
       ..updateDepartment(_selectedDepartment ?? '')
       ..updateDepartmentId(_selectedDepartmentId ?? '')
       ..updateIsHeadOfDepartment(_isHeadOfDepartment)
@@ -716,21 +710,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             label: 'Designation / Job Title',
             icon: Icons.work_history_outlined,
             items: _designationNames.isNotEmpty ? _designationNames : ['Select department first'],
-            value: _designationNames.isNotEmpty && _designationNames.contains(_designationController.text) 
-                ? _designationController.text 
+            value: _designationNames.isNotEmpty && _designationNames.contains(_designationController.text)
+                ? _designationController.text
                 : (_designationNames.isNotEmpty ? _designationNames.first : null),
             onChanged: (val) {
               _designationController.text = val ?? '';
             },
-            theme: theme,
-          ),
-          const SizedBox(height: 16),
-          _buildDropdown(
-            label: 'Role',
-            icon: Icons.account_tree_outlined,
-            items: _isLoadingLookupData ? ['Loading...'] : _roles,
-            value: _isLoadingLookupData ? null : _selectedRole,
-            onChanged: (val) => setState(() => _selectedRole = val),
             theme: theme,
           ),
           const SizedBox(height: 16),

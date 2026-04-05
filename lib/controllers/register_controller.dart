@@ -25,7 +25,6 @@ class RegisterController extends ChangeNotifier {
   String spouseContact = '';
   String dateOfEmployment = '';
   String designationId = '';
-  String role = '';
   String department = '';
   String departmentId = '';
   bool isHeadOfDepartment = false;
@@ -106,7 +105,6 @@ class RegisterController extends ChangeNotifier {
   void updateSpouseContact(String value) => spouseContact = value;
   void updateDateOfEmployment(String value) => dateOfEmployment = value;
   void updateDesignationId(String value) => designationId = value;
-  void updateRole(String value) => role = value;
   void updateDepartment(String value) => department = value;
   void updateDepartmentId(String value) => departmentId = value;
   void updateIsHeadOfDepartment(bool value) => isHeadOfDepartment = value;
@@ -193,11 +191,6 @@ class RegisterController extends ChangeNotifier {
       return RegisterResponse(success: false, message: designationError);
     }
 
-    final roleError = validateDropdown(role, 'Role');
-    if (roleError != null) {
-      return RegisterResponse(success: false, message: roleError);
-    }
-
     final departmentError = validateDropdown(department, 'Department');
     if (departmentError != null) {
       return RegisterResponse(success: false, message: departmentError);
@@ -238,7 +231,6 @@ class RegisterController extends ChangeNotifier {
       spouseContact: spouseContact,
       dateOfEmployment: dateOfEmployment,
       designationId: designationId,
-      role: role,
       department: department,
       departmentId: departmentId,
       isHeadOfDepartment: isHeadOfDepartment,
@@ -291,7 +283,6 @@ class RegisterController extends ChangeNotifier {
   }
 
   // Getters for dropdown data
-  List<String> getRoles() => _registerService.getRoles();
   List<String> getDepartments() => _registerService.getDepartments();
   List<String> getGenders() => ['male', 'female', 'other'];
   List<String> getMaritalStatuses() => ['single', 'married', 'divorced', 'widowed'];
@@ -317,7 +308,6 @@ class RegisterController extends ChangeNotifier {
     spouseContact = '';
     dateOfEmployment = '';
     designationId = '';
-    role = '';
     department = '';
     isHeadOfDepartment = false;
     password = '';

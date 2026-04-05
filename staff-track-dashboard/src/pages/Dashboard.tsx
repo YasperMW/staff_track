@@ -9,30 +9,25 @@ import {
   TrendingUp,
   Bell,
   RefreshCw,
-  MapPin,
   User,
   Calendar,
   Activity,
   Target,
-  Zap,
   Eye,
   BarChart3,
-  PieChartIcon,
   Filter,
-  Search,
   Download,
-  Settings,
   ChevronRight,
   ArrowUp,
   ArrowDown,
   MoreVertical,
+  Zap,
 } from 'lucide-react';
 import {
   BarChart,
   LineChart,
   PieChart,
   ProgressRing,
-  StatsCard,
   ActivityHeatmap
 } from '../components/Charts';
 
@@ -55,11 +50,17 @@ interface RecentAnnouncement {
 }
 
 interface TeamAttendanceMember {
+  attendance_log_id: string;
   user_id: string;
   name: string;
+  employee_number: string;
+  check_in_time: string;
+  check_out_time?: string;
+  location?: string;
+  work_hours?: number;
+  shift_type?: string;
   status: string;
-  check_in_time?: string;
-  department: string | { name: string };
+  department: string;
 }
 
 const Dashboard: React.FC = () => {
@@ -76,10 +77,8 @@ const Dashboard: React.FC = () => {
   });
   const [recentAnnouncements, setRecentAnnouncements] = useState<RecentAnnouncement[]>([]);
   const [teamAttendance, setTeamAttendance] = useState<TeamAttendanceMember[]>([]);
-  const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today');
-  const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [animatedStats, setAnimatedStats] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -109,18 +108,18 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [attendanceSummary, requestsSummary, announcements, teamList] = await Promise.all([
+      const [attendanceSummary, requestsSummary, announcements, recentCheckIns] = await Promise.all([
         attendanceApi.getTeamTodaySummary(),
         requestsApi.getRequestsSummary(),
         announcementsApi.getAnnouncements(3),
-        attendanceApi.getTeamTodayList(),
+        attendanceApi.getRecentCheckIns(10), // Get 10 recent check-ins for dashboard
       ]);
 
       console.log('Dashboard data:', {
         attendanceSummary,
         requestsSummary,
         announcements,
-        teamList
+        recentCheckIns
       });
 
       // Process attendance summary
@@ -150,18 +149,9 @@ const Dashboard: React.FC = () => {
       const announcementsData = Array.isArray(announcements) ? announcements : (announcements.items || []);
       setRecentAnnouncements(announcementsData.slice(0, 3));
 
-      // Process team attendance - handle different response formats
-      const teamData = Array.isArray(teamList) ? teamList : (teamList.staff || teamList.items || []);
-      setTeamAttendance(teamData);
-
-      // Get today's attendance for current user
-      try {
-        const userAttendance = await attendanceApi.getTodayAttendance();
-        setTodayAttendance(userAttendance);
-      } catch (error) {
-        // User might not have attendance record yet
-        setTodayAttendance(null);
-      }
+      // Process recent check-ins - handle different response formats
+      const checkInsData = Array.isArray(recentCheckIns) ? recentCheckIns : (recentCheckIns.recent_check_ins || []);
+      setTeamAttendance(checkInsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -188,104 +178,6 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  const getAttendanceStatus = () => {
-    if (!todayAttendance || todayAttendance.message === 'No attendance record for today') return 'Ready to check in';
-    if (todayAttendance.check_in_time && !todayAttendance.check_out_time) return 'Currently working';
-    if (todayAttendance.check_in_time && todayAttendance.check_out_time) return 'Completed for today';
-    return 'Not checked in today';
-  };
-
-  const getButtonText = () => {
-    if (!todayAttendance || todayAttendance.message === 'No attendance record for today') return 'Clock In';
-    if (todayAttendance.check_in_time && !todayAttendance.check_out_time) return 'Clock Out';
-    return 'View Details';
-  };
-
-  const handleClockAction = async () => {
-    try {
-      if (!todayAttendance || todayAttendance.message === 'No attendance record for today') {
-        // Clock in - get user location
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const locationData = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                device_id: 'web-dashboard',
-                shift_type: 'Day Shift'
-              };
-              
-              const result = await attendanceApi.checkIn(locationData);
-              console.log('Check-in successful:', result);
-              await loadDashboardData(); // Refresh data
-            },
-            (error) => {
-              console.error('Geolocation error:', error);
-              // Fallback without location
-              handleClockInWithoutLocation();
-            }
-          );
-        } else {
-          handleClockInWithoutLocation();
-        }
-      } else if (todayAttendance.check_in_time && !todayAttendance.check_out_time) {
-        // Clock out
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const locationData = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                device_id: 'web-dashboard'
-              };
-              
-              const result = await attendanceApi.checkOut(locationData);
-              console.log('Check-out successful:', result);
-              await loadDashboardData(); // Refresh data
-            },
-            (error) => {
-              console.error('Geolocation error:', error);
-              handleClockOutWithoutLocation();
-            }
-          );
-        } else {
-          handleClockOutWithoutLocation();
-        }
-      } else {
-        // View details - navigate to attendance page
-        window.location.href = '/attendance';
-      }
-    } catch (error: any) {
-      console.error('Clock action error:', error);
-      alert(error?.detail || 'Failed to perform clock action');
-    }
-  };
-
-  const handleClockInWithoutLocation = async () => {
-    const locationData = {
-      location: 'Office - Main Building',
-      device_id: 'web-dashboard',
-      shift_type: 'Day Shift'
-    };
-    
-    const result = await attendanceApi.checkIn(locationData);
-    console.log('Check-in successful:', result);
-    await loadDashboardData();
-  };
-
-  const handleClockOutWithoutLocation = async () => {
-    const locationData = {
-      location: 'Office - Main Building',
-      device_id: 'web-dashboard'
-    };
-    
-    const result = await attendanceApi.checkOut(locationData);
-    console.log('Check-out successful:', result);
-    await loadDashboardData();
-  };
-
   const handleNavigateToAnnouncements = () => {
     window.location.href = '/announcements';
   };
@@ -301,11 +193,14 @@ const Dashboard: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
+      case 'active':
         return 'status-present';
       case 'absent':
         return 'status-absent';
       case 'late':
         return 'status-late';
+      case 'checked out':
+        return 'bg-gray-100 text-gray-600';
       default:
         return 'bg-gray-100 text-gray-600';
     }
@@ -414,55 +309,50 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Clock In Card - Mobile Optimized */}
+      {/* Today's Summary Card - Management View */}
       <div className="relative bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl md:rounded-3xl p-4 md:p-8 text-white shadow-2xl overflow-hidden group">
         <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-white opacity-10 rounded-full -mr-16 md:-mr-20 -mt-16 md:-mt-20 group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-white opacity-10 rounded-full -ml-12 md:-ml-16 -mb-12 md:-mb-16 group-hover:scale-110 transition-transform duration-500" />
-        
+
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
             <div className="flex items-center space-x-3 mb-3 md:mb-0">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+                <Calendar className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <div>
-                <p className="text-xs md:text-sm opacity-90">Current Location</p>
-                <p className="font-semibold text-sm md:text-base">Office - Main Building</p>
+                <p className="text-xs md:text-sm opacity-90">Today's Date</p>
+                <p className="font-semibold text-sm md:text-base">{formatDate(currentTime)}</p>
               </div>
             </div>
             <div className="px-2 py-1 md:px-3 md:py-1 bg-white bg-opacity-20 rounded-full text-xs md:text-xs font-semibold backdrop-blur-sm">
-              {getAttendanceStatus()}
+              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
-          
-          <div className="mb-4 md:mb-8">
-            <p className="text-3xl md:text-6xl font-bold mb-2 font-mono tracking-wider">{formatTime(currentTime)}</p>
-            <p className="text-sm md:text-lg opacity-90">{formatDate(currentTime)}</p>
+
+          <div className="mb-4 md:mb-6">
+            <p className="text-xl md:text-2xl font-bold mb-2">Staff Attendance Overview</p>
+            <p className="text-sm md:text-base opacity-90">Real-time attendance statistics for today</p>
           </div>
-          
-          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
-            <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold">{stats.presentToday}</p>
+
+          <div className="grid grid-cols-4 gap-2 md:gap-4">
+            <div className="text-center bg-white bg-opacity-10 rounded-xl p-3">
+              <p className="text-xl md:text-3xl font-bold">{stats.totalStaff}</p>
+              <p className="text-xs md:text-xs opacity-80">Total Staff</p>
+            </div>
+            <div className="text-center bg-white bg-opacity-10 rounded-xl p-3">
+              <p className="text-xl md:text-3xl font-bold text-green-300">{stats.presentToday}</p>
               <p className="text-xs md:text-xs opacity-80">Present</p>
             </div>
-            <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold">{stats.lateToday}</p>
+            <div className="text-center bg-white bg-opacity-10 rounded-xl p-3">
+              <p className="text-xl md:text-3xl font-bold text-yellow-300">{stats.lateToday}</p>
               <p className="text-xs md:text-xs opacity-80">Late</p>
             </div>
-            <div className="text-center">
-              <p className="text-lg md:text-2xl font-bold">{stats.absentToday}</p>
+            <div className="text-center bg-white bg-opacity-10 rounded-xl p-3">
+              <p className="text-xl md:text-3xl font-bold text-red-300">{stats.absentToday}</p>
               <p className="text-xs md:text-xs opacity-80">Absent</p>
             </div>
           </div>
-          
-          <button 
-            onClick={handleClockAction}
-            disabled={isLoading}
-            className="w-full bg-white text-purple-600 px-4 py-3 md:px-6 md:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 text-sm md:text-base"
-          >
-            <Zap className="w-4 h-4 md:w-5 md:h-5" />
-            <span>{getButtonText()}</span>
-          </button>
         </div>
       </div>
 
@@ -904,7 +794,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Attendance</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Real-time team status</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Recent check-ins across all departments</p>
             </div>
             <div className="flex items-center space-x-2">
               <button 
@@ -925,14 +815,14 @@ const Dashboard: React.FC = () => {
               <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-6 h-6 text-gray-400" />
               </div>
-              <p className="text-gray-500 dark:text-gray-400">No team attendance data available</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Team members will appear here</p>
+              <p className="text-gray-500 dark:text-gray-400">No recent check-ins available</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Recent check-ins will appear here</p>
             </div>
           ) : (
             <div className="space-y-3">
               {teamAttendance.slice(0, 5).map((member) => (
                 <div 
-                  key={member.user_id} 
+                  key={member.attendance_log_id} 
                   className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer group"
                   onClick={handleNavigateToAttendance}
                 >
@@ -942,9 +832,11 @@ const Dashboard: React.FC = () => {
                         {member.name ? member.name.split(' ').map(n => n[0]).join('') : '??'}
                       </div>
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
+                        member.status.toLowerCase() === 'active' ? 'bg-green-500' :
                         member.status.toLowerCase() === 'present' ? 'bg-green-500' :
                         member.status.toLowerCase() === 'late' ? 'bg-amber-500' :
                         member.status.toLowerCase() === 'absent' ? 'bg-red-500' :
+                        member.status.toLowerCase() === 'checked out' ? 'bg-gray-400' :
                         'bg-gray-400'
                       }`} />
                     </div>
@@ -953,7 +845,7 @@ const Dashboard: React.FC = () => {
                         {member.name}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {typeof member.department === 'object' ? member.department.name : member.department}
+                        {member.department}
                       </p>
                     </div>
                   </div>
@@ -964,7 +856,15 @@ const Dashboard: React.FC = () => {
                     {member.check_in_time && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <Clock className="w-3 h-3 inline mr-1" />
-                        {member.check_in_time}
+                        {new Date(member.check_in_time).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    )}
+                    {member.work_hours && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {member.work_hours.toFixed(1)}h
                       </p>
                     )}
                   </div>

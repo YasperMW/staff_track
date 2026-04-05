@@ -62,17 +62,6 @@ const Attendance: React.FC = () => {
       
       // Process the data
       const attendanceData = [
-        ...(summaryResponse ? [{
-          id: '1',
-          user_id: '1',
-          user_name: 'Today Summary',
-          employee_number: 'SUM001',
-          department: 'System',
-          check_in_time: new Date().toISOString(),
-          status: 'present',
-          work_hours: summaryResponse?.total_work_hours || 0,
-          date: new Date().toISOString().split('T')[0]
-        }] : []),
         ...(teamListResponse?.staff?.map((staff: any) => ({
           id: staff.user_id,
           user_id: staff.user_id,

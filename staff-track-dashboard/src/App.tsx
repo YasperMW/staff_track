@@ -13,6 +13,8 @@ import Attendance from './pages/Attendance';
 import Requests from './pages/Requests';
 import Announcements from './pages/Announcements';
 import Settings from './pages/Settings';
+import PushNotifications from './pages/PushNotifications';
+import Reports from './pages/Reports';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Placeholder components for other routes
@@ -78,6 +80,16 @@ function App() {
                 <Route index element={<Attendance />} />
               </Route>
               <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Reports />} />
+              </Route>
+              <Route
                 path="/requests"
                 element={
                   <ProtectedRoute>
@@ -96,6 +108,16 @@ function App() {
                 }
               >
                 <Route index element={<Announcements />} />
+              </Route>
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<PushNotifications />} />
               </Route>
               <Route
                 path="/settings"
