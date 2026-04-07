@@ -477,7 +477,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _EnhancedLeaveCard(
+          _enhancedLeaveCard(
             usedDays: annualBalance.usedDays,
             totalDays: annualBalance.allocatedDays,
             remainingDays: annualBalance.remainingDays,
@@ -567,7 +567,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           Row(
             children: [
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: myApprovedCount,
                   label: 'My Approved',
                   icon: Icons.check_circle,
@@ -576,7 +576,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: myPendingCount,
                   label: 'My Pending',
                   icon: Icons.pending,
@@ -585,7 +585,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: teamPendingCount,
                   label: 'Team Pending',
                   icon: Icons.people,
@@ -599,7 +599,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     );
   }
 
-  Widget _EnhancedLeaveCard({
+  Widget _enhancedLeaveCard({
     required int usedDays,
     required int totalDays,
     required int remainingDays,
@@ -679,7 +679,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     );
   }
 
-  Widget _RequestStatusCard({
+  Widget _requestStatusCard({
     required int count,
     required String label,
     required IconData icon,
@@ -735,7 +735,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        if ((_myRequests.length) == 0)
+        if (_myRequests.isEmpty)
           Center(
             child: Column(
               children: [
@@ -942,7 +942,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        if ((_teamRequests.length) == 0)
+        if (_teamRequests.isEmpty)
           Center(
             child: Column(
               children: [
