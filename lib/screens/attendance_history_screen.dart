@@ -261,21 +261,21 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _EnhancedHistorySummaryItem(
+              _enhancedHistorySummaryItem(
                 value: '$onTimeDays',
                 label: 'On Time',
                 percentage: totalWorkingDays > 0 ? '${(onTimeDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.check_circle_outline,
                 color: Colors.white,
               ),
-              _EnhancedHistorySummaryItem(
+              _enhancedHistorySummaryItem(
                 value: '$lateDays',
                 label: 'Late',
                 percentage: totalWorkingDays > 0 ? '${(lateDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.access_time,
                 color: Colors.white,
               ),
-              _EnhancedHistorySummaryItem(
+              _enhancedHistorySummaryItem(
                 value: '$presentDays',
                 label: 'Present',
                 percentage: totalWorkingDays > 0 ? '${(presentDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
@@ -338,7 +338,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 
-  Widget _EnhancedHistorySummaryItem({
+  Widget _enhancedHistorySummaryItem({
     required String value,
     required String label,
     required String percentage,

@@ -563,7 +563,7 @@ class _TileDatePickerState extends State<TileDatePicker> {
     final isCurrentMonth = date.month == _currentMonth.month;
     final isToday = date.isAtSameMomentAs(DateTime.now());
     final isHoliday = _isHoliday(date);
-    final holiday = _getHolidayForDate(date);
+
 
     Color backgroundColor;
     Color textColor;

@@ -169,15 +169,29 @@ class AuthProvider extends ChangeNotifier {
   Future<void> updateProfilePhotoLocally(String photoUrl) async {
     if (_user != null) {
       _user = _user!.copyWith(profileImage: photoUrl);
-      
+
       // Also update in storage
       final userMap = await AuthStorage.getUser();
       if (userMap != null) {
         userMap['profile_photo_url'] = photoUrl;
         await AuthStorage.saveUser(userMap);
       }
-      
+
       notifyListeners();
     }
+  }
+
+  /// Save token and user directly (used after Google OAuth).
+  Future<void> saveToken(String token, Map<String, dynamic> user) async {
+    _token = token;
+    _user = appUserFromMap(user);
+    await AuthStorage.saveToken(token);
+    await AuthStorage.saveUser(user);
+
+    // Reset FCM cache and register for new user
+    FCMService.clearTokenCache();
+    FCMService.updateToken();
+
+    notifyListeners();
   }
 }

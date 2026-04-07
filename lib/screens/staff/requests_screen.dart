@@ -332,7 +332,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _EnhancedLeaveCard(
+          _enhancedLeaveCard(
             usedDays: annualBalance.usedDays,
             totalDays: annualBalance.allocatedDays,
             remainingDays: annualBalance.remainingDays,
@@ -413,7 +413,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
           Row(
             children: [
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: approvedCount,
                   label: 'Approved',
                   icon: Icons.check_circle,
@@ -422,7 +422,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: pendingCount,
                   label: 'Pending',
                   icon: Icons.pending,
@@ -431,7 +431,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _RequestStatusCard(
+                child: _requestStatusCard(
                   count: rejectedCount,
                   label: 'Rejected',
                   icon: Icons.cancel,
@@ -445,7 +445,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
     );
   }
 
-  Widget _RequestStatusCard({
+  Widget _requestStatusCard({
     required int count,
     required String label,
     required IconData icon,
@@ -480,7 +480,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
     );
   }
 
-  Widget _EnhancedLeaveCard({
+  Widget _enhancedLeaveCard({
     required int usedDays,
     required int totalDays,
     required int remainingDays,

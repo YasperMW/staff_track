@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
 import '../services/otp_service.dart';
+import '../services/google_auth_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'google_signup_screen.dart';
 import '../widgets/app_snackbar.dart';
 import '../controllers/register_controller.dart';
 import 'forgot_password_screen.dart';
@@ -21,8 +23,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _googleAuthService = GoogleAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -67,6 +71,69 @@ class _LoginScreenState extends State<LoginScreen> {
             result.message ?? 'Invalid credentials.',
           );
         }
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      // Sign in with Google
+      final account = await _googleAuthService.signInWithGoogle();
+      if (account == null) {
+        if (mounted) {
+          AppSnackBar.showError(context, 'Google sign-in was cancelled');
+        }
+        return;
+      }
+
+      // Get ID token
+      final idToken = await _googleAuthService.getIdToken();
+      if (idToken == null) {
+        if (mounted) {
+          AppSnackBar.showError(context, 'Failed to get Google authentication');
+        }
+        return;
+      }
+
+      // Check if user exists in backend
+      final response = await _googleAuthService.checkGoogleUser(idToken);
+
+      if (!mounted) return;
+
+      if (response.success) {
+        if (response.exists) {
+          // User exists - log them in
+          if (response.token != null) {
+            final authProvider = context.read<AuthProvider>();
+            await authProvider.saveToken(response.token!, response.user ?? {});
+
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          }
+        } else {
+          // New user - navigate to Google signup screen
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => GoogleSignupScreen(
+                googleData: response.googleData ?? {},
+                idToken: idToken,
+              ),
+            ),
+          );
+        }
+      } else {
+        AppSnackBar.showError(context, response.message ?? 'Google sign-in failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.showError(context, 'An error occurred during Google sign-in');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
       }
     }
   }
@@ -368,6 +435,73 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 letterSpacing: 1,
                                               ),
                                             ),
+                                    ),
+                                    SizedBox(height: isShort ? 12 : 20),
+                                    // Google Sign In Button
+                                    OutlinedButton(
+                                      onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        side: BorderSide(
+                                          color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                      child: _isGoogleLoading
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Image.asset(
+                                                  'assets/logo/google_logo.png',
+                                                  height: 20,
+                                                  width: 20,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return const Icon(Icons.login, size: 20);
+                                                  },
+                                                ),
+                                                const SizedBox(width: 12),
+                                                const Text(
+                                                  'Sign in with Google',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                    SizedBox(height: isShort ? 8 : 16),
+                                    // Divider with "or"
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Divider(
+                                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                                          child: Text(
+                                            'or',
+                                            style: TextStyle(
+                                              color: theme.colorScheme.outline,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Divider(
+                                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     SizedBox(height: isShort ? 4 : 24),
                                     Row(

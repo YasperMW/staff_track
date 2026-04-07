@@ -251,7 +251,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _EnhancedTeamStatCard(
+              _enhancedTeamStatCard(
                 context: context,
                 label: 'Present',
                 value: '$present',
@@ -260,7 +260,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: Colors.green,
               ),
               const SizedBox(width: 12),
-              _EnhancedTeamStatCard(
+              _enhancedTeamStatCard(
                 context: context,
                 label: 'Absent',
                 value: '$absent',
@@ -269,7 +269,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
                 color: AppTheme.paleRed,
               ),
               const SizedBox(width: 12),
-              _EnhancedTeamStatCard(
+              _enhancedTeamStatCard(
                 context: context,
                 label: 'Late',
                 value: '$late',
@@ -313,7 +313,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  Widget _EnhancedTeamStatCard({
+  Widget _enhancedTeamStatCard({
     required BuildContext context,
     required String label,
     required String value,
