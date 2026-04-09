@@ -138,6 +138,72 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Widget _buildGoogleSignInButton(ThemeData theme, bool isShort) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF4285F4), // Google Blue
+            Color(0xFFDB4437), // Google Red
+            Color(0xFFF4B400), // Google Yellow
+            Color(0xFF0F9D58), // Google Green
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4285F4).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isGoogleLoading ? null : _handleGoogleSignIn,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: _isGoogleLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)),
+                    ),
+                  )
+                : const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Google "G" Logo with brand colors
+                      _GoogleLogoWidget(size: 24),
+                      SizedBox(width: 12),
+                      Text(
+                        'Sign in with Google',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF3C4043),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -438,45 +504,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     SizedBox(height: isShort ? 12 : 20),
                                     // Google Sign In Button
-                                    OutlinedButton(
-                                      onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        side: BorderSide(
-                                          color: theme.colorScheme.outline.withValues(alpha: 0.5),
-                                        ),
-                                      ),
-                                      child: _isGoogleLoading
-                                          ? const SizedBox(
-                                              height: 20,
-                                              width: 20,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            )
-                                          : Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Image.asset(
-                                                  'assets/logo/google_logo.png',
-                                                  height: 20,
-                                                  width: 20,
-                                                  errorBuilder: (context, error, stackTrace) {
-                                                    return const Icon(Icons.login, size: 20);
-                                                  },
-                                                ),
-                                                const SizedBox(width: 12),
-                                                const Text(
-                                                  'Sign in with Google',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                    ),
+                                    _buildGoogleSignInButton(theme, isShort),
                                     SizedBox(height: isShort ? 8 : 16),
                                     // Divider with "or"
                                     Row(
@@ -570,4 +598,114 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+/// Google logo widget with brand colors
+class _GoogleLogoWidget extends StatelessWidget {
+  final double size;
+
+  const _GoogleLogoWidget({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: _GoogleLogoPainter(),
+      ),
+    );
+  }
+}
+
+/// Custom painter for Google "G" logo with brand colors
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 2;
+    final strokeWidth = 2.5;
+
+    // Google brand colors
+    const googleBlue = Color(0xFF4285F4);
+    const googleRed = Color(0xFFDB4437);
+    const googleYellow = Color(0xFFF4B400);
+    const googleGreen = Color(0xFF0F9D58);
+
+    // Draw the "G" logo with Google brand colors
+    // Blue arc (top-right to right)
+    final bluePaint = Paint()
+      ..color = googleBlue
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCenter(center: center, width: radius * 2, height: radius * 2),
+      -0.7,
+      1.3,
+      false,
+      bluePaint,
+    );
+
+    // Red arc (top-left)
+    final redPaint = Paint()
+      ..color = googleRed
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCenter(center: center, width: radius * 2, height: radius * 2),
+      2.4,
+      0.8,
+      false,
+      redPaint,
+    );
+
+    // Yellow arc (left)
+    final yellowPaint = Paint()
+      ..color = googleYellow
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCenter(center: center, width: radius * 2, height: radius * 2),
+      3.2,
+      1.0,
+      false,
+      yellowPaint,
+    );
+
+    // Green arc (bottom)
+    final greenPaint = Paint()
+      ..color = googleGreen
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCenter(center: center, width: radius * 2, height: radius * 2),
+      4.2,
+      1.3,
+      false,
+      greenPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

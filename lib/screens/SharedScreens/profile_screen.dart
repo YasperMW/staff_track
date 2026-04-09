@@ -5,11 +5,10 @@ import '../../theme/app_theme.dart';
 import '../../theme/theme_provider.dart';
 import '../../controllers/auth_provider.dart';
 import '../../widgets/simple_header.dart';
+import '../../widgets/avatar_widget.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
-import '../../services/image_service.dart';
-import '../../config/app_config.dart';
 import 'profile_details_screen.dart';
 import 'edit_profile_screen.dart';
 import 'notification_settings_screen.dart';
@@ -120,9 +119,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileCard(BuildContext context, user) {
-    final authProvider = context.read<AuthProvider>();
-    final ImageService imageService = ImageService();
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -133,107 +129,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          Stack(
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppTheme.skyBlue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppTheme.skyBlue,
-                    width: 2,
-                  ),
-                ),
-                child: user.profileImage.isNotEmpty
-                    ? ClipOval(
-                        child: Image.network(
-                          user.profileImage.startsWith('http') && !user.profileImage.contains('127.0.0.1') && !user.profileImage.contains('localhost')
-                              ? user.profileImage 
-                              : '${AppConfig.apiBaseUrl}/uploads/${user.profileImage}',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: AppTheme.skyBlue,
-                                strokeWidth: 2,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.person_outline,
-                              color: AppTheme.skyBlue,
-                              size: 60,
-                            );
-                          },
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person_outline,
-                        color: AppTheme.skyBlue,
-                        size: 60,
-                      ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: () async {
-                    // Show image source selection dialog
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return SafeArea(
-                          child: Wrap(
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.camera_alt),
-                                title: const Text('Take Photo'),
-                                onTap: () async {
-                                  Navigator.of(context).pop();
-                                  final imagePath = await imageService.takePhoto();
-                                  if (imagePath != null) {
-                                    _uploadAndUpdatePhoto(imagePath);
-                                  }
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.photo_library),
-                                title: const Text('Choose from Gallery'),
-                                onTap: () async {
-                                  Navigator.of(context).pop();
-                                  final imagePath = await imageService.pickImage();
-                                  if (imagePath != null) {
-                                    _uploadAndUpdatePhoto(imagePath);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.skyBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          AvatarWidget(
+            imageUrl: user.profileImage,
+            userName: user.name,
+            size: 120,
+            onUploadComplete: () {
+              // Reload profile data after successful upload
+              _loadUserProfile();
+            },
           ),
           const SizedBox(height: 20),
           Text(
@@ -284,80 +187,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _uploadAndUpdatePhoto(String imagePath) async {
-    final authProvider = context.read<AuthProvider>();
-    final token = authProvider.token;
-    if (token == null) return;
-
-    final ImageService imageService = ImageService();
-
-    if (!mounted) return;
-
-    // Show progress dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: AppTheme.skyBlue),
-              const SizedBox(height: 20),
-              Text(
-                'Updating profile photo...',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'This may take a moment',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // 1. Upload the image to get a URL
-      final uploadedUrl = await imageService.uploadImage(imagePath);
-      if (uploadedUrl != null) {
-        // 2. Update the user profile in the backend
-        final success = await UserProfileService.updateProfilePhoto(token, uploadedUrl);
-        if (success) {
-          // 3. Update the local state in AuthProvider
-          await authProvider.updateProfilePhotoLocally(uploadedUrl);
-          
-          if (mounted) {
-            Navigator.of(context).pop(); // Close progress dialog
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Profile photo updated successfully!')),
-            );
-          }
-
-          // 4. Reload the profile data to ensure everything is in sync
-          await _loadUserProfile();
-        } else {
-          throw Exception('Failed to update profile photo in backend');
-        }
-      } else {
-        throw Exception('Failed to upload image');
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close progress dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
-      }
-    }
   }
 
   Widget _buildStatsRow(BuildContext context) {
