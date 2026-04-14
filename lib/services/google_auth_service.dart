@@ -23,7 +23,12 @@ class GoogleAuthResponse {
 }
 
 class GoogleAuthService {
+  // Web client ID for backend token verification
+  static const String _serverClientId =
+      '152077619782-2kkf1h0rakope2d5l4pmnhbolkjv1mom.apps.googleusercontent.com';
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: _serverClientId,
     scopes: [
       'email',
       'profile',

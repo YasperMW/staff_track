@@ -413,6 +413,19 @@ export interface BroadcastNotificationRequest {
   data?: Record<string, string>;
 }
 
+export interface AdvancedBroadcastNotificationRequest {
+  title: string;
+  body: string;
+  notification_type: string;
+  data?: Record<string, string>;
+  target_audience?: string;
+  specific_users?: string[];
+  department_filter?: string;
+  role_filter?: string;
+  user_type_filter?: string[];
+  status_filter?: string;
+}
+
 export interface NotificationType {
   value: string;
   label: string;
@@ -425,12 +438,70 @@ export interface BroadcastTypesResponse {
 }
 
 export interface BroadcastResponse {
+  status: string;
   message: string;
-  target_users: number;
-  tokens_targeted: number;
-  push_sent: number;
-  push_failed: number;
+  target?: string;
+  target_value?: string;
+  recipients: {
+    total: number;
+    by_role: Record<string, number>;
+  };
+  fcm_sent: number;
+  fcm_failed: number;
   in_app_created: number;
+  fcm_responses?: any[];
+}
+
+export interface TargetingDepartment {
+  department_id: string;
+  name: string;
+  active_users: number;
+}
+
+export interface TargetingRole {
+  role_id: string;
+  name: string;
+  active_users: number;
+}
+
+export interface UserStatistics {
+  overall: {
+    total_users: number;
+    active_users: number;
+    inactive_users: number;
+    users_with_fcm_tokens: number;
+  };
+  by_role: Array<{
+    role_name: string;
+    active_users: number;
+  }>;
+  by_department: Array<{
+    department_name: string;
+    active_users: number;
+  }>;
+}
+
+export interface BroadcastLog {
+  broadcast_id: string;
+  broadcast_type: string;
+  title: string;
+  body: string;
+  notification_type: string;
+  target_audience: string;
+  targeting_criteria: any;
+  recipients_summary: any;
+  fcm_sent: number;
+  fcm_failed: number;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface BroadcastLogsResponse {
+  broadcasts: BroadcastLog[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
 }
 
 export const notificationsApi = {
@@ -441,6 +512,45 @@ export const notificationsApi = {
 
   sendBroadcast: async (notification: BroadcastNotificationRequest): Promise<BroadcastResponse> => {
     const response = await api.post('/notifications/broadcast', notification);
+    return response.data;
+  },
+
+  sendAdvancedBroadcast: async (notification: AdvancedBroadcastNotificationRequest): Promise<BroadcastResponse> => {
+    const response = await api.post('/notifications/broadcast-advanced', notification);
+    return response.data;
+  },
+
+  // Targeting helper endpoints
+  getTargetingDepartments: async (): Promise<{ departments: TargetingDepartment[]; count: number }> => {
+    const response = await api.get('/notifications/targeting/departments');
+    return response.data;
+  },
+
+  getTargetingRoles: async (): Promise<{ roles: TargetingRole[]; count: number }> => {
+    const response = await api.get('/notifications/targeting/roles');
+    return response.data;
+  },
+
+  getUserStatistics: async (): Promise<UserStatistics> => {
+    const response = await api.get('/notifications/targeting/user-stats');
+    return response.data;
+  },
+
+  // Broadcast logs for audit
+  getBroadcastLogs: async (page: number = 1, perPage: number = 20, broadcastType?: string, notificationType?: string): Promise<BroadcastLogsResponse> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString(),
+    });
+    if (broadcastType) params.append('broadcast_type', broadcastType);
+    if (notificationType) params.append('notification_type', notificationType);
+    
+    const response = await api.get(`/notifications/broadcast-logs?${params.toString()}`);
+    return response.data;
+  },
+
+  getBroadcastLogDetail: async (broadcastId: string): Promise<BroadcastLog> => {
+    const response = await api.get(`/notifications/broadcast-logs/${broadcastId}`);
     return response.data;
   },
 
