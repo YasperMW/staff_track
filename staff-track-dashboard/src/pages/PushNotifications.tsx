@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { notificationsApi, departmentsApi, rolesApi } from '../services/api';
-import type { BroadcastNotificationRequest } from '../services/api';
+import { notificationsApi } from '../services/api';
+import type { 
+  BroadcastNotificationRequest, 
+  AdvancedBroadcastNotificationRequest,
+  BroadcastResponse,
+  TargetingDepartment,
+  TargetingRole,
+  UserStatistics
+} from '../services/api';
 import {
   Send,
   Bell,
@@ -16,6 +23,8 @@ import {
   CheckCircle,
   XCircle,
   History,
+  Filter,
+  BarChart3,
 } from 'lucide-react';
 
 interface NotificationType {
@@ -37,13 +46,16 @@ interface SentNotification {
   target: string;
   targetValue?: string;
   sentAt: string;
-  targetUsers: number;
-  tokensTargeted: number;
-  pushSent: number;
-  pushFailed: number;
+  recipients: {
+    total: number;
+    by_role: Record<string, number>;
+  };
+  fcmSent: number;
+  fcmFailed: number;
   inAppCreated: number;
   success: boolean;
   errorMessage?: string;
+  broadcastType?: 'simple' | 'advanced';
 }
 
 const PushNotifications: React.FC = () => {
@@ -60,11 +72,18 @@ const PushNotifications: React.FC = () => {
   const [target, setTarget] = useState('all');
   const [targetValue, setTargetValue] = useState('');
 
+  // Advanced targeting state
+  const [useAdvancedTargeting, setUseAdvancedTargeting] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
+
   // Data from API
   const [notificationTypes, setNotificationTypes] = useState<NotificationType[]>([]);
   const [targets, setTargets] = useState<Target[]>([]);
-  const [departments, setDepartments] = useState<string[]>([]);
-  const [roles, setRoles] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<TargetingDepartment[]>([]);
+  const [roles, setRoles] = useState<TargetingRole[]>([]);
+  const [userStats, setUserStats] = useState<UserStatistics | null>(null);
 
   // History
   const [sentHistory, setSentHistory] = useState<SentNotification[]>([]);
@@ -76,16 +95,18 @@ const PushNotifications: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [typesRes, deptsRes, rolesRes] = await Promise.all([
+      const [typesRes, targetingDeptsRes, targetingRolesRes, userStatsRes] = await Promise.all([
         notificationsApi.getBroadcastTypes(),
-        departmentsApi.getAllDepartments(),
-        rolesApi.getAllRoles(),
+        notificationsApi.getTargetingDepartments(),
+        notificationsApi.getTargetingRoles(),
+        notificationsApi.getUserStatistics(),
       ]);
 
       setNotificationTypes(typesRes.notification_types || []);
       setTargets(typesRes.targets || []);
-      setDepartments(deptsRes.departments?.map((d: any) => d.name) || []);
-      setRoles(rolesRes.roles?.map((r: any) => r.name) || []);
+      setDepartments(targetingDeptsRes.departments || []);
+      setRoles(targetingRolesRes.roles || []);
+      setUserStats(userStatsRes);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError('Failed to load notification settings');
@@ -104,34 +125,47 @@ const PushNotifications: React.FC = () => {
       return;
     }
 
-    if (target !== 'all' && !targetValue) {
+    if (!useAdvancedTargeting && target !== 'all' && !targetValue) {
       setError('Please select a specific department or role');
       return;
     }
 
     setIsSending(true);
     try {
-      const request: BroadcastNotificationRequest = {
-        title: title.trim(),
-        body: body.trim(),
-        notification_type: notificationType,
-        target: target as 'all' | 'department' | 'role',
-        target_value: target !== 'all' ? targetValue : undefined,
-      };
+      let result: BroadcastResponse;
+      
+      if (useAdvancedTargeting) {
+        // Use advanced broadcast
+        const request: AdvancedBroadcastNotificationRequest = {
+          title: title.trim(),
+          body: body.trim(),
+          notification_type: notificationType,
+          department_filter: departmentFilter || undefined,
+          role_filter: roleFilter || undefined,
+          status_filter: statusFilter,
+        };
+        result = await notificationsApi.sendAdvancedBroadcast(request);
+      } else {
+        // Use simple broadcast
+        const request: BroadcastNotificationRequest = {
+          title: title.trim(),
+          body: body.trim(),
+          notification_type: notificationType,
+          target: target as 'all' | 'department' | 'role',
+          target_value: target !== 'all' ? targetValue : undefined,
+        };
+        result = await notificationsApi.sendBroadcast(request);
+      }
 
-      const result = await notificationsApi.sendBroadcast(request);
-
-      // Backend returns data directly, not wrapped in success/response format
-      const targetUsers = result.target_users || 0;
-      const tokensTargeted = result.tokens_targeted || 0;
-      const pushSent = result.push_sent || 0;
-      const pushFailed = result.push_failed || 0;
+      const recipients = result.recipients || { total: 0, by_role: {} };
+      const fcmSent = result.fcm_sent || 0;
+      const fcmFailed = result.fcm_failed || 0;
       const inAppCreated = result.in_app_created || 0;
       
       setSuccess(
         `Notification sent successfully! ` +
-        `${targetUsers} users targeted, ${pushSent} push notifications delivered, ${inAppCreated} in-app notifications created` +
-        (pushFailed > 0 ? ` (${pushFailed} failed)` : '')
+        `${recipients.total} users targeted, ${fcmSent} push notifications delivered, ${inAppCreated} in-app notifications created` +
+        (fcmFailed > 0 ? ` (${fcmFailed} failed)` : '')
       );
       
       // Add to history
@@ -140,15 +174,17 @@ const PushNotifications: React.FC = () => {
         title: title.trim(),
         body: body.trim(),
         type: notificationType,
-        target: target,
-        targetValue: target !== 'all' ? targetValue : undefined,
+        target: useAdvancedTargeting ? 'advanced' : target,
+        targetValue: useAdvancedTargeting ? 
+          (departmentFilter || roleFilter || statusFilter || 'custom') : 
+          (target !== 'all' ? targetValue : undefined),
         sentAt: new Date().toISOString(),
-        targetUsers,
-        tokensTargeted,
-        pushSent,
-        pushFailed,
+        recipients,
+        fcmSent,
+        fcmFailed,
         inAppCreated,
         success: true,
+        broadcastType: useAdvancedTargeting ? 'advanced' : 'simple',
       };
       setSentHistory(prev => [newNotification, ...prev].slice(0, 10));
       // Clear form
@@ -165,16 +201,18 @@ const PushNotifications: React.FC = () => {
         title: title.trim(),
         body: body.trim(),
         type: notificationType,
-        target: target,
-        targetValue: target !== 'all' ? targetValue : undefined,
+        target: useAdvancedTargeting ? 'advanced' : target,
+        targetValue: useAdvancedTargeting ? 
+          (departmentFilter || roleFilter || statusFilter || 'custom') : 
+          (target !== 'all' ? targetValue : undefined),
         sentAt: new Date().toISOString(),
-        targetUsers: 0,
-        tokensTargeted: 0,
-        pushSent: 0,
-        pushFailed: 0,
+        recipients: { total: 0, by_role: {} },
+        fcmSent: 0,
+        fcmFailed: 0,
         inAppCreated: 0,
         success: false,
         errorMessage: errorMessage,
+        broadcastType: useAdvancedTargeting ? 'advanced' : 'simple',
       };
       setSentHistory(prev => [newNotification, ...prev].slice(0, 10));
     } finally {
@@ -280,52 +318,175 @@ const PushNotifications: React.FC = () => {
                 </div>
               </div>
 
-              {/* Target Audience */}
+              {/* Targeting Mode Toggle */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Target Audience
+                  Targeting Mode
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <select
-                      value={target}
-                      onChange={(e) => {
-                        setTarget(e.target.value);
-                        setTargetValue('');
-                      }}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {targets.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {target !== 'all' && (
+                <div className="flex space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setUseAdvancedTargeting(false)}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
+                      !useAdvancedTargeting
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center space-x-2">
+                      <Users className="w-4 h-4" />
+                      <span>Simple Targeting</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUseAdvancedTargeting(true)}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
+                      useAdvancedTargeting
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center space-x-2">
+                      <Filter className="w-4 h-4" />
+                      <span>Advanced Targeting</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Simple Targeting */}
+              {!useAdvancedTargeting && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Target Audience
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <select
-                        value={targetValue}
-                        onChange={(e) => setTargetValue(e.target.value)}
+                        value={target}
+                        onChange={(e) => {
+                          setTarget(e.target.value);
+                          setTargetValue('');
+                        }}
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Select {target === 'department' ? 'Department' : 'Role'}</option>
-                        {(target === 'department' ? departments : roles).map((item) => (
-                          <option key={item} value={item}>{item}</option>
+                        {targets.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
                     </div>
+                    {target !== 'all' && (
+                      <div>
+                        <select
+                          value={targetValue}
+                          onChange={(e) => setTargetValue(e.target.value)}
+                          className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select {target === 'department' ? 'Department' : 'Role'}</option>
+                          {(target === 'department' ? departments : roles).map((item) => (
+                            <option key={item.name} value={item.name}>
+                              {item.name} ({item.active_users} users)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  {target !== 'all' && (
+                    <div className="mt-2 flex items-center space-x-2 text-sm text-gray-500">
+                      {target === 'department' ? <Building className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                      <span>
+                        {target === 'department'
+                          ? 'Only users in the selected department will receive this notification'
+                          : 'Only users with the selected role will receive this notification'}
+                      </span>
+                    </div>
                   )}
                 </div>
-                {target !== 'all' && (
-                  <div className="mt-2 flex items-center space-x-2 text-sm text-gray-500">
-                    {target === 'department' ? <Building className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
-                    <span>
-                      {target === 'department'
-                        ? 'Only users in the selected department will receive this notification'
-                        : 'Only users with the selected role will receive this notification'}
-                    </span>
+              )}
+
+              {/* Advanced Targeting */}
+              {useAdvancedTargeting && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Department Filter (Optional)
+                      </label>
+                      <select
+                        value={departmentFilter}
+                        onChange={(e) => setDepartmentFilter(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">All Departments</option>
+                        {departments.map((dept) => (
+                          <option key={dept.department_id} value={dept.name}>
+                            {dept.name} ({dept.active_users} users)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Role Filter (Optional)
+                      </label>
+                      <select
+                        value={roleFilter}
+                        onChange={(e) => setRoleFilter(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">All Roles</option>
+                        {roles.map((role) => (
+                          <option key={role.role_id} value={role.name}>
+                            {role.name} ({role.active_users} users)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      User Status Filter
+                    </label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="active">Active Users Only</option>
+                      <option value="inactive">Inactive Users Only</option>
+                      <option value="all">All Users</option>
+                    </select>
+                  </div>
+                  {userStats && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <BarChart3 className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-400">User Statistics</span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Total Users:</span>
+                          <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{userStats.overall.total_users}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Active:</span>
+                          <span className="ml-1 font-medium text-green-700 dark:text-green-400">{userStats.overall.active_users}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">With Tokens:</span>
+                          <span className="ml-1 font-medium text-blue-700 dark:text-blue-400">{userStats.overall.users_with_fcm_tokens}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Inactive:</span>
+                          <span className="ml-1 font-medium text-red-700 dark:text-red-400">{userStats.overall.inactive_users}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Title */}
               <div>
@@ -510,30 +671,47 @@ const PushNotifications: React.FC = () => {
                     </div>
                     
                     {/* Delivery Statistics */}
-                    {item.success && item.targetUsers > 0 ? (
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center space-x-1">
-                          <Users className="w-3 h-3 text-blue-500" />
-                          <span className="text-gray-600 dark:text-gray-400">Users:</span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{item.targetUsers}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Smartphone className="w-3 h-3 text-green-500" />
-                          <span className="text-gray-600 dark:text-gray-400">Push Sent:</span>
-                          <span className="font-medium text-green-700 dark:text-green-400">{item.pushSent}</span>
-                        </div>
-                        {item.pushFailed > 0 && (
+                    {item.success && item.recipients.total > 0 ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="flex items-center space-x-1">
-                            <XCircle className="w-3 h-3 text-red-500" />
-                            <span className="text-gray-600 dark:text-gray-400">Failed:</span>
-                            <span className="font-medium text-red-700 dark:text-red-400">{item.pushFailed}</span>
+                            <Users className="w-3 h-3 text-blue-500" />
+                            <span className="text-gray-600 dark:text-gray-400">Users:</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.recipients.total}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Smartphone className="w-3 h-3 text-green-500" />
+                            <span className="text-gray-600 dark:text-gray-400">Push Sent:</span>
+                            <span className="font-medium text-green-700 dark:text-green-400">{item.fcmSent}</span>
+                          </div>
+                          {item.fcmFailed > 0 && (
+                            <div className="flex items-center space-x-1">
+                              <XCircle className="w-3 h-3 text-red-500" />
+                              <span className="text-gray-600 dark:text-gray-400">Failed:</span>
+                              <span className="font-medium text-red-700 dark:text-red-400">{item.fcmFailed}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-1">
+                            <Bell className="w-3 h-3 text-purple-500" />
+                            <span className="text-gray-600 dark:text-gray-400">In-App:</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{item.inAppCreated}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Role breakdown if available */}
+                        {Object.keys(item.recipients.by_role).length > 0 && (
+                          <div className="text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2">
+                            <span className="font-medium">By Role:</span>
+                            <div className="mt-1 space-y-1">
+                              {Object.entries(item.recipients.by_role).map(([role, count]) => (
+                                <div key={role} className="flex justify-between">
+                                  <span>{role}:</span>
+                                  <span className="font-medium">{count}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
-                        <div className="flex items-center space-x-1">
-                          <Bell className="w-3 h-3 text-purple-500" />
-                          <span className="text-gray-600 dark:text-gray-400">In-App:</span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{item.inAppCreated}</span>
-                        </div>
                       </div>
                     ) : (
                       <div className="text-xs text-gray-500">

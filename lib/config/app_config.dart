@@ -15,7 +15,7 @@ class AppConfig {
       case AppEnvironment.dev2:
         return 'http://localhost:8888';
       case AppEnvironment.prod:
-        return 'https://staff-track-api.onrender.com';
+        return 'http://api.example.com:8080';
     }
   }
 }
