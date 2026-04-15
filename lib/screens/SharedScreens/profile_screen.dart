@@ -6,6 +6,7 @@ import '../../theme/theme_provider.dart';
 import '../../controllers/auth_provider.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../utils/connectivity_handler.dart';
 import '../login_screen.dart';
 import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
@@ -24,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? userProfile;
   bool isLoadingProfile = false;
   bool isLoadingMetrics = false;
+  bool isRefreshing = false;
+  String? errorMessage;
   int workingDays = 0;
   double onTimeRate = 0.0;
   int leaveUsed = 0;
@@ -37,11 +40,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserProfile() async {
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.token;
-    
+
     if (token == null) return;
-    
+
     setState(() {
       isLoadingProfile = true;
+      errorMessage = null;
     });
 
     try {
@@ -57,6 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           userProfile = profile;
           isLoadingProfile = false;
+          isRefreshing = false;
           if (metrics != null) {
             workingDays = metrics.workingDays;
             onTimeRate = metrics.onTimeRate;
@@ -70,12 +75,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         print('Error loading profile: $e');
       }
       if (mounted) {
+        final errorMsg = ConnectivityHandler.getErrorMessage(e);
         setState(() {
           isLoadingProfile = false;
           isLoadingMetrics = false;
+          isRefreshing = false;
+          errorMessage = errorMsg;
         });
+
+        // Show error snackbar if not the initial load
+        if (userProfile != null) {
+          ConnectivityHandler.showErrorSnackBar(
+            context,
+            message: errorMsg,
+            onRetry: _loadUserProfile,
+          );
+        }
       }
     }
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() => isRefreshing = true);
+    await _loadUserProfile();
   }
 
   @override
@@ -87,32 +109,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
+    // Show loading state on initial load
+    if (isLoadingProfile && userProfile == null) {
+      return Scaffold(
+        appBar: const SimpleHeader(title: 'Profile'),
+        body: const LoadingWidget(message: 'Loading profile...'),
+      );
+    }
+
+    // Show error state if no data and error occurred
+    if (errorMessage != null && userProfile == null) {
+      return Scaffold(
+        appBar: const SimpleHeader(title: 'Profile'),
+        body: ConnectivityErrorWidget(
+          message: errorMessage!,
+          onRetry: _loadUserProfile,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: const SimpleHeader(
         title: 'Profile',
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  _buildProfileCard(context, user),
-                  const SizedBox(height: 24),
+      body: RefreshIndicator(
+        color: AppTheme.skyBlue,
+        onRefresh: _handleRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Show compact error banner if there's an error but we have data
+              if (errorMessage != null && userProfile != null)
+                ConnectivityErrorWidget(
+                  message: errorMessage!,
+                  onRetry: _loadUserProfile,
+                  isCompact: true,
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildProfileCard(context, user),
+                    const SizedBox(height: 24),
                     _buildStatsRow(context),
                     const SizedBox(height: 24),
                     _buildOptionsList(context),
                     const SizedBox(height: 32),
                     _buildSignOutButton(context),
                     const SizedBox(height: 40),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

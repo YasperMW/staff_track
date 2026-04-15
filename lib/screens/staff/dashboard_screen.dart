@@ -73,6 +73,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return DateFormat('hh:mm:ss a').format(dateTime);
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  }
+
   @override
   void dispose() {
     _timer.cancel();
@@ -141,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontFamily: 'Poppins', // Since we use GoogleFonts Poppins
             ),
             children: [
-              const TextSpan(text: 'Good Morning, '),
+              TextSpan(text: '${_getGreeting()}, '),
               TextSpan(
                 text: context.watch<AuthProvider>().user?.name ?? 'User',
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -324,22 +335,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final workingDays = metrics['working_days'] as int? ?? 0;
     final workingDaysStr = workingDays > 0 ? '$workingDays days' : '0 days';
     
-    final onTimeRate = metrics['on_time_rate'] as double? ?? 0.0;
-    final onTimeRateStr = onTimeRate > 0 ? '${onTimeRate.toStringAsFixed(0)}%' : '0%';
-    
-    // Calculate leave left (assuming 21 days total annual leave)
-    final totalAnnualLeave = 21;
-    final leaveUsed = metrics['leave_used'] as int? ?? 0;
-    final leaveLeft = totalAnnualLeave - leaveUsed;
-    final leaveLeftStr = leaveLeft > 0 ? '$leaveLeft days' : '0 days';
+    final onTimeDays = metrics['on_time_days'] as int? ?? 0;
+    final onTimeDaysStr = onTimeDays > 0 ? '$onTimeDays days' : '0 days';
+
+    final lateDays = metrics['late_days'] as int? ?? 0;
+    final lateDaysStr = lateDays > 0 ? '$lateDays days' : '0 days';
     
     return Row(
       children: [
         Expanded(child: _buildStatCard(context, Icons.access_time, workingDaysStr, 'Days Present This Year', AppTheme.skyBlue)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.trending_up, onTimeRateStr, 'On Time', AppTheme.lightGold)),
+        Expanded(child: _buildStatCard(context, Icons.trending_up, onTimeDaysStr, 'On Time Days', AppTheme.lightGold)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard(context, Icons.calendar_today, leaveLeftStr, 'Leave Left', AppTheme.lightGold)),
+        Expanded(child: _buildStatCard(context, Icons.calendar_today, lateDaysStr, 'Days Arrived Late', AppTheme.lightGold)),
       ],
     );
   }
@@ -347,7 +355,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatCard(BuildContext context, IconData icon, String value, String label, Color color) {
     return Container(
       height: 120, // Fixed height for all cards
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),

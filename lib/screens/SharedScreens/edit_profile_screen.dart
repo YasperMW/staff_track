@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../controllers/auth_provider.dart';
 import '../../widgets/simple_header.dart';
+import '../../widgets/validated_text_field.dart';
+import '../../utils/validators.dart';
+import '../../utils/connectivity_handler.dart';
 import '../../services/user_profile_service.dart';
 import '../../services/complete_user_profile_service.dart';
 
@@ -17,7 +20,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
   bool isLoadingProfile = true;
-  
+  String? errorMessage;
+
   // Text controllers
   final _firstNameController = TextEditingController();
   final _surnameController = TextEditingController();
@@ -33,10 +37,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _traditionalAuthorityController = TextEditingController();
   final _districtController = TextEditingController();
   final _dateOfBirthController = TextEditingController();
-  
+
   String? _selectedGender;
   String? _selectedSuffix;
-  
+
   CompleteUserProfile? _profile;
 
   @override
@@ -65,6 +69,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadProfileData() async {
+    setState(() {
+      isLoadingProfile = true;
+      errorMessage = null;
+    });
+
     try {
       final profile = await CompleteUserProfileService.getCompleteUserProfile();
       if (profile != null && mounted) {
@@ -73,15 +82,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _populateFields();
           isLoadingProfile = false;
         });
+      } else if (mounted) {
+        setState(() {
+          isLoadingProfile = false;
+          errorMessage = 'Unable to load profile data. Please try again.';
+        });
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = ConnectivityHandler.getErrorMessage(e);
         setState(() {
           isLoadingProfile = false;
+          errorMessage = errorMsg;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
-        );
       }
     }
   }
@@ -120,7 +133,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.token;
-      
+
       if (token == null) {
         throw Exception('Not authenticated');
       }
@@ -149,18 +162,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       updateData.removeWhere((key, value) => value == null);
 
       final success = await UserProfileService.updateProfile(token, updateData);
-      
+
       if (success) {
         // Update local user data in AuthProvider
         await authProvider.updateUserData({
           'name': '${_firstNameController.text.trim()} ${_surnameController.text.trim()}',
           'email': _emailController.text.trim(),
         });
-        
+
         if (mounted) {
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated successfully!')),
+            const SnackBar(
+              content: Text('Profile updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       } else {
@@ -168,8 +184,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
+        final errorMsg = ConnectivityHandler.getErrorMessage(e);
+        ConnectivityHandler.showErrorSnackBar(
+          context,
+          message: errorMsg,
+          onRetry: _saveProfile,
+          duration: const Duration(seconds: 8),
         );
       }
     } finally {
@@ -183,6 +203,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading state
+    if (isLoadingProfile) {
+      return Scaffold(
+        appBar: const SimpleHeader(title: 'Edit Profile'),
+        body: const LoadingWidget(message: 'Loading profile...'),
+      );
+    }
+
+    // Show error state
+    if (errorMessage != null && _profile == null) {
+      return Scaffold(
+        appBar: const SimpleHeader(title: 'Edit Profile'),
+        body: ConnectivityErrorWidget(
+          message: errorMessage!,
+          onRetry: _loadProfileData,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: SimpleHeader(
         title: 'Edit Profile',
@@ -208,27 +247,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ],
       ),
-      body: isLoadingProfile
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildPersonalInfoSection(),
-                    const SizedBox(height: 32),
-                    _buildContactInfoSection(),
-                    const SizedBox(height: 32),
-                    _buildLocationInfoSection(),
-                    const SizedBox(height: 32),
-                    _buildFamilyInfoSection(),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPersonalInfoSection(),
+              const SizedBox(height: 32),
+              _buildContactInfoSection(),
+              const SizedBox(height: 32),
+              _buildLocationInfoSection(),
+              const SizedBox(height: 32),
+              _buildFamilyInfoSection(),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -237,46 +274,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       title: 'Personal Information',
       icon: Icons.person_outline,
       children: [
-        _buildTextField(
+        ValidatedTextField(
           controller: _firstNameController,
           label: 'First Name',
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'First name is required';
-            }
-            return null;
-          },
+          icon: Icons.person_outline,
+          validationType: ValidationType.name,
+          fieldName: 'First Name',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _surnameController,
           label: 'Surname',
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Surname is required';
-            }
-            return null;
-          },
+          icon: Icons.person_pin_outlined,
+          validationType: ValidationType.name,
+          fieldName: 'Surname',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _otherNamesController,
           label: 'Other Names',
-          hintText: 'Optional',
+          icon: Icons.people_outline,
+          validationType: ValidationType.optional,
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildDropdownField<String>(
-          value: _selectedSuffix,
+        ValidatedDropdown(
           label: 'Suffix',
+          icon: Icons.title_outlined,
           items: const ['Mr', 'Mrs', 'Miss', 'Dr', 'Prof', 'Eng'],
+          value: _selectedSuffix,
           onChanged: (value) => setState(() => _selectedSuffix = value),
+          isRequired: false,
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _dateOfBirthController,
           label: 'Date of Birth',
-          hintText: 'YYYY-MM-DD',
+          icon: Icons.cake_outlined,
+          validationType: ValidationType.optional,
+          hint: 'YYYY-MM-DD',
           keyboardType: TextInputType.datetime,
+          readOnly: true,
           onTap: () async {
             final date = await showDatePicker(
               context: context,
@@ -290,11 +328,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           },
         ),
         const SizedBox(height: 16),
-        _buildDropdownField<String>(
-          value: _selectedGender,
+        ValidatedDropdown(
           label: 'Gender',
-          items: const ['Male', 'Female', 'Other'],
-          onChanged: (value) => setState(() => _selectedGender = value),
+          icon: Icons.wc_outlined,
+          items: const ['male', 'female', 'other'],
+          value: _selectedGender,
+          onChanged: (value) => setState(() => _selectedGender = value?.toLowerCase()),
+          isRequired: false,
         ),
       ],
     );
@@ -305,40 +345,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       title: 'Contact Information',
       icon: Icons.contact_phone_outlined,
       children: [
-        _buildTextField(
+        ValidatedTextField(
           controller: _emailController,
           label: 'Email Address',
+          icon: Icons.email_outlined,
+          validationType: ValidationType.email,
           keyboardType: TextInputType.emailAddress,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Email is required';
-            }
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-              return 'Please enter a valid email';
-            }
-            return null;
-          },
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _phoneController,
           label: 'Phone Number',
+          icon: Icons.phone_android_outlined,
+          validationType: ValidationType.optional,
           keyboardType: TextInputType.phone,
-          hintText: 'Optional',
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _contactNumberController,
           label: 'Contact Number',
+          icon: Icons.phone_outlined,
+          validationType: ValidationType.optional,
           keyboardType: TextInputType.phone,
-          hintText: 'Optional',
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _currentAddressController,
           label: 'Current Address',
-          hintText: 'Optional',
+          icon: Icons.location_on_outlined,
+          validationType: ValidationType.optional,
           maxLines: 3,
+          hint: 'Optional',
         ),
       ],
     );
@@ -349,22 +388,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       title: 'Location Information',
       icon: Icons.location_on_outlined,
       children: [
-        _buildTextField(
+        ValidatedTextField(
           controller: _homeOfOriginController,
           label: 'Home of Origin',
-          hintText: 'Optional',
+          icon: Icons.home_work_outlined,
+          validationType: ValidationType.optional,
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _traditionalAuthorityController,
           label: 'Traditional Authority',
-          hintText: 'Optional',
+          icon: Icons.gavel_outlined,
+          validationType: ValidationType.optional,
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _districtController,
           label: 'District',
-          hintText: 'Optional',
+          icon: Icons.map_outlined,
+          validationType: ValidationType.optional,
+          hint: 'Optional',
         ),
       ],
     );
@@ -375,23 +420,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       title: 'Family Information',
       icon: Icons.family_restroom,
       children: [
-        _buildTextField(
-          controller: _maritalStatusController,
+        ValidatedDropdown(
           label: 'Marital Status',
-          hintText: 'Optional',
+          icon: Icons.favorite_border_outlined,
+          items: const ['single', 'married', 'divorced', 'widowed'],
+          value: _maritalStatusController.text.isNotEmpty ? _maritalStatusController.text.toLowerCase() : null,
+          onChanged: (value) => setState(() => _maritalStatusController.text = value ?? ''),
+          isRequired: false,
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _spouseNameController,
           label: 'Spouse Name',
-          hintText: 'Optional',
+          icon: Icons.person_pin_outlined,
+          validationType: ValidationType.optional,
+          hint: 'Optional',
         ),
         const SizedBox(height: 16),
-        _buildTextField(
+        ValidatedTextField(
           controller: _spouseContactController,
           label: 'Spouse Contact',
+          icon: Icons.phone_outlined,
+          validationType: ValidationType.optional,
           keyboardType: TextInputType.phone,
-          hintText: 'Optional',
+          hint: 'Optional',
         ),
       ],
     );
@@ -459,81 +511,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    String? hintText,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-    VoidCallback? onTap,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-      onTap: onTap,
-      readOnly: onTap != null,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hintText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.skyBlue),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.paleRed),
-        ),
-        filled: true,
-        fillColor: Theme.of(context).colorScheme.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildDropdownField<T>({
-    required T? value,
-    required String label,
-    required List<T> items,
-    required void Function(T?) onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTheme.skyBlue),
-        ),
-        filled: true,
-        fillColor: Theme.of(context).colorScheme.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      items: items.map((item) {
-        return DropdownMenuItem<T>(
-          value: item,
-          child: Text(item.toString()),
-        );
-      }).toList(),
-      onChanged: onChanged,
-    );
-  }
 }

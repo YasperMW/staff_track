@@ -7,7 +7,9 @@ import '../controllers/auth_provider.dart';
 import '../services/google_auth_service.dart';
 import '../services/lookup_service.dart';
 import '../widgets/single_date_picker.dart';
+import '../widgets/validated_text_field.dart';
 import '../widgets/app_snackbar.dart';
+import '../utils/validators.dart';
 import '../../theme/app_theme.dart';
 import 'home_screen.dart';
 
@@ -450,42 +452,42 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
           _buildStepTitle('Personal Details', 'Basic identification information'),
           const SizedBox(height: 24),
           // Email - Pre-filled from Google, read-only
-          _buildTextField(
+          ValidatedTextField(
             controller: _emailController,
             label: 'Email Address',
             icon: Icons.email_outlined,
-            theme: theme,
+            validationType: ValidationType.email,
             readOnly: true,
-            isRequired: true,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _firstNameController,
             label: 'First Name',
             icon: Icons.person_outline,
-            theme: theme,
+            validationType: ValidationType.name,
+            fieldName: 'First Name',
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _surNameController,
             label: 'Surname',
             icon: Icons.person_pin_outlined,
-            theme: theme,
+            validationType: ValidationType.name,
+            fieldName: 'Surname',
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _otherNamesController,
             label: 'Other Names',
             icon: Icons.people_outline,
-            theme: theme,
-            isRequired: false,
+            validationType: ValidationType.optional,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _dateOfBirthController,
             label: 'Date of Birth',
             icon: Icons.cake_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
             readOnly: true,
             onTap: () async {
               final date = await showSingleDatePicker(
@@ -501,21 +503,20 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
             },
           ),
           const SizedBox(height: 16),
-          _buildDropdown(
+          ValidatedDropdown(
             label: 'Gender',
             icon: Icons.wc_outlined,
             items: const ['male', 'female', 'other'],
             value: _selectedGender,
             onChanged: (val) => setState(() => _selectedGender = val),
-            theme: theme,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _phoneController,
             label: 'Contact Number',
             icon: Icons.phone_android_outlined,
+            validationType: ValidationType.phone,
             keyboardType: TextInputType.phone,
-            theme: theme,
           ),
           const SizedBox(height: 20),
         ],
@@ -531,32 +532,32 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
         children: [
           _buildStepTitle('Location Information', 'Residential and origin details'),
           const SizedBox(height: 24),
-          _buildTextField(
+          ValidatedTextField(
             controller: _homeOfOriginController,
             label: 'Home of Origin',
             icon: Icons.home_work_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _traditionalAuthorityController,
             label: 'Traditional Authority',
             icon: Icons.gavel_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _districtController,
             label: 'District',
             icon: Icons.map_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _currentAddressController,
             label: 'Current Address',
             icon: Icons.location_on_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
             maxLines: 2,
           ),
           const SizedBox(height: 20),
@@ -573,7 +574,7 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
         children: [
           _buildStepTitle('Family Information', 'Marital and emergency contact'),
           const SizedBox(height: 24),
-          _buildDropdown(
+          ValidatedDropdown(
             label: 'Marital Status',
             icon: Icons.favorite_border_outlined,
             items: const ['single', 'married', 'divorced', 'widowed'],
@@ -582,23 +583,23 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
               setState(() => _selectedMaritalStatus = val);
               _checkScrollNeed();
             },
-            theme: theme,
           ),
           if (_selectedMaritalStatus == 'married') ...[
             const SizedBox(height: 16),
-            _buildTextField(
+            ValidatedTextField(
               controller: _spouseNameController,
               label: 'Spouse Full Name',
               icon: Icons.person_pin_outlined,
-              theme: theme,
+              validationType: ValidationType.name,
+              fieldName: 'Spouse Full Name',
             ),
             const SizedBox(height: 16),
-            _buildTextField(
+            ValidatedTextField(
               controller: _spouseContactController,
               label: 'Spouse Contact',
               icon: Icons.phone_outlined,
+              validationType: ValidationType.phone,
               keyboardType: TextInputType.phone,
-              theme: theme,
             ),
           ],
           const SizedBox(height: 20),
@@ -615,25 +616,25 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
         children: [
           _buildStepTitle('Work Information', 'Hospital employment details'),
           const SizedBox(height: 24),
-          _buildTextField(
+          ValidatedTextField(
             controller: _employeeNumberController,
             label: 'Employee ID',
             icon: Icons.badge_outlined,
-            theme: theme,
+            validationType: ValidationType.employeeId,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _nationalIdController,
             label: 'National ID',
             icon: Icons.credit_card_outlined,
-            theme: theme,
+            validationType: ValidationType.nationalId,
           ),
           const SizedBox(height: 16),
-          _buildTextField(
+          ValidatedTextField(
             controller: _dateOfEmploymentController,
             label: 'Employment Date',
             icon: Icons.calendar_month_outlined,
-            theme: theme,
+            validationType: ValidationType.required,
             readOnly: true,
             onTap: () async {
               final date = await showSingleDatePicker(
@@ -649,7 +650,7 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
             },
           ),
           const SizedBox(height: 16),
-          _buildDropdown(
+          ValidatedDropdown(
             label: 'Department',
             icon: Icons.corporate_fare_outlined,
             items: _isLoadingLookupData ? ['Loading...'] : _departments.map((d) => d.name).toList(),
@@ -672,10 +673,9 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
                 }
               });
             },
-            theme: theme,
           ),
           const SizedBox(height: 16),
-          _buildDropdown(
+          ValidatedDropdown(
             label: 'Designation / Job Title',
             icon: Icons.work_history_outlined,
             items: _designationNames.isNotEmpty ? _designationNames : ['Select department first'],
@@ -685,7 +685,6 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
             onChanged: (val) {
               _designationController.text = val ?? '';
             },
-            theme: theme,
           ),
           const SizedBox(height: 16),
           _buildGradeDropdown(theme),
@@ -802,89 +801,6 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
       ],
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required ThemeData theme,
-    bool isPassword = false,
-    TextInputType? keyboardType,
-    bool isRequired = true,
-    bool readOnly = false,
-    int maxLines = 1,
-    String? hint,
-    VoidCallback? onTap,
-    String? Function(String?)? customValidator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: isPassword,
-      keyboardType: keyboardType,
-      readOnly: readOnly,
-      onTap: onTap,
-      maxLines: isPassword ? 1 : maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        fillColor: readOnly
-            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
-            : theme.brightness == Brightness.dark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.grey.withValues(alpha: 0.05),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppTheme.skyBlue, width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      validator: (value) {
-        if (customValidator != null) return customValidator(value);
-        if (isRequired && (value == null || value.isEmpty)) return 'Required';
-        return null;
-      },
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required IconData icon,
-    required List<String> items,
-    required String? value,
-    required Function(String?) onChanged,
-    required ThemeData theme,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      items: items.map((String item) {
-        return DropdownMenuItem<String>(
-          value: item,
-          child: Text(item, style: const TextStyle(fontSize: 14)),
-        );
-      }).toList(),
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        fillColor: theme.brightness == Brightness.dark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey.withValues(alpha: 0.05),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-      validator: (val) => val == null ? 'Required' : null,
     );
   }
 
