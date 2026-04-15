@@ -94,6 +94,9 @@ class UserProfileService {
         },
       );
       if (response.statusCode == 200) {
+        if (kDebugMode) {
+          print('User metrics response: ${response.body}');
+        }
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return UserMetrics.fromJson(data);
       } else {
@@ -206,10 +209,16 @@ class UserMetrics {
     required this.year,
   });
 
+  static double _parseDouble(dynamic value, {double fallback = 0.0}) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
   factory UserMetrics.fromJson(Map<String, dynamic> json) {
     return UserMetrics(
       workingDays: (json['working_days'] as num?)?.toInt() ?? 0,
-      onTimeRate: (json['on_time_rate'] as num?)?.toDouble() ?? 0.0,
+      onTimeRate: _parseDouble(json['on_time_rate']),
       leaveUsed: (json['leave_used'] as num?)?.toInt() ?? 0,
       year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
     );

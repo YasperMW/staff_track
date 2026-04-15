@@ -172,32 +172,60 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: _isGoogleLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)),
-                    ),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Google "G" Logo with brand colors
-                      _GoogleLogoWidget(size: 24),
-                      SizedBox(width: 12),
-                      Text(
-                        'Sign in with Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3C4043),
-                          letterSpacing: 0.3,
-                        ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Google "G" Logo with brand colors
+                const _GoogleLogoWidget(size: 24),
+                const SizedBox(width: 12),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.1),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
                       ),
-                    ],
+                    );
+                  },
+                  child: Text(
+                    _isGoogleLoading ? 'Signing in…' : 'Sign in with Google',
+                    key: ValueKey<bool>(_isGoogleLoading),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF3C4043),
+                      letterSpacing: 0.3,
+                    ),
                   ),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  child: _isGoogleLoading
+                      ? const Padding(
+                          padding: EdgeInsets.only(left: 10),
+                          child: SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF4285F4)),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -240,10 +268,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   constraints: BoxConstraints(
                     minHeight: height,
                   ),
-                  child: IntrinsicHeight(
+                  child: Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(height: isShort ? 12 : 32),
@@ -572,7 +601,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           // Only use Spacer if there's significant room to spare
-                          if (!isShort) const Spacer(),
+                          if (!isShort) const SizedBox(height: 24),
                           // Footer info
                           Padding(
                             padding: EdgeInsets.only(

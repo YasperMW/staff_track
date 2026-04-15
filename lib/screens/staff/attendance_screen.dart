@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../services/attendance_service.dart';
 import '../../models/models.dart';
 import '../../widgets/app_header.dart';
+import '../../controllers/attendance_provider.dart';
 import '../check_in_out_screen.dart';
 import '../attendance_history_screen.dart';
 
@@ -24,6 +26,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   void initState() {
     super.initState();
     _loadAttendanceData();
+    final attendanceProvider = context.read<AttendanceProvider>();
+    attendanceProvider.loadTodayAttendance();
   }
 
   Future<void> _loadAttendanceData() async {
@@ -50,6 +54,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _onRefresh() async {
     await _loadAttendanceData();
+    final attendanceProvider = context.read<AttendanceProvider>();
+    attendanceProvider.loadTodayAttendance();
   }
 
   @override
@@ -164,13 +170,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _buildCheckInButton(BuildContext context) {
+    final attendanceProvider = context.watch<AttendanceProvider>();
+    final todayAttendance = attendanceProvider.todayAttendance;
+    
+    String buttonText = 'Check In';
+    IconData buttonIcon = Icons.login;
+    Color buttonColor = AppTheme.skyBlue;
+    
+    if (todayAttendance != null) {
+      if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
+        buttonText = 'Check Out';
+        buttonIcon = Icons.logout;
+        buttonColor = AppTheme.paleRed;
+      } else if (todayAttendance.isCheckedOut) {
+        buttonText = 'View Details';
+        buttonIcon = Icons.visibility;
+        buttonColor = AppTheme.lightGold;
+      }
+    }
+    
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.skyBlue,
+        color: buttonColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.skyBlue.withValues(alpha: 0.3),
+            color: buttonColor.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -185,18 +210,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               MaterialPageRoute(
                 builder: (context) => const CheckInOutScreen(),
               ),
-            );
+            ).then((_) => context.read<AttendanceProvider>().loadTodayAttendance());
           },
           borderRadius: BorderRadius.circular(12),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.login, color: Colors.white, size: 18),
-                SizedBox(width: 8),
+                Icon(buttonIcon, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
                 Text(
-                  'Check In',
-                  style: TextStyle(
+                  buttonText,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
