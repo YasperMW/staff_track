@@ -16,6 +16,7 @@ class AttendanceController {
     double? latitude,
     double? longitude,
     String? shiftType,
+    String? lateReason,
   }) async {
     final token = await _getAuthToken();
     if (token == null) {
@@ -32,6 +33,7 @@ class AttendanceController {
     if (latitude != null) requestBody['latitude'] = latitude;
     if (longitude != null) requestBody['longitude'] = longitude;
     if (shiftType != null) requestBody['shift_type'] = shiftType;
+    if (lateReason != null) requestBody['late_reason'] = lateReason;
 
     // Debug logging
     if (kDebugMode) {
@@ -80,6 +82,7 @@ class AttendanceController {
     String? location,
     double? latitude,
     double? longitude,
+    String? earlyCheckoutReason,
   }) async {
     final token = await _getAuthToken();
     if (token == null) {
@@ -95,6 +98,7 @@ class AttendanceController {
     if (location != null) requestBody['location'] = location;
     if (latitude != null) requestBody['latitude'] = latitude;
     if (longitude != null) requestBody['longitude'] = longitude;
+    if (earlyCheckoutReason != null) requestBody['early_checkout_reason'] = earlyCheckoutReason;
 
     // Debug logging
     if (kDebugMode) {

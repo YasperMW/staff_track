@@ -632,4 +632,78 @@ export const reportsApi = {
   },
 };
 
+// Shift Configuration Types
+export interface ShiftConfiguration {
+  shift_config_id: string;
+  shift_name: string;
+  shift_type: string;
+  check_in_earliest: string;
+  check_in_latest: string;
+  official_start_time: string;
+  check_out_earliest: string;
+  check_out_latest: string;
+  official_end_time: string;
+  extended_start_time: string;
+  late_threshold: string;
+  is_active: boolean;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShiftConfigurationCreate {
+  shift_name: string;
+  shift_type: string;
+  check_in_earliest: string;
+  check_in_latest: string;
+  official_start_time: string;
+  check_out_earliest: string;
+  check_out_latest: string;
+  official_end_time: string;
+  extended_start_time: string;
+  late_threshold: string;
+  description?: string;
+}
+
+export interface ShiftConfigurationUpdate {
+  shift_name?: string;
+  check_in_earliest?: string;
+  check_in_latest?: string;
+  official_start_time?: string;
+  check_out_earliest?: string;
+  check_out_latest?: string;
+  official_end_time?: string;
+  extended_start_time?: string;
+  late_threshold?: string;
+  is_active?: boolean;
+  description?: string;
+}
+
+// Shift Configurations API
+export const shiftConfigurationsApi = {
+  getAll: async (): Promise<ShiftConfiguration[]> => {
+    const response = await api.get('/shift-configurations/');
+    return response.data;
+  },
+
+  getByType: async (shiftType: string): Promise<ShiftConfiguration> => {
+    const response = await api.get(`/shift-configurations/${shiftType}`);
+    return response.data;
+  },
+
+  create: async (config: ShiftConfigurationCreate): Promise<ShiftConfiguration> => {
+    const response = await api.post('/shift-configurations/', config);
+    return response.data;
+  },
+
+  update: async (id: string, config: ShiftConfigurationUpdate): Promise<ShiftConfiguration> => {
+    const response = await api.put(`/shift-configurations/${id}`, config);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/shift-configurations/${id}`);
+  },
+};
+
 export default api;

@@ -13,6 +13,7 @@ import '../../services/user_profile_service.dart';
 import 'profile_details_screen.dart';
 import 'edit_profile_screen.dart';
 import 'notification_settings_screen.dart';
+import 'security_privacy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -321,7 +322,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildOptionTile(
             context: context,
             icon: Icons.shield_outlined,
-            title: 'Privacy',
+            title: 'Security and Privacy',
+            onTap: () => _navigateToSecurityPrivacy(context),
           ),
           const Divider(height: 1, indent: 60),
           _buildInfoTile(
@@ -488,6 +490,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result == true) {
       _loadUserProfile();
     }
+  }
+
+  void _navigateToSecurityPrivacy(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SecurityPrivacyScreen(),
+      ),
+    );
   }
 
   Widget _buildSignOutButton(BuildContext context) {
