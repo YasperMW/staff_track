@@ -33,6 +33,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   String shiftTimeRange = '';
   Timer? _timer;
 
+  // Constants for shift times
+  static const int dayShiftLateHour = 9; // Late if checking in after 09:00
+  static const int dayShiftEndHour = 16;
+  static const int dayShiftEndMinute = 30; // Day shift ends at 16:30
+  static const int nightShiftLateHour = 18; // Late if checking in after 18:00
+  static const int nightShiftEndHour = 7;
+  static const int nightShiftEndMinute = 30; // Night shift ends at 07:30
+
   @override
   void initState() {
     super.initState();
@@ -193,6 +201,21 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Future<void> _checkIn() async {
+    // Check if late check-in and collect reason if needed
+    String? lateReason;
+    if (_isLateCheckIn()) {
+      lateReason = await _showReasonDialog(
+        title: 'Late Check-in',
+        message: 'You are checking in late. Please provide a reason for your late arrival.',
+        hint: 'e.g., Traffic delay, car trouble, family emergency...',
+      );
+
+      // If user cancelled the dialog, abort check-in
+      if (lateReason == null) {
+        return;
+      }
+    }
+
     setState(() {
       isLoading = true;
     });
@@ -225,13 +248,15 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       debugPrint('  latitude: ${currentPosition?.latitude}');
       debugPrint('  longitude: ${currentPosition?.longitude}');
       debugPrint('  currentShift: $currentShift');
+      debugPrint('  lateReason: $lateReason');
     }
 
     final result = await AttendanceController.checkIn(
       location: currentLocation,
       latitude: currentPosition?.latitude,
       longitude: currentPosition?.longitude,
-      shiftType: currentShift, // Store current shift
+      shiftType: currentShift,
+      lateReason: lateReason,
     );
 
     setState(() {
@@ -273,6 +298,21 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Future<void> _checkOut() async {
+    // Check if early check-out and collect reason if needed
+    String? earlyCheckoutReason;
+    if (_isEarlyCheckOut()) {
+      earlyCheckoutReason = await _showReasonDialog(
+        title: 'Early Check-out',
+        message: 'You are checking out early. Please provide a reason for leaving early.',
+        hint: 'e.g., Doctor appointment, family emergency, approved leave...',
+      );
+
+      // If user cancelled the dialog, abort check-out
+      if (earlyCheckoutReason == null) {
+        return;
+      }
+    }
+
     setState(() {
       isLoading = true;
     });
@@ -304,12 +344,14 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       debugPrint('  location: $currentLocation');
       debugPrint('  latitude: ${currentPosition?.latitude}');
       debugPrint('  longitude: ${currentPosition?.longitude}');
+      debugPrint('  earlyCheckoutReason: $earlyCheckoutReason');
     }
 
     final result = await AttendanceController.checkOut(
       location: currentLocation,
       latitude: currentPosition?.latitude,
       longitude: currentPosition?.longitude,
+      earlyCheckoutReason: earlyCheckoutReason,
     );
 
     setState(() {
@@ -356,6 +398,111 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
 
   void _showErrorSnackBar(String message) {
     AppSnackBar.showError(context, message);
+  }
+
+  /// Check if current time is late for check-in
+  bool _isLateCheckIn() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final minute = now.minute;
+
+    if (currentShift == 'Day Shift') {
+      // Late if after 09:00 for day shift
+      return hour > dayShiftLateHour || (hour == dayShiftLateHour && minute >= 0);
+    } else {
+      // Night shift: Late if after 18:00
+      return hour >= nightShiftLateHour;
+    }
+  }
+
+  /// Check if current time is early for check-out
+  bool _isEarlyCheckOut() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final minute = now.minute;
+
+    // Get the shift type from today's attendance
+    final shift = todayAttendance?.shiftType ?? currentShift;
+
+    if (shift.contains('Day Shift')) {
+      // Early if before 16:30 for day shift
+      return hour < dayShiftEndHour || (hour == dayShiftEndHour && minute < dayShiftEndMinute);
+    } else if (shift.contains('Night Shift')) {
+      // Night shift spans midnight
+      // Early if before 07:30 (and check-in was after 16:00 previous day)
+      if (hour < nightShiftEndHour || (hour == nightShiftEndHour && minute < nightShiftEndMinute)) {
+        // Check if this is a valid night shift checkout
+        // Night shift: 16:30 - 07:30, so early checkout is before 07:30
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Show dialog to collect reason for late check-in or early check-out
+  Future<String?> _showReasonDialog({
+    required String title,
+    required String message,
+    required String hint,
+  }) async {
+    final controller = TextEditingController();
+    String? reason;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: hint,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              reason = null;
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isEmpty) {
+                AppSnackBar.showError(context, 'Please provide a reason');
+                return;
+              }
+              reason = text;
+              Navigator.of(context).pop();
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+
+    return reason;
   }
 
   @override

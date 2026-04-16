@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { usersApi } from '../services/api';
+import { usersApi, shiftConfigurationsApi } from '../services/api';
+import type { ShiftConfiguration, ShiftConfigurationUpdate } from '../services/api';
 import { 
   Settings as SettingsIcon, 
   User, 
@@ -16,7 +17,10 @@ import {
   Key,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Clock,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -40,9 +44,16 @@ const Settings: React.FC = () => {
   // Loading state
   const [loading, setLoading] = useState(true);
 
-  // Load profile data on component mount
+  // Shift Configurations
+  const [shiftConfigurations, setShiftConfigurations] = useState<ShiftConfiguration[]>([]);
+  const [shiftConfigLoading, setShiftConfigLoading] = useState(false);
+  const [editingShift, setEditingShift] = useState<ShiftConfiguration | null>(null);
+  const [shiftForm, setShiftForm] = useState<ShiftConfigurationUpdate>({});
+
+  // Load profile data and shift configurations on component mount
   useEffect(() => {
     loadProfileData();
+    loadShiftConfigurations();
   }, []);
 
   const loadProfileData = async () => {
@@ -162,6 +173,78 @@ const Settings: React.FC = () => {
   const handleResetSettings = () => {
     warning('Settings reset to defaults');
     // TODO: Implement settings reset
+  };
+
+  // Shift Configuration Functions
+  const loadShiftConfigurations = async () => {
+    try {
+      setShiftConfigLoading(true);
+      const configs = await shiftConfigurationsApi.getAll();
+      setShiftConfigurations(configs);
+    } catch (err: any) {
+      console.error('Error loading shift configurations:', err);
+      error('Failed to load shift configurations');
+    } finally {
+      setShiftConfigLoading(false);
+    }
+  };
+
+  const handleEditShift = (config: ShiftConfiguration) => {
+    setEditingShift(config);
+    setShiftForm({
+      shift_name: config.shift_name,
+      check_in_earliest: config.check_in_earliest,
+      check_in_latest: config.check_in_latest,
+      official_start_time: config.official_start_time,
+      check_out_earliest: config.check_out_earliest,
+      check_out_latest: config.check_out_latest,
+      official_end_time: config.official_end_time,
+      extended_start_time: config.extended_start_time,
+      late_threshold: config.late_threshold,
+      is_active: config.is_active,
+      description: config.description
+    });
+  };
+
+  const handleSaveShift = async () => {
+    if (!editingShift) return;
+
+    try {
+      setShiftConfigLoading(true);
+      await shiftConfigurationsApi.update(editingShift.shift_config_id, shiftForm);
+      success('Shift configuration updated successfully');
+      setEditingShift(null);
+      setShiftForm({});
+      loadShiftConfigurations();
+    } catch (err: any) {
+      console.error('Error updating shift configuration:', err);
+      error('Failed to update shift configuration');
+    } finally {
+      setShiftConfigLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingShift(null);
+    setShiftForm({});
+  };
+
+  const handleDeleteShift = async (config: ShiftConfiguration) => {
+    if (!confirm(`Are you sure you want to delete the "${config.shift_name}" configuration?`)) {
+      return;
+    }
+
+    try {
+      setShiftConfigLoading(true);
+      await shiftConfigurationsApi.delete(config.shift_config_id);
+      success('Shift configuration deleted successfully');
+      loadShiftConfigurations();
+    } catch (err: any) {
+      console.error('Error deleting shift configuration:', err);
+      error('Failed to delete shift configuration');
+    } finally {
+      setShiftConfigLoading(false);
+    }
   };
 
   return (
@@ -468,6 +551,247 @@ const Settings: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Shift Configuration Management - HR Admin Only */}
+          {(profile.role === 'HR Admin' || profile.role === 'System Admin') && (
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Clock className="w-5 h-5 text-sky-blue" />
+              <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+                Shift Configuration Management
+              </h2>
+              {shiftConfigLoading && <RefreshCw className="w-4 h-4 animate-spin text-text-grey" />}
+            </div>
+            
+            {/* Current Configurations */}
+            <div className="space-y-4 mb-6">
+              {shiftConfigurations.map((config) => (
+                <div key={config.shift_config_id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-medium text-text-dark dark:text-text-dark-light">
+                        {config.shift_name}
+                      </h3>
+                      <p className="text-sm text-text-grey dark:text-text-grey-dark">
+                        {config.shift_type} {config.is_active ? '(Active)' : '(Inactive)'}
+                      </p>
+                      {config.description && (
+                        <p className="text-sm text-text-grey dark:text-text-grey-dark mt-1">
+                          {config.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditShift(config)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteShift(config)}
+                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-text-grey dark:text-text-grey-dark">Check-in:</span>
+                      <span className="ml-2 text-text-dark dark:text-text-dark-light">
+                        {config.check_in_earliest} - {config.check_in_latest}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-grey dark:text-text-grey-dark">Check-out:</span>
+                      <span className="ml-2 text-text-dark dark:text-text-dark-light">
+                        {config.check_out_earliest} - {config.check_out_latest}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-grey dark:text-text-grey-dark">Official Hours:</span>
+                      <span className="ml-2 text-text-dark dark:text-text-dark-light">
+                        {config.official_start_time} - {config.official_end_time}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-text-grey dark:text-text-grey-dark">Extended After:</span>
+                      <span className="ml-2 text-text-dark dark:text-text-dark-light">
+                        {config.extended_start_time}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Edit Form */}
+            {editingShift && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 className="font-medium text-text-dark dark:text-text-dark-light mb-4">
+                  Edit {editingShift.shift_name}
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Configuration Name
+                    </label>
+                    <input
+                      type="text"
+                      value={shiftForm.shift_name || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, shift_name: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={shiftForm.is_active?.toString() || 'true'}
+                      onChange={(e) => setShiftForm({...shiftForm, is_active: e.target.value === 'true'})}
+                      className="input-field"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Check-in Earliest
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.check_in_earliest || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, check_in_earliest: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Check-in Latest
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.check_in_latest || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, check_in_latest: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Official Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.official_start_time || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, official_start_time: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Official End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.official_end_time || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, official_end_time: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Check-out Earliest
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.check_out_earliest || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, check_out_earliest: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Check-out Latest
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.check_out_latest || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, check_out_latest: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Extended Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.extended_start_time || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, extended_start_time: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Late Threshold
+                    </label>
+                    <input
+                      type="time"
+                      value={shiftForm.late_threshold || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, late_threshold: e.target.value})}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={shiftForm.description || ''}
+                      onChange={(e) => setShiftForm({...shiftForm, description: e.target.value})}
+                      rows={3}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3 mt-6">
+                  <button 
+                    onClick={handleSaveShift}
+                    disabled={shiftConfigLoading}
+                    className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{shiftConfigLoading ? 'Saving...' : 'Save Changes'}</span>
+                  </button>
+                  <button 
+                    onClick={handleCancelEdit}
+                    className="btn-outline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
         </div>
 
         {/* Sidebar Settings */}

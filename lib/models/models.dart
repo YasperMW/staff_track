@@ -90,12 +90,23 @@ class AttendanceRecord {
   bool get isComplete => isCheckedIn && isCheckedOut;
 }
 
-// Shift utility class
+// Shift utility class - matches backend ShiftTimes class
 class ShiftUtils {
-  static const TimeOfDay dayShiftStart = TimeOfDay(hour: 7, minute: 30);
-  static const TimeOfDay dayShiftEnd = TimeOfDay(hour: 16, minute: 30);
-  static const TimeOfDay nightShiftStart = TimeOfDay(hour: 16, minute: 30);
-  static const TimeOfDay nightShiftEnd = TimeOfDay(hour: 7, minute: 30);
+  // Day Shift Times
+  static const TimeOfDay dayShiftCheckInEarliest = TimeOfDay(hour: 6, minute: 0);    // 06:00 AM
+  static const TimeOfDay dayShiftCheckInLatest = TimeOfDay(hour: 7, minute: 45);    // 07:45 AM
+  static const TimeOfDay dayShiftStart = TimeOfDay(hour: 7, minute: 30);            // 07:30 AM (official start)
+  static const TimeOfDay dayShiftEnd = TimeOfDay(hour: 16, minute: 30);             // 04:30 PM (official end)
+  static const TimeOfDay dayShiftCheckOutEarliest = TimeOfDay(hour: 16, minute: 0); // 04:00 PM
+  static const TimeOfDay dayShiftCheckOutLatest = TimeOfDay(hour: 17, minute: 30);   // 05:30 PM
+  static const TimeOfDay dayShiftExtendedStart = TimeOfDay(hour: 17, minute: 30);   // 05:30 PM (extended starts)
+  
+  // Night Shift Times
+  static const TimeOfDay nightShiftStart = TimeOfDay(hour: 16, minute: 30);         // 04:30 PM
+  static const TimeOfDay nightShiftEnd = TimeOfDay(hour: 7, minute: 30);            // 07:30 AM (next day)
+  static const TimeOfDay nightShiftCheckOutEarliest = TimeOfDay(hour: 6, minute: 0); // 06:00 AM
+  static const TimeOfDay nightShiftCheckOutLatest = TimeOfDay(hour: 8, minute: 0);   // 08:00 AM
+  static const TimeOfDay nightShiftExtendedStart = TimeOfDay(hour: 8, minute: 0);    // 08:00 AM (extended starts)
   
   static String getCurrentShift() {
     final now = TimeOfDay.now();
@@ -108,18 +119,18 @@ class ShiftUtils {
   }
   
   static String _getShiftForTime(TimeOfDay time) {
-    final currentMinutes = time.hour * 60 + time.minute;
-    final dayStartMinutes = dayShiftStart.hour * 60 + dayShiftStart.minute;
-    final dayEndMinutes = dayShiftEnd.hour * 60 + dayShiftEnd.minute;
+    final hour = time.hour;
+    final minute = time.minute;
     
-    // Day shift: 07:30 to 16:30
-    if (currentMinutes >= dayStartMinutes && currentMinutes < dayEndMinutes) {
-      return 'Day Shift';
+    // Day shift: 06:00 to 16:29 (before night shift starts at 16:30)
+    if ((hour > 6) || (hour == 6 && minute >= 0)) {
+      if ((hour < 16) || (hour == 16 && minute < 30)) {
+        return 'Day Shift';
+      }
     }
-    // Night shift: 16:30 to 07:30 (next day)
-    else {
-      return 'Night Shift';
-    }
+    
+    // Night shift: 16:30 to 05:59 (next day)
+    return 'Night Shift';
   }
   
   static bool isWithinShiftGracePeriod(DateTime checkInTime, String expectedShift) {
@@ -130,18 +141,25 @@ class ShiftUtils {
   static String determineShiftForAttendance(DateTime checkInTime, DateTime? checkOutTime) {
     // Primary shift based on check-in time
     final primaryShift = getShiftForDateTime(checkInTime);
-    
-    // If check-out is in different shift and significantly late, consider mixed shift
+
+    // If check-out is provided, check for extended shift
     if (checkOutTime != null) {
-      final checkOutShift = getShiftForDateTime(checkOutTime);
-      final durationDifference = checkOutTime.difference(checkInTime);
-      
-      // If worked across shift boundary for more than 2 hours, mark as mixed
-      if (primaryShift != checkOutShift && durationDifference.inHours > 2) {
-        return '$primaryShift → $checkOutShift';
+      final checkOutHour = checkOutTime.hour;
+      final checkOutMinute = checkOutTime.minute;
+
+      if (primaryShift == 'Day Shift') {
+        // Day shift: extended only if checkout after 17:30
+        if (checkOutHour > 17 || (checkOutHour == 17 && checkOutMinute >= 30)) {
+          return '$primaryShift → Extended';
+        }
+      } else if (primaryShift == 'Night Shift') {
+        // Night shift: extended if checkout after 08:00
+        if (checkOutHour > 8 || (checkOutHour == 8 && checkOutMinute >= 0)) {
+          return '$primaryShift → Extended';
+        }
       }
     }
-    
+
     return primaryShift;
   }
   
@@ -151,6 +169,11 @@ class ShiftUtils {
         return '${_formatTime(dayShiftStart)} - ${_formatTime(dayShiftEnd)}';
       case 'Night Shift':
         return '${_formatTime(nightShiftStart)} - ${_formatTime(nightShiftEnd)}';
+      case 'Day Shift → Extended':
+        return 'Extended: ${_formatTime(dayShiftStart)} → Late';
+      case 'Night Shift → Extended':
+        return 'Extended: ${_formatTime(nightShiftStart)} → Late';
+      // Legacy support for old format
       case 'Day Shift → Night Shift':
         return 'Extended: ${_formatTime(dayShiftStart)} → Late';
       case 'Night Shift → Day Shift':

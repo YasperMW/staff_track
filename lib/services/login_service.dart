@@ -180,4 +180,41 @@ class LoginService {
       return false;
     }
   }
+
+  Future<LoginResponse> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/auth/change-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return LoginResponse(
+          success: true,
+          message: data['message'],
+        );
+      }
+      return LoginResponse(
+        success: false,
+        message: _detailFromBody(response.body),
+      );
+    } catch (e) {
+      return LoginResponse(
+        success: false,
+        message: 'Network error. Check server and try again.',
+      );
+    }
+  }
 }
