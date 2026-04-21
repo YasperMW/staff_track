@@ -24,6 +24,8 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   List<EmployeeFileItem> _myFiles = [];
   bool isLoadingLeaveBalances = false;
   bool isLoadingFiles = false;
+  bool _isUploadingFile = false;
+  String? _uploadingFileName;
 
   @override
   void initState() {
@@ -246,6 +248,220 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     }
   }
 
+  void _showUploadDialog(BuildContext context) {
+    String selectedType = 'payslip';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Upload Document',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Select the type of document you want to upload',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildFileTypeChip(
+                        ctx: context,
+                        setModalState: setModalState,
+                        label: 'Payslip',
+                        value: 'payslip',
+                        icon: Icons.receipt_long,
+                        selectedType: selectedType,
+                        onSelect: (v) {
+                          if (!v) return;
+                          setModalState(() => selectedType = 'payslip');
+                        },
+                      ),
+                      _buildFileTypeChip(
+                        ctx: context,
+                        setModalState: setModalState,
+                        label: 'Offer Letter',
+                        value: 'offer_letter',
+                        icon: Icons.description,
+                        selectedType: selectedType,
+                        onSelect: (v) {
+                          if (!v) return;
+                          setModalState(() => selectedType = 'offer_letter');
+                        },
+                      ),
+                      _buildFileTypeChip(
+                        ctx: context,
+                        setModalState: setModalState,
+                        label: 'Job Description',
+                        value: 'job_description',
+                        icon: Icons.work_outline,
+                        selectedType: selectedType,
+                        onSelect: (v) {
+                          if (!v) return;
+                          setModalState(() => selectedType = 'job_description');
+                        },
+                      ),
+                      _buildFileTypeChip(
+                        ctx: context,
+                        setModalState: setModalState,
+                        label: 'Other',
+                        value: 'other',
+                        icon: Icons.folder_outlined,
+                        selectedType: selectedType,
+                        onSelect: (v) {
+                          if (!v) return;
+                          setModalState(() => selectedType = 'other');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _performUpload(selectedType);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.skyBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Select File', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFileTypeChip({
+    required BuildContext ctx,
+    required StateSetter setModalState,
+    required String label,
+    required String value,
+    required IconData icon,
+    required String selectedType,
+    required void Function(bool) onSelect,
+  }) {
+    final isSelected = selectedType == value;
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? Colors.white : AppTheme.skyBlue,
+          ),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: onSelect,
+      selectedColor: AppTheme.skyBlue,
+      backgroundColor: AppTheme.skyBlue.withAlpha(26),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppTheme.skyBlue,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
+
+  Future<void> _performUpload(String fileType) async {
+    setState(() {
+      _isUploadingFile = true;
+      _uploadingFileName = null;
+    });
+
+    try {
+      final url = await EmployeeFilesService.uploadFile(
+        fileType: fileType,
+        onFileName: (name) {
+          setState(() {
+            _uploadingFileName = name;
+          });
+        },
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isUploadingFile = false;
+        _uploadingFileName = null;
+      });
+
+      if (url != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File uploaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _loadUserProfile();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Upload cancelled or failed'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isUploadingFile = false;
+        _uploadingFileName = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upload failed: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildPersonalInfoSection(BuildContext context, user) {
     return _buildSectionCard(
       context,
@@ -461,86 +677,26 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               ),
             ),
             TextButton.icon(
-              onPressed: () async {
-                String selectedType = 'payslip';
-                await showModalBottomSheet(
-                  context: context,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  builder: (ctx) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Select Document Type', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('Payslip'),
-                                selected: selectedType == 'payslip',
-                                onSelected: (v) { if (!v) return; selectedType = 'payslip'; },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Offer Letter'),
-                                selected: selectedType == 'offer_letter',
-                                onSelected: (v) { if (!v) return; selectedType = 'offer_letter'; },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Job Description'),
-                                selected: selectedType == 'job_description',
-                                onSelected: (v) { if (!v) return; selectedType = 'job_description'; },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Other'),
-                                selected: selectedType == 'other',
-                                onSelected: (v) { if (!v) return; selectedType = 'other'; },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () => Navigator.of(ctx).pop(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.skyBlue,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: const Text('Continue'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-                final url = await EmployeeFilesService.uploadFile(fileType: selectedType);
-                if (url != null) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('File uploaded')),
-                  );
-                  await _loadUserProfile();
-                } else {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Upload failed')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.upload_file, color: AppTheme.skyBlue, size: 16),
-              label: const Text('Upload', style: TextStyle(color: AppTheme.skyBlue, fontSize: 12)),
+              onPressed: _isUploadingFile ? null : () => _showUploadDialog(context),
+              icon: Icon(
+                Icons.upload_file,
+                color: _isUploadingFile ? Colors.grey : AppTheme.skyBlue,
+                size: 16,
+              ),
+              label: Text(
+                'Upload',
+                style: TextStyle(
+                  color: _isUploadingFile ? Colors.grey : AppTheme.skyBlue,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
+        if (_isUploadingFile) ...[
+          const SizedBox(height: 16),
+          _buildUploadProgress(),
+        ],
         const SizedBox(height: 12),
         if (_myFiles.isEmpty)
           Center(
@@ -571,8 +727,13 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.open_in_new, color: AppTheme.skyBlue),
-                  onPressed: () {
-                    // For now, rely on system to open URL if supported
+                  onPressed: () async {
+                    final ok = await EmployeeFilesService.openEmployeeFile(f.fileUrl);
+                    if (!ok && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Unable to open file')),
+                      );
+                    }
                   },
                 ),
               );
@@ -670,6 +831,52 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUploadProgress() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.skyBlue.withAlpha(26),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.skyBlue.withAlpha(51)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.skyBlue),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Uploading ${_uploadingFileName ?? "file"}...',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Please wait, this may take a moment',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

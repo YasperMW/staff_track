@@ -24,7 +24,7 @@ class CheckInOutScreen extends StatefulWidget {
 }
 
 class _CheckInOutScreenState extends State<CheckInOutScreen> {
-  AttendanceRecord? todayAttendance;
+  List<AttendanceRecord> todayAttendances = [];
   bool isLoading = false;
   bool isGettingLocation = false;
   String? currentLocation;
@@ -32,6 +32,60 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   String currentShift = '';
   String shiftTimeRange = '';
   Timer? _timer;
+
+  AlertDialog _buildUniformDialog({
+    required String title,
+    required Widget content,
+    required Widget primaryAction,
+    String cancelText = 'Cancel',
+    VoidCallback? onCancel,
+  }) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      content: DefaultTextStyle(
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+          fontSize: 14,
+        ),
+        child: content,
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () {
+                  onCancel?.call();
+                  Navigator.of(context).pop();
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(cancelText),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: primaryAction,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   // Constants for shift times
   static const int dayShiftLateHour = 9; // Late if checking in after 09:00
@@ -76,9 +130,47 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     });
 
     try {
-      final attendance = await AttendanceController.getTodayAttendance();
+      final attendances = await AttendanceController.getTodayAttendance();
+
+      // Also fetch yesterday's attendance to check for unresolved night shift check-ins
+      // This handles the case where someone forgot to check out their night shift yesterday
+      final now = DateTime.now();
+      final yesterday = now.subtract(const Duration(days: 1));
+      final yesterdayDate = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+
+      try {
+        final yesterdayAttendances = await AttendanceController.getAttendanceHistory(
+          startDate: yesterdayDate,
+          endDate: yesterdayDate,
+          limit: 10,
+        );
+
+        // Filter for active night shift check-ins from yesterday
+        final activeNightShiftCheckIns = yesterdayAttendances.where((a) =>
+            a.checkInTime != null &&
+            a.checkOutTime == null &&
+            (a.shiftType ?? '').contains('Night Shift')
+        ).toList();
+
+        if (kDebugMode) {
+          debugPrint('DEBUG: Found ${activeNightShiftCheckIns.length} unresolved night shift check-ins from yesterday');
+        }
+
+        // Add them to today's attendances (only if not already present from backend)
+        for (final checkIn in activeNightShiftCheckIns) {
+          if (!attendances.any((a) => a.id == checkIn.id)) {
+            attendances.add(checkIn);
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('DEBUG: Failed to fetch yesterday\'s attendance: $e');
+        }
+        // Continue without yesterday's records - backend should handle this
+      }
+
       setState(() {
-        todayAttendance = attendance;
+        todayAttendances = attendances;
         isLoading = false;
       });
     } catch (e) {
@@ -298,6 +390,20 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
   }
 
   Future<void> _checkOut() async {
+    // Check if less than 1 hour from check-in and require confirmation
+    if (_isLessThanOneHourCheckIn()) {
+      final confirmed = await _showConfirmationDialog(
+        title: 'Quick Check-out Confirmation',
+        message: 'You are checking out less than 1 hour after checking in. Are you sure you want to continue?',
+        confirmText: 'Yes, Check Out',
+        cancelText: 'Cancel',
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     // Check if early check-out and collect reason if needed
     String? earlyCheckoutReason;
     if (_isEarlyCheckOut()) {
@@ -421,8 +527,21 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     final hour = now.hour;
     final minute = now.minute;
 
-    // Get the shift type from today's attendance
-    final shift = todayAttendance?.shiftType ?? currentShift;
+    // Find the most recent active attendance record
+    AttendanceRecord? activeAttendance;
+    for (final attendance in todayAttendances.reversed) {
+      if (attendance.checkInTime != null && attendance.checkOutTime == null) {
+        activeAttendance = attendance;
+        break;
+      }
+    }
+
+    if (activeAttendance == null) {
+      return false;
+    }
+
+    // Get shift type from active attendance
+    final shift = activeAttendance!.shiftType ?? currentShift;
 
     if (shift.contains('Day Shift')) {
       // Early if before 16:30 for day shift
@@ -451,19 +570,13 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(title),
+      builder: (context) => _buildUniformDialog(
+        title: title,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-            ),
+            Text(message),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
@@ -478,31 +591,146 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              reason = null;
-            },
-            child: const Text('Cancel'),
+        primaryAction: ElevatedButton(
+          onPressed: () {
+            final text = controller.text.trim();
+            if (text.isEmpty) {
+              AppSnackBar.showError(context, 'Please provide a reason');
+              return;
+            }
+            reason = text;
+            Navigator.of(context).pop();
+          },
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
           ),
-          ElevatedButton(
-            onPressed: () {
-              final text = controller.text.trim();
-              if (text.isEmpty) {
-                AppSnackBar.showError(context, 'Please provide a reason');
-                return;
-              }
-              reason = text;
-              Navigator.of(context).pop();
-            },
-            child: const Text('Submit'),
-          ),
-        ],
+          child: const Text('Submit'),
+        ),
       ),
     );
 
     return reason;
+  }
+
+  /// Show confirmation dialog for quick check-outs
+  Future<bool> _showConfirmationDialog({
+    required String title,
+    required String message,
+    required String confirmText,
+    required String cancelText,
+  }) async {
+    bool confirmed = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _buildUniformDialog(
+        title: title,
+        content: Text(message),
+        cancelText: cancelText,
+        onCancel: () {
+          confirmed = false;
+        },
+        primaryAction: ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            confirmed = true;
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.paleRed,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          child: Text(confirmText, textAlign: TextAlign.center),
+        ),
+      ),
+    );
+
+    return confirmed;
+  }
+
+  /// Check if current check-out is less than 1 hour after check-in
+  bool _isLessThanOneHourCheckIn() {
+    if (todayAttendances.isEmpty) {
+      return false;
+    }
+
+    // Find the most recent check-in that hasn't been checked out
+    final now = DateTime.now();
+    for (final attendance in todayAttendances.reversed) {
+      if (attendance.checkInTime != null && attendance.checkOutTime == null) {
+        final checkInTime = attendance.checkInTime!;
+        final difference = now.difference(checkInTime);
+
+        // For night shifts that span midnight, the difference will naturally be large
+        // (e.g., checked in at 4:30 PM yesterday, now 6:00 AM today = ~13.5 hours)
+        // So the < 1 hour check will correctly return false for legitimate night shift check-outs
+        return difference.inMinutes < 60;
+      }
+    }
+
+    return false;
+  }
+
+  /// Get attendance status color based on current attendances
+  Color _getAttendanceStatusColor() {
+    if (todayAttendances.isEmpty) {
+      return AppTheme.lightGoldAccent;
+    }
+
+    // Check if any active check-ins exist
+    final hasActiveCheckIn = todayAttendances.any((att) => 
+        att.checkInTime != null && att.checkOutTime == null);
+    
+    if (!hasActiveCheckIn) {
+      return AppTheme.lightGoldAccent; // Ready to check in
+    }
+
+    // Check if all are checked out
+    final allCheckedOut = todayAttendances.every((att) => att.checkOutTime != null);
+    
+    if (allCheckedOut) {
+      return AppTheme.skyBlue.withValues(alpha: 0.8); // Completed for today
+    }
+
+    return Colors.yellowAccent; // Currently checked in
+  }
+
+  /// Get attendance status text based on current attendances
+  String _getAttendanceStatusText() {
+    if (todayAttendances.isEmpty) {
+      return 'Not checked in yet';
+    }
+
+    // Check if any active check-ins exist
+    final activeAttendance = todayAttendances.firstWhere(
+      (att) => att.checkInTime != null && att.checkOutTime == null,
+      orElse: () => todayAttendances.first,
+    );
+
+    final hasActiveCheckIn = activeAttendance.checkInTime != null &&
+                             activeAttendance.checkOutTime == null;
+
+    if (!hasActiveCheckIn) {
+      return 'Ready to check in';
+    }
+
+    // Check if this is a night shift check-in from yesterday
+    final now = DateTime.now();
+    final checkInDate = activeAttendance.checkInTime!;
+    final isDifferentDay = checkInDate.day != now.day ||
+                           checkInDate.month != now.month ||
+                           checkInDate.year != now.year;
+
+    if (isDifferentDay && (activeAttendance.shiftType ?? '').contains('Night Shift')) {
+      return 'Night shift from yesterday - pending checkout';
+    }
+
+    return 'Currently checked in';
   }
 
   @override
@@ -601,22 +829,11 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                 Icon(
                                   Icons.circle,
                                   size: 10,
-                                  color: todayAttendance == null ||
-                                          !todayAttendance!.isCheckedIn
-                                      ? AppTheme.lightGoldAccent
-                                      : todayAttendance!.isCheckedOut
-                                          ? AppTheme.skyBlue.withValues(alpha: 0.8)
-                                          : Colors.yellowAccent,
+                                  color: _getAttendanceStatusColor(),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  todayAttendance == null
-                                      ? 'Not checked in yet'
-                                      : !todayAttendance!.isCheckedIn
-                                          ? 'Ready to check in'
-                                          : todayAttendance!.isCheckedOut
-                                              ? 'Completed for today'
-                                              : 'Currently checked in',
+                                  _getAttendanceStatusText(),
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.9),
                                     fontSize: 14,
@@ -758,10 +975,10 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            if (!isLoading && todayAttendance == null)
+                            if (!isLoading && todayAttendances.isEmpty)
                               _buildNoAttendanceStatus()
-                            else if (!isLoading && todayAttendance != null)
-                              _buildAttendanceStatus(todayAttendance!),
+                            else if (!isLoading && todayAttendances.isNotEmpty)
+                              _buildMultipleAttendanceStatus(),
                           ],
                         ),
                       ),
@@ -973,16 +1190,18 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                             
 
                             
-                            if (todayAttendance == null ||
-                                !todayAttendance!.isCheckedIn) {
+                            // Check if user has any active check-ins (not checked out)
+                            final hasActiveCheckIn = todayAttendances.any((att) => 
+                                att.checkInTime != null && att.checkOutTime == null);
+                            
+                            if (!hasActiveCheckIn) {
                               return ElevatedButton.icon(
                                 onPressed:
                                     isLoading || !hasLocation ? null : _checkIn,
                                 icon: const Icon(Icons.login),
                                 label: const Text('Check in'),
                               );
-                            } else if (todayAttendance!.isCheckedIn &&
-                                !todayAttendance!.isCheckedOut) {
+                            } else {
                               return ElevatedButton.icon(
                                 onPressed:
                                     isLoading || !hasLocation ? null : _checkOut,
@@ -992,55 +1211,6 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
                                 ),
                                 icon: const Icon(Icons.logout),
                                 label: const Text('Check out'),
-                              );
-                            } else {
-                              return Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.lightGold,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: AppTheme.skyBlue,
-                                      size: 32,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'All done for today',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'You have already checked out. See your history for details.',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               );
                             }
                           },
@@ -1180,6 +1350,18 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMultipleAttendanceStatus() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: todayAttendances.map((attendance) => 
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildAttendanceStatus(attendance),
+        )
+      ).toList(),
     );
   }
 

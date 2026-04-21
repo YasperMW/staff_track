@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'auth_storage.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmployeeFileItem {
   final String fileId;
@@ -28,6 +29,27 @@ class EmployeeFileItem {
 }
 
 class EmployeeFilesService {
+  static String buildEmployeeFileUrl(String fileUrl) {
+    final trimmed = fileUrl.trim();
+    if (trimmed.isEmpty) return '';
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    final normalized = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return '${AppConfig.apiBaseUrl}/uploads/$normalized';
+  }
+
+  static Future<bool> openEmployeeFile(String fileUrl) async {
+    final url = buildEmployeeFileUrl(fileUrl);
+    if (url.isEmpty) return false;
+
+    final uri = Uri.parse(url);
+    if (!await canLaunchUrl(uri)) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   static Future<List<EmployeeFileItem>> listMyFiles() async {
     final token = await AuthStorage.getToken();
     if (token == null) {
@@ -48,12 +70,21 @@ class EmployeeFilesService {
     }
   }
 
-  static Future<String?> uploadFile({required String fileType}) async {
+  static Future<String?> uploadFile({
+    required String fileType,
+    void Function(String fileName)? onFileName,
+  }) async {
     final token = await AuthStorage.getToken();
     if (token == null) return null;
     final result = await FilePicker.platform.pickFiles(withReadStream: true);
     if (result == null || result.files.isEmpty) return null;
     final file = result.files.first;
+
+    // Notify caller of file name
+    if (onFileName != null) {
+      onFileName(file.name);
+    }
+
     final request = http.MultipartRequest(
       'POST',
       Uri.parse('${AppConfig.apiBaseUrl}/files/upload/employee-file'),
@@ -76,6 +107,7 @@ class EmployeeFilesService {
     } else {
       return null;
     }
+
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
     if (response.statusCode >= 200 && response.statusCode < 300) {

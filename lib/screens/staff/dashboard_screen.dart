@@ -27,10 +27,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
-    final attendanceProvider = context.read<AttendanceProvider>();
-    attendanceProvider.loadTodayAttendance();
-    attendanceProvider.loadRecentAttendance(limit: 5);
-    attendanceProvider.loadProfileMetrics();
+    
+    // Defer provider calls to avoid setState() during build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final attendanceProvider = context.read<AttendanceProvider>();
+      attendanceProvider.loadTodayAttendance();
+      attendanceProvider.loadRecentAttendance(limit: 5);
+      attendanceProvider.loadProfileMetrics();
+    });
   }
 
   String _getAttendanceStatusText() {
@@ -51,11 +55,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final todayAttendance =
         context.watch<AttendanceProvider>().todayAttendance;
     if (todayAttendance == null || !todayAttendance.isCheckedIn) {
-      return 'Clock In';
+      return 'Check In';
     } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
-      return 'Clock Out';
+      return 'Check Out';
     } else {
       return 'View Details';
+    }
+  }
+
+  bool _shouldDisableCheckIn() {
+    final todayAttendance =
+        context.watch<AttendanceProvider>().todayAttendance;
+    // Disable if user has completed both check-in and check-out for today's shift
+    return todayAttendance != null && 
+           todayAttendance.isCheckedIn && 
+           todayAttendance.isCheckedOut;
+  }
+
+  String _getNextShiftMessage() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    
+    if (hour < 6) {
+      return 'Check-in available at 6:00 AM for Day Shift';
+    } else if (hour < 16) {
+      return 'Check-in available at 4:30 PM for Night Shift';
+    } else {
+      return 'Check-in available tomorrow at 6:00 AM for Day Shift';
     }
   }
 
@@ -168,6 +194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildClockInCard() {
     final attendanceProvider = context.watch<AttendanceProvider>();
     final todayAttendance = attendanceProvider.todayAttendance;
+    final buttonText = _getButtonText();
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -235,62 +262,114 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (todayAttendance == null || !todayAttendance.isCheckedIn) {
-                        // Check in
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CheckInOutScreen(),
+                  child: Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _shouldDisableCheckIn() ? null : () {
+                          if (todayAttendance == null || !todayAttendance.isCheckedIn) {
+                            // Check in
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckInOutScreen(),
+                              ),
+                            ).then(
+                              (_) => context
+                                  .read<AttendanceProvider>()
+                                  .loadTodayAttendance(),
+                            );
+                          } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
+                            // Check out
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckInOutScreen(),
+                              ),
+                            ).then(
+                              (_) => context
+                                  .read<AttendanceProvider>()
+                                  .loadTodayAttendance(),
+                            );
+                          } else {
+                            // View details (already completed)
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CheckInOutScreen(),
+                              ),
+                            ).then(
+                              (_) => context
+                                  .read<AttendanceProvider>()
+                                  .loadTodayAttendance(),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _shouldDisableCheckIn() ? Colors.grey[300] : Colors.white,
+                          foregroundColor: _shouldDisableCheckIn() ? Colors.grey[600] : AppTheme.skyBlue,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ).then(
-                          (_) => context
-                              .read<AttendanceProvider>()
-                              .loadTodayAttendance(),
-                        );
-                      } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
-                        // Check out
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CheckInOutScreen(),
-                          ),
-                        ).then(
-                          (_) => context
-                              .read<AttendanceProvider>()
-                              .loadTodayAttendance(),
-                        );
-                      } else {
-                        // View details (already completed)
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CheckInOutScreen(),
-                          ),
-                        ).then(
-                          (_) => context
-                              .read<AttendanceProvider>()
-                              .loadTodayAttendance(),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.skyBlue,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          minimumSize: const Size.fromHeight(56),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              buttonText == 'Check In'
+                                  ? Icons.login
+                                  : buttonText == 'Check Out'
+                                      ? Icons.logout
+                                      : Icons.visibility,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              buttonText,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: Text(
-                      _getButtonText(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                      if (_shouldDisableCheckIn()) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.orange,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _getNextShiftMessage(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -304,7 +383,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatsRow(BuildContext context) {
     final attendanceProvider = context.watch<AttendanceProvider>();
     final metrics = attendanceProvider.profileMetrics;
-    
+
     // Show loading state while metrics are being fetched
     if (attendanceProvider.isLoadingMetrics) {
       return Row(

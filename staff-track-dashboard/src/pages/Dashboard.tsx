@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { attendanceApi, requestsApi, announcementsApi } from '../services/api';
 import {
@@ -18,10 +19,10 @@ import {
   Filter,
   Download,
   ChevronRight,
-  ArrowUp,
-  ArrowDown,
   MoreVertical,
   Zap,
+  Pause,
+  Play,
 } from 'lucide-react';
 import {
   BarChart,
@@ -65,6 +66,8 @@ interface TeamAttendanceMember {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [stats, setStats] = useState<DashboardStats>({
     totalStaff: 0,
@@ -94,16 +97,21 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-    // Trigger animations after data loads
-    setTimeout(() => setAnimatedStats(true), 500);
-    
-    // Set up real-time updates every 30 seconds
+    // Trigger animations after data loads — store ref so we can clean up on unmount
+    animationTimerRef.current = setTimeout(() => setAnimatedStats(true), 500);
+    return () => {
+      if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+    };
+  }, []);
+
+  // Separate effect so the interval actually starts/stops when autoRefresh changes
+  useEffect(() => {
+    if (!autoRefresh) return;
     const interval = setInterval(() => {
       loadDashboardData();
     }, 30000);
-    
     return () => clearInterval(interval);
-  }, []);
+  }, [autoRefresh]);
 
   const loadDashboardData = async () => {
     setIsLoading(true);
@@ -114,13 +122,6 @@ const Dashboard: React.FC = () => {
         announcementsApi.getAnnouncements(3),
         attendanceApi.getRecentCheckIns(10), // Get 10 recent check-ins for dashboard
       ]);
-
-      console.log('Dashboard data:', {
-        attendanceSummary,
-        requestsSummary,
-        announcements,
-        recentCheckIns
-      });
 
       // Process attendance summary
       setStats(prev => ({
@@ -178,17 +179,9 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  const handleNavigateToAnnouncements = () => {
-    window.location.href = '/announcements';
-  };
-
-  const handleNavigateToAttendance = () => {
-    window.location.href = '/attendance';
-  };
-
-  const handleNavigateToRequests = () => {
-    window.location.href = '/requests';
-  };
+  const handleNavigateToAnnouncements = () => navigate('/announcements');
+  const handleNavigateToAttendance = () => navigate('/attendance');
+  const handleNavigateToRequests = () => navigate('/requests');
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -283,9 +276,13 @@ const Dashboard: React.FC = () => {
                   ? 'bg-green-500 bg-opacity-30 text-white' 
                   : 'bg-white bg-opacity-20 text-blue-100 hover:bg-opacity-30'
               }`}
-              title={autoRefresh ? 'Auto-refresh enabled' : 'Auto-refresh disabled'}
+              title={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
             >
-              <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${autoRefresh ? 'animate-spin' : ''}`} />
+              {autoRefresh ? (
+                <Pause className="w-4 h-4 md:w-5 md:h-5" />
+              ) : (
+                <Play className="w-4 h-4 md:w-5 md:h-5" />
+              )}
             </button>
             
             <button
@@ -302,6 +299,7 @@ const Dashboard: React.FC = () => {
               onClick={loadDashboardData}
               disabled={isLoading}
               className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center hover:bg-opacity-30 transition-all backdrop-blur-sm disabled:opacity-50"
+              title="Refresh data now"
             >
               <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -309,23 +307,37 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Auto-refresh paused banner */}
+      {!autoRefresh && (
+        <div className="flex items-center space-x-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-amber-700 dark:text-amber-300">
+          <Pause className="w-4 h-4 flex-shrink-0" />
+          <p className="text-sm font-medium">
+            Auto-refresh paused — data may be stale. Last updated at{' '}
+            <span className="font-semibold">{formatTime(lastUpdated)}</span>.
+          </p>
+          <button
+            onClick={() => setAutoRefresh(true)}
+            className="ml-auto text-xs font-semibold px-3 py-1 bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 rounded-lg transition-colors flex-shrink-0"
+          >
+            Resume
+          </button>
+        </div>
+      )}
+
       {/* Today's Summary Card - Management View */}
       <div className="relative bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl md:rounded-3xl p-4 md:p-8 text-white shadow-2xl overflow-hidden group">
         <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-white opacity-10 rounded-full -mr-16 md:-mr-20 -mt-16 md:-mt-20 group-hover:scale-110 transition-transform duration-500" />
         <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-white opacity-10 rounded-full -ml-12 md:-ml-16 -mb-12 md:-mb-16 group-hover:scale-110 transition-transform duration-500" />
 
         <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
-            <div className="flex items-center space-x-3 mb-3 md:mb-0">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="flex items-center space-x-3">
               <div className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
                 <Calendar className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <div>
-                <p className="text-xs md:text-sm opacity-90">Today's Date</p>
-                <p className="font-semibold text-sm md:text-base">{formatDate(currentTime)}</p>
-              </div>
+              <p className="font-semibold text-sm md:text-base opacity-90">Today's Attendance Snapshot</p>
             </div>
-            <div className="px-2 py-1 md:px-3 md:py-1 bg-white bg-opacity-20 rounded-full text-xs md:text-xs font-semibold backdrop-blur-sm">
+            <div className="px-2 py-1 md:px-3 md:py-1 bg-white bg-opacity-20 rounded-full text-xs font-semibold backdrop-blur-sm">
               {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
@@ -407,16 +419,18 @@ const Dashboard: React.FC = () => {
         <div className="card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Analytics</h3>
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-green-600" />
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-green-600" />
+              </div>
             </div>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Trend</span>
               <div className="flex items-center space-x-1 text-green-600">
-                <ArrowUp className="w-4 h-4" />
-                <span className="text-sm font-semibold">12%</span>
+                <span className="text-sm font-semibold">↑ 12%</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -441,8 +455,11 @@ const Dashboard: React.FC = () => {
         <div className="card p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Performance</h3>
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Target className="w-4 h-4 text-purple-600" />
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Target className="w-4 h-4 text-purple-600" />
+              </div>
             </div>
           </div>
           <div className="space-y-4">
@@ -484,25 +501,10 @@ const Dashboard: React.FC = () => {
             <div className="w-12 h-12 avatar-gradient rounded-xl flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-1 text-green-600">
-              <ArrowUp className="w-4 h-4" />
-              <span className="text-sm font-semibold">12%</span>
-            </div>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.presentToday}/{stats.totalStaff}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Staff Present</p>
-          </div>
-          <div className="mt-4 h-12">
-            <svg width="100%" height="100%" className="overflow-visible">
-              <polyline
-                points="0,30 20,25 40,28 60,20 80,15 100,18 120,10"
-                fill="none"
-                stroke="#3B82F6"
-                strokeWidth="2"
-                className="transition-all duration-500"
-              />
-            </svg>
           </div>
         </div>
         
@@ -511,25 +513,10 @@ const Dashboard: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
               <Clock className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-1 text-green-600">
-              <ArrowDown className="w-4 h-4" />
-              <span className="text-sm font-semibold">8%</span>
-            </div>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.lateToday}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Late Arrivals</p>
-          </div>
-          <div className="mt-4 h-12">
-            <svg width="100%" height="100%" className="overflow-visible">
-              <polyline
-                points="0,20 20,25 40,22 60,28 80,24 100,26 120,30"
-                fill="none"
-                stroke="#F59E0B"
-                strokeWidth="2"
-                className="transition-all duration-500"
-              />
-            </svg>
           </div>
         </div>
         
@@ -538,25 +525,10 @@ const Dashboard: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-red-600 rounded-xl flex items-center justify-center">
               <UserX className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-1 text-red-600">
-              <ArrowUp className="w-4 h-4" />
-              <span className="text-sm font-semibold">5%</span>
-            </div>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.absentToday}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Absent</p>
-          </div>
-          <div className="mt-4 h-12">
-            <svg width="100%" height="100%" className="overflow-visible">
-              <polyline
-                points="0,25 20,22 40,28 60,24 80,30 100,26 120,28"
-                fill="none"
-                stroke="#EF4444"
-                strokeWidth="2"
-                className="transition-all duration-500"
-              />
-            </svg>
           </div>
         </div>
         
@@ -565,14 +537,12 @@ const Dashboard: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-1 text-green-600">
-              <ArrowUp className="w-4 h-4" />
-              <span className="text-sm font-semibold">3%</span>
-            </div>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">94%</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Efficiency</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {stats.totalStaff > 0 ? Math.round((stats.presentToday / stats.totalStaff) * 100) : 0}%
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Attendance Rate</p>
           </div>
           <div className="mt-4 h-12">
             <svg width="100%" height="100%" className="overflow-visible">
@@ -596,9 +566,12 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Attendance Trend</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Staff presence over the last 7 days</p>
             </div>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <MoreVertical className="w-4 h-4 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
           <LineChart
             data={[
@@ -621,9 +594,12 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Department Distribution</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Current staffing across departments</p>
             </div>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <MoreVertical className="w-4 h-4 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
           <PieChart
             data={[
@@ -681,9 +657,12 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Activity</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Total activities this week</p>
             </div>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <Download className="w-4 h-4 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <Download className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
           <BarChart
             data={[
@@ -799,7 +778,7 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button 
                 onClick={handleNavigateToAttendance}
-                className="text-white hover:text-blue-100 text-sm font-medium flex items-center space-x-1 px-3 py-1 hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium flex items-center space-x-1 px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
               >
                 <Activity className="w-4 h-4" />
                 <span>Live View</span>
@@ -831,14 +810,18 @@ const Dashboard: React.FC = () => {
                       <div className="w-10 h-10 avatar-gradient rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {member.name ? member.name.split(' ').map(n => n[0]).join('') : '??'}
                       </div>
-                      <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
-                        member.status.toLowerCase() === 'active' ? 'bg-green-500' :
-                        member.status.toLowerCase() === 'present' ? 'bg-green-500' :
-                        member.status.toLowerCase() === 'late' ? 'bg-amber-500' :
-                        member.status.toLowerCase() === 'absent' ? 'bg-red-500' :
-                        member.status.toLowerCase() === 'checked out' ? 'bg-gray-400' :
-                        'bg-gray-400'
-                      }`} />
+                      <div
+                        aria-label={`Status: ${member.status}`}
+                        role="img"
+                        className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${
+                          member.status.toLowerCase() === 'active' ? 'bg-green-500' :
+                          member.status.toLowerCase() === 'present' ? 'bg-green-500' :
+                          member.status.toLowerCase() === 'late' ? 'bg-amber-500' :
+                          member.status.toLowerCase() === 'absent' ? 'bg-red-500' :
+                          member.status.toLowerCase() === 'checked out' ? 'bg-gray-400' :
+                          'bg-gray-400'
+                        }`}
+                      />
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-gray-100 text-sm group-hover:text-blue-600 transition-colors">
@@ -874,7 +857,7 @@ const Dashboard: React.FC = () => {
               {teamAttendance.length > 5 && (
                 <button 
                   onClick={handleNavigateToAttendance}
-                  className="w-full text-center py-3 text-sm text-white hover:text-blue-100 font-medium hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+                  className="w-full text-center py-3 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
                 >
                   View {teamAttendance.length - 5} more team members
                   <ChevronRight className="w-4 h-4 inline ml-1" />
