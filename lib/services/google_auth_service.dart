@@ -41,7 +41,7 @@ class GoogleAuthService {
       final account = await _googleSignIn.signIn();
       return account;
     } catch (e) {
-      print('Google Sign-In error: $e');
+
       return null;
     }
   }

@@ -33,17 +33,22 @@ class AttendanceProvider extends ChangeNotifier {
   String? get metricsError => _metricsError;
 
   Future<void> loadTodayAttendance() async {
+    debugPrint('🔄 [AttendanceProvider] Starting loadTodayAttendance...');
     _isLoadingToday = true;
     _todayError = null;
+    debugPrint('📢 [AttendanceProvider] Notifying listeners - loading state');
     notifyListeners();
 
     try {
       final attendance = await _attendanceService.getTodayAttendance();
       _todayAttendance = attendance;
+      debugPrint('✅ [AttendanceProvider] Successfully loaded today\'s attendance');
     } catch (e) {
       _todayError = e.toString();
+      debugPrint('❌ [AttendanceProvider] Error loading today\'s attendance: $e');
     } finally {
       _isLoadingToday = false;
+      debugPrint('📢 [AttendanceProvider] Notifying listeners - completed state');
       notifyListeners();
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,6 +19,7 @@ import {
   Sun,
   Moon,
   BarChart3,
+  UserCircle,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -83,6 +84,11 @@ const Layout: React.FC = () => {
       path: '/notifications',
     },
     {
+      label: 'Profile',
+      icon: UserCircle,
+      path: '/profile',
+    },
+    {
       label: 'Settings',
       icon: Settings,
       path: '/settings',
@@ -101,8 +107,25 @@ const Layout: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  // Close profile dropdown on Escape
+  useEffect(() => {
+    if (!profileDropdownOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProfileDropdownOpen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [profileDropdownOpen]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* Skip to main content – keyboard / screen-reader accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-semibold focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       {/* Sidebar Overlay for Mobile */}
       {sidebarOpen && (
         <div
@@ -150,6 +173,7 @@ const Layout: React.FC = () => {
                       navigate(item.path);
                       setSidebarOpen(false);
                     }}
+                    aria-current={isActive ? 'page' : undefined}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-500 text-white shadow-md'
@@ -259,7 +283,7 @@ const Layout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main id="main-content" className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

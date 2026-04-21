@@ -142,13 +142,15 @@ class AttendanceController {
     }
   }
 
-  static Future<AttendanceRecord?> getTodayAttendance() async {
+  static Future<List<AttendanceRecord>> getTodayAttendance() async {
     try {
+      debugPrint('🔍 [AttendanceController] Fetching today\'s attendance...');
       final token = await _getAuthToken();
       if (token == null) {
         throw Exception('User not authenticated');
       }
 
+      debugPrint('📡 [AttendanceController] Making request to: ${AppConfig.apiBaseUrl}/attendance/today');
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/attendance/today'),
         headers: {
@@ -157,19 +159,62 @@ class AttendanceController {
         },
       );
 
+      debugPrint('📊 [AttendanceController] Response status: ${response.statusCode}');
+      debugPrint('📄 [AttendanceController] Response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        debugPrint('📋 [AttendanceController] Parsed data: $data');
+        
+        // Check if response is null
+        if (data == null) {
+          debugPrint('⚠️ [AttendanceController] Response data is null');
+          return [];
+        }
         
         // Check if it's a "no record" message
         if (data.containsKey('message')) {
-          return null;
+          debugPrint('📝 [AttendanceController] No record message: ${data['message']}');
+          return [];
         }
         
-        return AttendanceRecord.fromJson(data);
+        // Handle old backend format: single attendance object with attendance_log_id
+        if (data.containsKey('attendance_log_id')) {
+          debugPrint('✅ [AttendanceController] Found single attendance record (old format)');
+          return [AttendanceRecord.fromJson(data)];
+        }
+        
+        // Handle very old backend format: single attendance object with attendance_id
+        if (data.containsKey('attendance_id')) {
+          debugPrint('✅ [AttendanceController] Found single attendance record (very old format)');
+          return [AttendanceRecord.fromJson(data)];
+        }
+        
+        // Handle new backend format: array of attendance records
+        if (!data.containsKey('attendances')) {
+          debugPrint('⚠️ [AttendanceController] Response missing "attendances" key and not a single record');
+          return [];
+        }
+        
+        final attendances = data['attendances'];
+        if (attendances == null) {
+          debugPrint('⚠️ [AttendanceController] "attendances" is null');
+          return [];
+        }
+        
+        if (attendances is! List) {
+          debugPrint('⚠️ [AttendanceController] "attendances" is not a list: ${attendances.runtimeType}');
+          return [];
+        }
+        
+        debugPrint('✅ [AttendanceController] Found ${attendances.length} attendance records');
+        return attendances.map((json) => AttendanceRecord.fromJson(json)).toList();
       } else {
-        throw Exception('Failed to get today\'s attendance');
+        debugPrint('❌ [AttendanceController] HTTP error: ${response.statusCode}');
+        throw Exception('Failed to get today\'s attendance: HTTP ${response.statusCode}');
       }
     } catch (e) {
+      debugPrint('💥 [AttendanceController] Exception: $e');
       throw Exception('Failed to get today\'s attendance: $e');
     }
   }

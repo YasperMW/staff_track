@@ -54,10 +54,10 @@ class AttendanceRecord {
           '',
       date: DateTime.parse(json['date']),
       checkInTime: json['check_in_time'] != null 
-          ? DateTime.parse('${json['date']} ${json['check_in_time']}')
+          ? DateTime.parse('${json['date']}T${json['check_in_time']}')
           : null,
       checkOutTime: json['check_out_time'] != null 
-          ? DateTime.parse('${json['date']} ${json['check_out_time']}')
+          ? DateTime.parse('${json['date']}T${json['check_out_time']}')
           : null,
       location: json['location'],
       workHours: json['work_hours']?.toDouble(),

@@ -205,6 +205,7 @@ class _ValidatedTextFieldState extends State<ValidatedTextField> {
               borderSide: const BorderSide(color: AppTheme.paleRed, width: 1.5),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            errorStyle: const TextStyle(fontSize: 0, height: 0),
             errorText: null, // We handle error display ourselves
           ),
           validator: _getValidator(),
