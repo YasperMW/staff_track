@@ -4,6 +4,7 @@ import { designationsApi, departmentsApi } from '../services/api';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import DesignationForm from '../components/DesignationForm';
+import StatsCard from '../components/StatsCard';
 import type { Column, Action } from '../components/DataTable';
 import { Plus, Briefcase, Edit, Trash2, Eye, Building2, Users } from 'lucide-react';
 
@@ -233,61 +234,33 @@ Created: ${designation.created_at ? new Date(designation.created_at).toLocaleDat
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Total Designations</p>
-              <p className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
-                {totalDesignations}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-500 bg-opacity-10 rounded-xl flex items-center justify-center">
-              <Briefcase className="w-6 h-6 text-purple-500" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Departments with Designations</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {departmentsWithDesignations}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Avg. per Department</p>
-              <p className="text-2xl font-bold text-green-600">
-                {departmentsWithDesignations > 0 ? Math.round(totalDesignations / departmentsWithDesignations) : 0}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Active Positions</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {totalDesignations}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-xl flex items-center justify-center">
-              <Briefcase className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-          </div>
-        </div>
+        <StatsCard
+          label="Total Designations"
+          value={totalDesignations}
+          icon={<Briefcase className="w-6 h-6 text-purple-500" />}
+          iconBgColor="bg-purple-500"
+        />
+        <StatsCard
+          label="Departments with Designations"
+          value={departmentsWithDesignations}
+          icon={<Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
+          iconBgColor="bg-blue-100 dark:bg-blue-900"
+          valueColor="text-blue-600"
+        />
+        <StatsCard
+          label="Avg. per Department"
+          value={departmentsWithDesignations > 0 ? Math.round(totalDesignations / departmentsWithDesignations) : 0}
+          icon={<Users className="w-6 h-6 text-green-600 dark:text-green-400" />}
+          iconBgColor="bg-green-100 dark:bg-green-900"
+          valueColor="text-green-600"
+        />
+        <StatsCard
+          label="Active Positions"
+          value={totalDesignations}
+          icon={<Briefcase className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />}
+          iconBgColor="bg-yellow-100 dark:bg-yellow-900"
+          valueColor="text-yellow-600"
+        />
       </div>
 
       {/* Designations Table */}

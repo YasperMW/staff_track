@@ -5,6 +5,7 @@ import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import DepartmentForm from '../components/DepartmentForm';
 import DepartmentDesignationsModal from '../components/DepartmentDesignationsModal';
+import StatsCard from '../components/StatsCard';
 import type { Column, Action } from '../components/DataTable';
 import { Plus, Building2, Edit, Trash2, Eye, Users, Settings, MapPin } from 'lucide-react';
 
@@ -233,61 +234,33 @@ Created: ${department.created_at ? new Date(department.created_at).toLocaleDateS
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Total Departments</p>
-              <p className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
-                {departments.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-sky-blue bg-opacity-10 rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-sky-blue" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Total Designations</p>
-              <p className="text-2xl font-bold text-light-gold">
-                {totalDesignations}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Avg. Designations</p>
-              <p className="text-2xl font-bold text-green-600">
-                {avgDesignationsPerDept}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
-              <Settings className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-grey dark:text-text-grey-dark">Active Departments</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {departments.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
-              <MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-        </div>
+        <StatsCard
+          label="Total Departments"
+          value={departments.length}
+          icon={<Building2 className="w-6 h-6 text-sky-blue" />}
+          iconBgColor="bg-sky-blue"
+        />
+        <StatsCard
+          label="Total Designations"
+          value={totalDesignations}
+          icon={<Users className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />}
+          iconBgColor="bg-yellow-100 dark:bg-yellow-900"
+          valueColor="text-light-gold"
+        />
+        <StatsCard
+          label="Avg. Designations"
+          value={avgDesignationsPerDept}
+          icon={<Settings className="w-6 h-6 text-green-600 dark:text-green-400" />}
+          iconBgColor="bg-green-100 dark:bg-green-900"
+          valueColor="text-green-600"
+        />
+        <StatsCard
+          label="Active Departments"
+          value={departments.length}
+          icon={<MapPin className="w-6 h-6 text-purple-600 dark:text-purple-400" />}
+          iconBgColor="bg-purple-100 dark:bg-purple-900"
+          valueColor="text-purple-600"
+        />
       </div>
 
       {/* Departments Grid View */}

@@ -706,4 +706,71 @@ export const shiftConfigurationsApi = {
   },
 };
 
+// Dashboard API
+export interface WeeklyTrendData {
+  label: string;
+  date: string;
+  value: number;
+}
+
+export interface DepartmentDistributionData {
+  label: string;
+  value: number;
+  color: string;
+}
+
+export interface AnalyticsStats {
+  weekly_trend_change: number;
+  efficiency_rate: number;
+  active_requests: number;
+}
+
+export interface PerformanceMetrics {
+  productivity: number;
+  attendance: number;
+  satisfaction: number;
+}
+
+export interface WeeklyActivity {
+  check_ins: number;
+  check_outs: number;
+  overtime: number;
+}
+
+export interface ActivityHeatmap {
+  heatmap_data: number[][];
+}
+
+export const dashboardApi = {
+  getWeeklyTrend: async (): Promise<WeeklyTrendData[]> => {
+    const response = await api.get('/dashboard/weekly-trend');
+    return response.data;
+  },
+
+  getDepartmentDistribution: async (): Promise<DepartmentDistributionData[]> => {
+    const response = await api.get('/dashboard/department-distribution');
+    return response.data;
+  },
+
+  getAnalyticsStats: async (): Promise<AnalyticsStats> => {
+    const response = await api.get('/dashboard/analytics-stats');
+    return response.data;
+  },
+
+  getPerformanceMetrics: async (): Promise<PerformanceMetrics> => {
+    const response = await api.get('/dashboard/performance-metrics');
+    return response.data;
+  },
+
+  getWeeklyActivity: async (): Promise<WeeklyActivity> => {
+    const response = await api.get('/dashboard/weekly-activity');
+    return response.data;
+  },
+
+  getActivityHeatmap: async (): Promise<ActivityHeatmap> => {
+    const response = await api.get('/dashboard/activity-heatmap');
+    return response.data;
+  },
+};
+
 export default api;

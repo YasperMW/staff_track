@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { attendanceApi, requestsApi, announcementsApi } from '../services/api';
+import { attendanceApi, requestsApi, announcementsApi, dashboardApi, WeeklyTrendData, DepartmentDistributionData, AnalyticsStats, PerformanceMetrics, WeeklyActivity, ActivityHeatmap } from '../services/api';
 import {
   Users,
   Clock,
@@ -80,6 +80,24 @@ const Dashboard: React.FC = () => {
   });
   const [recentAnnouncements, setRecentAnnouncements] = useState<RecentAnnouncement[]>([]);
   const [teamAttendance, setTeamAttendance] = useState<TeamAttendanceMember[]>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrendData[]>([]);
+  const [departmentDistribution, setDepartmentDistribution] = useState<DepartmentDistributionData[]>([]);
+  const [analyticsStats, setAnalyticsStats] = useState<AnalyticsStats>({
+    weekly_trend_change: 0,
+    efficiency_rate: 0,
+    active_requests: 0
+  });
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>({
+    productivity: 0,
+    attendance: 0,
+    satisfaction: 0
+  });
+  const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivity>({
+    check_ins: 0,
+    check_outs: 0,
+    overtime: 0
+  });
+  const [activityHeatmap, setActivityHeatmap] = useState<number[][]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -116,11 +134,28 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [attendanceSummary, requestsSummary, announcements, recentCheckIns] = await Promise.all([
+      const [
+        attendanceSummary, 
+        requestsSummary, 
+        announcements, 
+        recentCheckIns,
+        weeklyTrendData,
+        deptDistData,
+        statsData,
+        performanceData,
+        weeklyActivityData,
+        heatmapData
+      ] = await Promise.all([
         attendanceApi.getTeamTodaySummary(),
         requestsApi.getRequestsSummary(),
         announcementsApi.getAnnouncements(3),
-        attendanceApi.getRecentCheckIns(10), // Get 10 recent check-ins for dashboard
+        attendanceApi.getRecentCheckIns(10),
+        dashboardApi.getWeeklyTrend(),
+        dashboardApi.getDepartmentDistribution(),
+        dashboardApi.getAnalyticsStats(),
+        dashboardApi.getPerformanceMetrics(),
+        dashboardApi.getWeeklyActivity(),
+        dashboardApi.getActivityHeatmap()
       ]);
 
       // Process attendance summary
@@ -153,6 +188,14 @@ const Dashboard: React.FC = () => {
       // Process recent check-ins - handle different response formats
       const checkInsData = Array.isArray(recentCheckIns) ? recentCheckIns : (recentCheckIns.recent_check_ins || []);
       setTeamAttendance(checkInsData);
+
+      // Set new dashboard data
+      setWeeklyTrend(weeklyTrendData);
+      setDepartmentDistribution(deptDistData);
+      setAnalyticsStats(statsData);
+      setPerformanceMetrics(performanceData);
+      setWeeklyActivity(weeklyActivityData);
+      setActivityHeatmap(heatmapData.heatmap_data || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -420,7 +463,6 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Analytics</h3>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                 <BarChart3 className="w-4 h-4 text-green-600" />
               </div>
@@ -429,23 +471,23 @@ const Dashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">Weekly Trend</span>
-              <div className="flex items-center space-x-1 text-green-600">
-                <span className="text-sm font-semibold">↑ 12%</span>
+              <div className={`flex items-center space-x-1 ${analyticsStats.weekly_trend_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className="text-sm font-semibold">{analyticsStats.weekly_trend_change >= 0 ? '↑' : '↓'} {Math.abs(analyticsStats.weekly_trend_change)}%</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency Rate</span>
               <div className="flex items-center space-x-1 text-blue-600">
-                <span className="text-sm font-semibold">94%</span>
+                <span className="text-sm font-semibold">{analyticsStats.efficiency_rate}%</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Active Projects</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Pending Requests</span>
               <div className="flex items-center space-x-1 text-purple-600">
-                <span className="text-sm font-semibold">8</span>
+                <span className="text-sm font-semibold">{analyticsStats.active_requests}</span>
               </div>
             </div>
-            <button className="w-full btn-primary flex items-center justify-center space-x-2">
+            <button onClick={() => navigate('/reports')} className="w-full btn-primary flex items-center justify-center space-x-2">
               <Eye className="w-4 h-4" />
               <span>View Detailed Analytics</span>
             </button>
@@ -456,7 +498,6 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Performance</h3>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Target className="w-4 h-4 text-purple-600" />
               </div>
@@ -466,28 +507,28 @@ const Dashboard: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Productivity</span>
-                <span className="text-sm font-semibold">87%</span>
+                <span className="text-sm font-semibold">{performanceMetrics.productivity}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-purple-500 h-2 rounded-full" style={{ width: '87%' }} />
+                <div className="bg-purple-500 h-2 rounded-full transition-all duration-500" style={{ width: `${performanceMetrics.productivity}%` }} />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Attendance</span>
-                <span className="text-sm font-semibold">92%</span>
+                <span className="text-sm font-semibold">{performanceMetrics.attendance}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: '92%' }} />
+                <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${performanceMetrics.attendance}%` }} />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Satisfaction</span>
-                <span className="text-sm font-semibold">95%</span>
+                <span className="text-sm font-semibold">{performanceMetrics.satisfaction}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div className="bg-blue-500 h-2 rounded-full" style={{ width: '95%' }} />
+                <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${performanceMetrics.satisfaction}%` }} />
               </div>
             </div>
           </div>
@@ -567,22 +608,13 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Staff presence over the last 7 days</p>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <MoreVertical className="w-4 h-4 text-gray-500" />
               </button>
             </div>
           </div>
           <LineChart
-            data={[
-              { label: 'Mon', value: 45 },
-              { label: 'Tue', value: 52 },
-              { label: 'Wed', value: 48 },
-              { label: 'Thu', value: 58 },
-              { label: 'Fri', value: 62 },
-              { label: 'Sat', value: 35 },
-              { label: 'Sun', value: 28 }
-            ]}
+            data={weeklyTrend}
             height={200}
             color="#3B82F6"
           />
@@ -595,20 +627,13 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Current staffing across departments</p>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <MoreVertical className="w-4 h-4 text-gray-500" />
               </button>
             </div>
           </div>
           <PieChart
-            data={[
-              { label: 'Emergency', value: 25, color: '#3B82F6' },
-              { label: 'ICU', value: 18, color: '#10B981' },
-              { label: 'Surgery', value: 22, color: '#F59E0B' },
-              { label: 'Pediatrics', value: 15, color: '#8B5CF6' },
-              { label: 'Other', value: 20, color: '#6B7280' }
-            ]}
+            data={departmentDistribution}
             size={200}
           />
         </div>
@@ -658,7 +683,6 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Total activities this week</p>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">Demo data</span>
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <Download className="w-4 h-4 text-gray-500" />
               </button>
@@ -666,9 +690,9 @@ const Dashboard: React.FC = () => {
           </div>
           <BarChart
             data={[
-              { label: 'Check-ins', value: 156, color: '#10B981' },
-              { label: 'Check-outs', value: 142, color: '#F59E0B' },
-              { label: 'Overtime', value: 28, color: '#8B5CF6' }
+              { label: 'Check-ins', value: weeklyActivity.check_ins, color: '#10B981' },
+              { label: 'Check-outs', value: weeklyActivity.check_outs, color: '#F59E0B' },
+              { label: 'Overtime', value: weeklyActivity.overtime, color: '#8B5CF6' }
             ]}
             height={150}
           />
@@ -692,12 +716,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <ActivityHeatmap
-          data={[
-            [5, 8, 12, 15, 18, 8, 3],    // Week 1
-            [7, 10, 14, 16, 20, 12, 5],   // Week 2
-            [6, 9, 11, 18, 22, 10, 4],    // Week 3
-            [8, 12, 15, 20, 19, 11, 6],   // Week 4
-          ]}
+          data={activityHeatmap}
         />
       </div>
 

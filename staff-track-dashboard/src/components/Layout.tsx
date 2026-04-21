@@ -19,7 +19,6 @@ import {
   Sun,
   Moon,
   BarChart3,
-  UserCircle,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -82,11 +81,6 @@ const Layout: React.FC = () => {
       label: 'Push Notifications',
       icon: Send,
       path: '/notifications',
-    },
-    {
-      label: 'Profile',
-      icon: UserCircle,
-      path: '/profile',
     },
     {
       label: 'Settings',
