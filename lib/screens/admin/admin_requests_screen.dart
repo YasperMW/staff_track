@@ -28,6 +28,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   final String _filterType = 'all';
   final String _searchQuery = '';
   String? _userRole;
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
@@ -49,7 +50,11 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh data when page becomes visible (e.g., navigating back)
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
     _loadRequests();
   }
 

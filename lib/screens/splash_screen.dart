@@ -5,6 +5,8 @@ import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import '../../services/fcm_service.dart';
+import '../../services/local_notification_service.dart';
+import '../../services/holidays_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -70,6 +72,11 @@ class _SplashScreenState extends State<SplashScreen>
     // Initialize FCM service after auth is established
     if (authProvider.isLoggedIn) {
       await FCMService.initialize(context);
+      // Initialize local notification service for offline reminders
+      await LocalNotificationService().initialize();
+      
+      // Schedule upcoming holiday reminders
+      await HolidaysService.scheduleUpcomingHolidayReminders();
     }
     
     // Mark as initialized to trigger navigation in build method

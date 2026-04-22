@@ -21,6 +21,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool isLoading = false;
   final AttendanceService _attendanceService = const AttendanceService();
   Map<String, dynamic>? summary;
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
@@ -28,6 +29,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     _loadAttendanceData();
     final attendanceProvider = context.read<AttendanceProvider>();
     attendanceProvider.loadTodayAttendance();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
+    _loadAttendanceData();
+    context.read<AttendanceProvider>().loadTodayAttendance();
   }
 
   Future<void> _loadAttendanceData() async {

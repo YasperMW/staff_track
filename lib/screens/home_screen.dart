@@ -30,12 +30,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    
+
     // Use microtask to avoid "setState() or markNeedsBuild() called during build" error
     Future.microtask(() {
       if (mounted) {
         context.read<AttendanceProvider>().loadTodayAttendance();
       }
+    });
+  }
+
+  void _onTabChanged(int index) {
+    setState(() {
+      _currentIndex = index;
     });
   }
 
