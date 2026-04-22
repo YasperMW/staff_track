@@ -18,6 +18,7 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   List<TeamAttendanceMember> _teamAttendance = [];
   bool _isLoadingStaff = false;
   final AttendanceService _attendanceService = const AttendanceService();
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
@@ -26,6 +27,17 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     _loadStaffList();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
+    _loadTeamSummary();
+    _loadStaffList();
+  }
 
   Future<void> _onRefresh() async {
     await _loadTeamSummary();

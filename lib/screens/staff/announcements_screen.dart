@@ -20,10 +20,22 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _selectedFilter = 'all'; // 'all', 'urgent', 'policy', 'event'
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    _loadAnnouncements();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
     _loadAnnouncements();
   }
 

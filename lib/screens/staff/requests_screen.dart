@@ -20,10 +20,22 @@ class _RequestsScreenState extends State<RequestsScreen> {
   CompleteUserProfile? userProfile;
   List<Grade> grades = [];
   int userAnnualLeaveDays = 21; // Default fallback
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    _loadInitialData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
     _loadInitialData();
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/fcm_service.dart';
+import '../../services/local_notification_service.dart';
 import '../../theme/app_theme.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -13,6 +14,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   bool _isLoading = false;
   Map<String, dynamic>? _testResults;
   Map<String, dynamic>? _settings;
+  bool _localNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -25,8 +27,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     
     try {
       final settings = await FCMService.getNotificationSettings();
+      final localEnabled = await LocalNotificationService().isLocalNotificationsEnabled();
+      
       setState(() {
         _settings = settings;
+        _localNotificationsEnabled = localEnabled;
         _isLoading = false;
       });
     } catch (e) {
@@ -72,6 +77,39 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Test failed: $e'),
+            backgroundColor: AppTheme.paleRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleLocalNotifications(bool enabled) async {
+    setState(() => _isLoading = true);
+    
+    try {
+      await LocalNotificationService().setLocalNotificationsEnabled(enabled);
+      setState(() {
+        _localNotificationsEnabled = enabled;
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(enabled 
+              ? 'Offline reminders enabled!' 
+              : 'Offline reminders disabled'),
+            backgroundColor: enabled ? AppTheme.lightGoldAccent : AppTheme.paleRed,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating settings: $e'),
             backgroundColor: AppTheme.paleRed,
           ),
         );
@@ -154,6 +192,73 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
+  Widget _buildLocalNotificationsCard() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.notifications_off_outlined, color: AppTheme.textLightBlue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Offline Reminders',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Get reminders even without internet connection',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _localNotificationsEnabled,
+                  onChanged: _toggleLocalNotifications,
+                  activeThumbColor: AppTheme.skyBlue,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppTheme.skyBlue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Works alongside regular notifications to ensure you never miss important reminders',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.skyBlue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTestResultsCard() {
     if (_testResults == null) return const SizedBox();
     
@@ -212,6 +317,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               child: Column(
                 children: [
                   _buildPermissionStatusCard(),
+                  _buildLocalNotificationsCard(),
                   _buildTestResultsCard(),
                   const SizedBox(height: 20),
                   Padding(

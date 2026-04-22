@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'controllers/auth_provider.dart';
@@ -10,6 +11,9 @@ import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize timezone data for local notifications
+  tz.initializeTimeZones();
   
   try {
     if (!kIsWeb &&

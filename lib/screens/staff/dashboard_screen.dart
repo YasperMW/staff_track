@@ -10,6 +10,7 @@ import '../../widgets/app_header.dart';
 import '../../widgets/async_content.dart';
 import '../check_in_out_screen.dart';
 import '../attendance_history_screen.dart';
+import '../../services/reminder_integration_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,20 +22,38 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late Timer _timer;
   String _timeString = '';
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
-    
+
     // Defer provider calls to avoid setState() during build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final attendanceProvider = context.read<AttendanceProvider>();
       attendanceProvider.loadTodayAttendance();
       attendanceProvider.loadRecentAttendance(limit: 5);
       attendanceProvider.loadProfileMetrics();
+      
+      // Schedule daily reminders after loading data
+      _scheduleDailyReminders();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when navigating back to this tab
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
+    final attendanceProvider = context.read<AttendanceProvider>();
+    attendanceProvider.loadTodayAttendance();
+    attendanceProvider.loadRecentAttendance(limit: 5);
+    attendanceProvider.loadProfileMetrics();
   }
 
   String _getAttendanceStatusText() {
@@ -82,6 +101,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return 'Check-in available at 4:30 PM for Night Shift';
     } else {
       return 'Check-in available tomorrow at 6:00 AM for Day Shift';
+    }
+  }
+
+  /// Schedule daily attendance reminders
+  Future<void> _scheduleDailyReminders() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final user = authProvider.user;
+      
+      if (user == null) return;
+
+      // Schedule daily check-in and check-out reminders
+      await ReminderIntegrationService.scheduleDailyAttendanceReminders(
+        userName: user.name,
+        checkInTime: const TimeOfDay(hour: 6, minute: 0), // 6:00 AM
+        checkOutTime: const TimeOfDay(hour: 14, minute: 30), // 2:30 PM
+      );
+
+    } catch (e) {
+      debugPrint('Error scheduling daily reminders: $e');
+    }
+  }
+
+  /// Schedule reminders after successful check-in or check-out
+  Future<void> _scheduleAttendanceReminders() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final user = authProvider.user;
+      final attendanceProvider = context.read<AttendanceProvider>();
+      final todayAttendance = attendanceProvider.todayAttendance;
+
+      if (user == null || todayAttendance == null) return;
+
+      // Schedule check-out reminder 15 minutes before shift end
+      if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
+        // Estimate shift end time (you can customize this logic)
+        final now = DateTime.now();
+        final shiftEndTime = now.add(const Duration(hours: 8)); // Assuming 8-hour shift
+        
+        await ReminderIntegrationService.scheduleCheckOutReminders(
+          checkOutTime: shiftEndTime,
+          userName: user.name,
+          userId: user.id,
+        );
+      }
+
+      // Schedule tomorrow's check-in reminder
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrowCheckIn = DateTime(
+        tomorrow.year, tomorrow.month, tomorrow.day,
+        6, 0, // 6:00 AM for day shift
+      );
+      
+      await ReminderIntegrationService.scheduleCheckInReminders(
+        checkInTime: tomorrowCheckIn,
+        userName: user.name,
+        userId: user.id,
+      );
+
+    } catch (e) {
+      debugPrint('Error scheduling attendance reminders: $e');
     }
   }
 
@@ -234,7 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icon(Icons.location_on_outlined, color: Colors.white.withValues(alpha:0.9), size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Office - Main Building',
+                      'St. John\'s Mission Hospital',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha:0.9),
                         fontSize: 14,
@@ -274,9 +354,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 builder: (context) => const CheckInOutScreen(),
                               ),
                             ).then(
-                              (_) => context
-                                  .read<AttendanceProvider>()
-                                  .loadTodayAttendance(),
+                              (_) {
+                                context.read<AttendanceProvider>().loadTodayAttendance();
+                                // Schedule reminders after check-in
+                                _scheduleAttendanceReminders();
+                              },
                             );
                           } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
                             // Check out
@@ -286,9 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 builder: (context) => const CheckInOutScreen(),
                               ),
                             ).then(
-                              (_) => context
-                                  .read<AttendanceProvider>()
-                                  .loadTodayAttendance(),
+                              (_) {
+                                context.read<AttendanceProvider>().loadTodayAttendance();
+                                // Schedule reminders after check-out
+                                _scheduleAttendanceReminders();
+                              },
                             );
                           } else {
                             // View details (already completed)

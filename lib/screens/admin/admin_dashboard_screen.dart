@@ -39,12 +39,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<Announcement> _recentAnnouncements = [];
   bool _isLoadingAnnouncements = false;
   final AttendanceService _attendanceService = const AttendanceService();
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
+    _loadTodayAttendance();
+    _loadRequestsSummary();
+    _loadTeamTodaySummary();
+    _loadTeamTodayList();
+    _loadRecentAnnouncements();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
     _loadTodayAttendance();
     _loadRequestsSummary();
     _loadTeamTodaySummary();

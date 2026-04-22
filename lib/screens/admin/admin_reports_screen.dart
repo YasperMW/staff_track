@@ -17,6 +17,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   List<WeeklyAttendancePoint> _weeklyPoints = [];
   bool _isLoadingTop = false;
   List<TopPerformer> _topPerformers = [];
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
@@ -24,6 +25,27 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
     _loadOverview();
     _loadWeekly();
     _loadTopPerformers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when page becomes visible
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      return;
+    }
+    _loadOverview();
+    _loadWeekly();
+    _loadTopPerformers();
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _loadOverview(),
+      _loadWeekly(),
+      _loadTopPerformers(),
+    ]);
   }
 
   Future<void> _loadOverview() async {
@@ -90,8 +112,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: _refreshAll,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           SliverAppBar(
             floating: false,
             pinned: true,
@@ -128,7 +154,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildOverviewCards(BuildContext context) {

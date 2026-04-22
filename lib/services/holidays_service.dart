@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/models.dart';
 import 'auth_storage.dart';
+import 'reminder_integration_service.dart';
 
 class HolidaysService {
 
@@ -262,6 +263,7 @@ class HolidaysService {
 
   static Future<void> sendHolidayNotifications(PublicHoliday holiday) async {
     try {
+      // Send FCM notification via backend
       final token = await AuthStorage.getToken();
       await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/api/holidays/${holiday.id}/notify'),
@@ -273,10 +275,27 @@ class HolidaysService {
           'message': 'Upcoming holiday: ${holiday.name} on ${holiday.date}',
         }),
       );
+
+      // Also schedule local notification as backup
+      await ReminderIntegrationService.scheduleHolidayReminders(
+        holidays: [holiday],
+      );
+      
     } catch (e) {
       // Mock notification for development
       if (kDebugMode) {
         print('Holiday notification sent: ${holiday.name} on ${holiday.date}');
+      }
+      
+      // Still try to schedule local notification even if FCM fails
+      try {
+        await ReminderIntegrationService.scheduleHolidayReminders(
+          holidays: [holiday],
+        );
+      } catch (localError) {
+        if (kDebugMode) {
+          print('Failed to schedule local holiday reminder: $localError');
+        }
       }
     }
   }
@@ -340,5 +359,25 @@ class HolidaysService {
 
   static Future<List<PublicHoliday>> getUpcomingPublicHolidays({int monthsAhead = 3}) async {
     return getUpcomingHolidays(monthsAhead: monthsAhead, category: 'public');
+  }
+
+  /// Schedule local reminders for all upcoming holidays
+  static Future<void> scheduleUpcomingHolidayReminders() async {
+    try {
+      final upcomingHolidays = await getUpcomingHolidays(monthsAhead: 6);
+      if (upcomingHolidays.isNotEmpty) {
+        await ReminderIntegrationService.scheduleHolidayReminders(
+          holidays: upcomingHolidays,
+        );
+        
+        if (kDebugMode) {
+          print('Scheduled local reminders for ${upcomingHolidays.length} upcoming holidays');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error scheduling upcoming holiday reminders: $e');
+      }
+    }
   }
 }
