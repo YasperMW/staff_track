@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { requestsApi } from '../services/api';
 import {
   LayoutDashboard,
   Users,
@@ -26,11 +27,13 @@ interface SidebarItem {
   icon: React.ElementType;
   path: string;
   badge?: number;
+  section: string;
 }
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -41,52 +44,71 @@ const Layout: React.FC = () => {
       label: 'Dashboard',
       icon: LayoutDashboard,
       path: '/dashboard',
+      section: 'main',
     },
     {
       label: 'Users',
       icon: Users,
       path: '/users',
+      section: 'main',
     },
     {
       label: 'Departments',
       icon: Building2,
       path: '/departments',
+      section: 'management',
     },
     {
       label: 'Roles',
       icon: Shield,
       path: '/roles',
+      section: 'management',
     },
     {
       label: 'Attendance',
       icon: Calendar,
       path: '/attendance',
+      section: 'tracking',
     },
     {
       label: 'Reports',
       icon: BarChart3,
       path: '/reports',
+      section: 'tracking',
     },
     {
       label: 'Requests',
       icon: FileText,
       path: '/requests',
+      badge: pendingRequestsCount,
+      section: 'communication',
     },
     {
       label: 'Announcements',
       icon: Bell,
       path: '/announcements',
+      section: 'communication',
     },
     {
       label: 'Push Notifications',
       icon: Send,
       path: '/notifications',
+      section: 'communication',
     },
     {
       label: 'Settings',
       icon: Settings,
       path: '/settings',
+      section: 'system',
     },
+  ];
+
+  const sections = [
+    { key: 'main', label: 'Main' },
+    { key: 'management', label: 'Management' },
+    { key: 'tracking', label: 'Tracking' },
+    { key: 'communication', label: 'Communication' },
+    { key: 'system', label: 'System' },
   ];
 
   const handleLogout = async () => {
@@ -101,7 +123,21 @@ const Layout: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Close profile dropdown on Escape
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const summary = await requestsApi.getRequestsSummary();
+        const total = (summary.byType || []).reduce((acc: number, r: any) => acc + (r.count || 0), 0);
+        setPendingRequestsCount(total);
+      } catch {
+        // silently fail — badge is non-critical
+      }
+    };
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (!profileDropdownOpen) return;
     const handler = (e: KeyboardEvent) => {
@@ -110,6 +146,10 @@ const Layout: React.FC = () => {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [profileDropdownOpen]);
+
+  useEffect(() => {
+    if (profileDropdownOpen) setProfileDropdownOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
@@ -155,45 +195,56 @@ const Layout: React.FC = () => {
         </div>
 
         <nav className="p-4 flex-1 overflow-y-auto">
-          <ul className="space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = isActivePath(item.path);
-              
-              return (
-                <li key={item.path}>
-                  <button
-                    onClick={() => {
-                      navigate(item.path);
-                      setSidebarOpen(false);
-                    }}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{item.label}</span>
-                    </div>
-                    {item.badge && item.badge > 0 && (
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          isActive
-                            ? 'bg-white text-blue-500'
-                            : 'bg-red-500 text-white'
-                        }`}
-                      >
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {sections.map((section) => {
+            const items = sidebarItems.filter((item) => item.section === section.key);
+            if (items.length === 0) return null;
+            return (
+              <div key={section.key} className="mb-6">
+                <p className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  {section.label}
+                </p>
+                <ul className="space-y-1">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isActivePath(item.path);
+
+                    return (
+                      <li key={item.path}>
+                        <button
+                          onClick={() => {
+                            navigate(item.path);
+                            setSidebarOpen(false);
+                          }}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                            isActive
+                              ? 'bg-blue-500 text-white shadow-md'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Icon className="w-5 h-5" />
+                            <span className="font-medium text-sm">{item.label}</span>
+                          </div>
+                          {item.badge && item.badge > 0 && (
+                            <span
+                              className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                                isActive
+                                  ? 'bg-white text-blue-500'
+                                  : 'bg-red-500 text-white'
+                              }`}
+                            >
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </nav>
       </div>
 

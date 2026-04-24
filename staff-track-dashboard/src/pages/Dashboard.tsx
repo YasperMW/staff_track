@@ -31,6 +31,7 @@ import {
   ProgressRing,
   ActivityHeatmap
 } from '../components/Charts';
+import { DashboardSkeleton } from '../components/LoadingSkeleton';
 
 interface DashboardStats {
   totalStaff: number;
@@ -98,7 +99,7 @@ const Dashboard: React.FC = () => {
     overtime: 0
   });
   const [activityHeatmap, setActivityHeatmap] = useState<number[][]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today');
   const [showNotifications, setShowNotifications] = useState(false);
   const [animatedStats, setAnimatedStats] = useState(false);
@@ -264,6 +265,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Enhanced Header - Mobile Optimized */}
@@ -413,7 +418,7 @@ const Dashboard: React.FC = () => {
 
       {/* Enhanced Quick Actions - Mobile Optimized */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="card p-4 md:p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-4 md:p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100">Quick Actions</h3>
             <div className="w-6 h-6 md:w-8 md:h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -459,7 +464,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Analytics</h3>
             <div className="flex items-center space-x-2">
@@ -494,7 +499,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Performance</h3>
             <div className="flex items-center space-x-2">
@@ -601,7 +606,7 @@ const Dashboard: React.FC = () => {
 
       {/* Enhanced Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Attendance Trend</h3>
@@ -620,7 +625,7 @@ const Dashboard: React.FC = () => {
           />
         </div>
         
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Department Distribution</h3>
@@ -641,7 +646,7 @@ const Dashboard: React.FC = () => {
 
       {/* Enhanced Request Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pending Requests</h3>
@@ -661,7 +666,7 @@ const Dashboard: React.FC = () => {
           />
         </div>
         
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Attendance Rate</h3>
@@ -676,7 +681,7 @@ const Dashboard: React.FC = () => {
           />
         </div>
         
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weekly Activity</h3>
@@ -700,7 +705,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Enhanced Activity Heatmap */}
-      <div className="card p-6 hover:shadow-lg transition-shadow">
+      <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Staff Activity Heatmap</h3>
@@ -723,7 +728,7 @@ const Dashboard: React.FC = () => {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Enhanced Recent Announcements */}
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Announcements</h3>
@@ -788,16 +793,16 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Enhanced Team Attendance */}
-        <div className="card p-6 hover:shadow-lg transition-shadow">
+        <div className="dashboard-cardp-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Team Attendance</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Recent check-ins across all departments</p>
             </div>
             <div className="flex items-center space-x-2">
-              <button 
+              <button
                 onClick={handleNavigateToAttendance}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium flex items-center space-x-1 px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                className="btn-ghost flex items-center space-x-1 text-sm"
               >
                 <Activity className="w-4 h-4" />
                 <span>Live View</span>
@@ -874,12 +879,12 @@ const Dashboard: React.FC = () => {
               ))}
               
               {teamAttendance.length > 5 && (
-                <button 
+                <button
                   onClick={handleNavigateToAttendance}
-                  className="w-full text-center py-3 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                  className="btn-ghost w-full justify-center"
                 >
                   View {teamAttendance.length - 5} more team members
-                  <ChevronRight className="w-4 h-4 inline ml-1" />
+                  <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
               )}
             </div>

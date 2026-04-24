@@ -4,7 +4,8 @@
       "Bash(npm run:*)",
       "Bash(flutter analyze:*)",
       "Bash(flutter pub:*)",
-      "Bash(python -m py_compile endpoints/attendance_endpoints.py)"
+      "Bash(python -m py_compile endpoints/attendance_endpoints.py)",
+      "Bash(npx tsc *)"
     ]
   }
 }
