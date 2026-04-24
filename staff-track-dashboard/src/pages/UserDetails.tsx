@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, MapPin, Mail, Phone, User as UserIcon, Building, TrendingUp, Minus, FileText, Download, Eye } from 'lucide-react';
 import type { User, UserDocument } from '../services/api';
 import { usersApi } from '../services/api';
+import EmptyState from '../components/EmptyState';
 
 interface AttendanceRecord {
   attendance_log_id: string;
@@ -464,6 +465,8 @@ const UserDetails: React.FC = () => {
                       <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
                     ))}
                   </div>
+                ) : attendance.length === 0 ? (
+                  <EmptyState variant="attendance" />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -505,10 +508,7 @@ const UserDetails: React.FC = () => {
                     ))}
                   </div>
                 ) : documents.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400">No documents uploaded yet</p>
-                  </div>
+                  <EmptyState variant="default" title="No documents uploaded" description="Documents will appear here once uploaded." />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {documents.map((doc) => (

@@ -80,12 +80,20 @@
     border-color: var(--sky-blue);
     color: var(--sky-blue);
   }
-  
+
   .btn-outline:hover {
     background: linear-gradient(135deg, var(--sky-blue), var(--dark-sky-blue));
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sky-blue dark:text-blue-400 hover:bg-sky-blue hover:text-white dark:hover:bg-blue-600;
+  }
+
+  .btn-ghost-danger {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 text-pale-red dark:text-red-400 hover:bg-pale-red hover:text-white dark:hover:bg-red-600;
   }
   
   .card {
@@ -96,17 +104,20 @@
   
   .dark .card {
     background-color: var(--surface-dark);
-    border: 1px solid rgba(2, 132, 199, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   }
   
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 40px rgba(2, 132, 199, 0.15);
+  .dashboard-card {
     transition: all 0.3s ease;
   }
-  
-  .dark .card:hover {
+
+  .dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(2, 132, 199, 0.15);
+  }
+
+  .dark .dashboard-card:hover {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   }
   
@@ -153,27 +164,27 @@
   }
   
   .status-late {
-    background: linear-gradient(135deg, var(--light-gold), var(--light-gold-accent));
+    background: linear-gradient(135deg, #D97706, #F59E0B);
     color: white;
   }
-  
+
   .status-absent {
     background: linear-gradient(135deg, var(--pale-red), var(--pale-red-accent));
     color: white;
   }
-  
+
   .status-active {
     background: linear-gradient(135deg, #10B981, #059669);
     color: white;
   }
-  
+
   .status-inactive {
     background: linear-gradient(135deg, var(--pale-red), var(--pale-red-accent));
     color: white;
   }
-  
+
   .status-pending {
-    background: linear-gradient(135deg, var(--light-gold), var(--light-gold-accent));
+    background: linear-gradient(135deg, #2563EB, #3B82F6);
     color: white;
   }
   
