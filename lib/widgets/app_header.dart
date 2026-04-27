@@ -40,21 +40,11 @@ class AppHeader extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                Container(
+                Image.asset(
+                  'assets/logo/logo.png',
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/logo/logo.png',
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
