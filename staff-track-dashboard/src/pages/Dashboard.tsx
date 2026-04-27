@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { attendanceApi, requestsApi, announcementsApi, dashboardApi, WeeklyTrendData, DepartmentDistributionData, AnalyticsStats, PerformanceMetrics, WeeklyActivity, ActivityHeatmap } from '../services/api';
+import { attendanceApi, requestsApi, announcementsApi, dashboardApi } from '../services/api';
+import type { WeeklyTrendData, DepartmentDistributionData, AnalyticsStats, PerformanceMetrics, WeeklyActivity } from '../services/api';
 import {
   Users,
   Clock,
@@ -276,9 +277,11 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
           <div className="mb-4 md:mb-0">
             <div className="flex items-center space-x-3 md:space-x-4 mb-3">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <User className="w-5 h-5 md:w-6 md:h-6" />
-              </div>
+              <img 
+                src="/src/assets/logo.png" 
+                alt="Staff Track Logo" 
+                className="w-10 h-10 md:w-12 md:h-12 object-contain"
+              />
               <div>
                 <h1 className="text-xl md:text-3xl font-bold">Admin Dashboard</h1>
                 <p className="text-blue-100 text-sm md:text-base">Welcome back, {user?.first_name || 'Admin'}!</p>
