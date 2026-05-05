@@ -12,12 +12,14 @@ class AppHeader extends StatelessWidget {
   final String subtitle;
   final bool showNotifications;
   final bool enableProfileNavigation;
+  final VoidCallback? onBack;
 
   const AppHeader({
     super.key,
     required this.subtitle,
     this.showNotifications = true,
     this.enableProfileNavigation = true,
+    this.onBack,
   });
 
   @override
@@ -37,6 +39,16 @@ class AppHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (onBack != null)
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              onPressed: onBack,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              padding: const EdgeInsets.all(8),
+            ),
           Expanded(
             child: Row(
               children: [

@@ -381,12 +381,12 @@ class AttendanceController {
       return const ApiError(
         code: 'outside_work_area',
         message:
-            'You are currently outside the allowed work area. Please move closer and try again.',
+            'You are currently outside allowed work area. Please move closer and try again.',
       );
     }
 
     if (lower.contains('location data is required') ||
-        lower.contains('location')) {
+        lower.contains('location is required')) {
       return const ApiError(
         code: 'location_required',
         message:
@@ -394,10 +394,80 @@ class AttendanceController {
       );
     }
 
+    if (lower.contains('already checked in')) {
+      return ApiError(
+        code: 'already_checked_in',
+        message: detail.isNotEmpty ? detail : 'You are already checked in.',
+      );
+    }
+
+    if (lower.contains('unresolved night shift')) {
+      return ApiError(
+        code: 'unresolved_night_shift',
+        message: detail.isNotEmpty ? detail : 'You have an unresolved night shift. Please check out first.',
+      );
+    }
+
+    if (lower.contains('late check-in detected')) {
+      return const ApiError(
+        code: 'late_check_in',
+        message: 'Late check-in detected. Please provide a reason for arriving late.',
+      );
+    }
+
+    if (lower.contains('early check-in detected')) {
+      return const ApiError(
+        code: 'early_check_in',
+        message: 'Early check-in detected. Please provide a reason for arriving early.',
+      );
+    }
+
+    if (lower.contains('early check-out detected')) {
+      return const ApiError(
+        code: 'early_check_out',
+        message: 'Early check-out detected. Please provide a reason for leaving early.',
+      );
+    }
+
+    if (lower.contains('no active check-in')) {
+      return const ApiError(
+        code: 'no_active_check_in',
+        message: 'No active check-in found. Please check in first.',
+      );
+    }
+
+    if (lower.contains('already checked out')) {
+      return const ApiError(
+        code: 'already_checked_out',
+        message: 'You have already checked out from this shift.',
+      );
+    }
+
+    if (lower.contains('invalid shift')) {
+      return const ApiError(
+        code: 'invalid_shift',
+        message: 'Invalid shift type specified.',
+      );
+    }
+
     if (statusCode == 401 || statusCode == 403) {
       return const ApiError(
         code: 'unauthorized',
         message: 'Your session has expired. Please log in again.',
+      );
+    }
+
+    if (statusCode == 400) {
+      return ApiError(
+        code: 'bad_request',
+        message: detail.isNotEmpty ? detail : 'Invalid request. Please check your input and try again.',
+      );
+    }
+
+    if (statusCode == 500) {
+      return const ApiError(
+        code: 'server_error',
+        message: 'Server error occurred. Please try again later.',
       );
     }
 

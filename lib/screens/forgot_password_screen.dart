@@ -27,6 +27,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         setState(() => _isLoading = false);
         
         if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reset code sent successfully!'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+            ),
+          );
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => OTPScreen(email: _emailController.text),
@@ -304,7 +311,8 @@ class _OTPScreenState extends State<OTPScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: List.generate(6, (index) => SizedBox(
-                            width: 50,
+                            width: 55,
+                            height: 65,
                             child: TextField(
                               controller: _controllers[index],
                               focusNode: _focusNodes[index],
@@ -326,6 +334,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: const BorderSide(color: AppTheme.skyBlue, width: 2),
                                 ),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
                               ),
                               onChanged: (value) {
                                 if (value.isNotEmpty && index < 5) {
@@ -443,7 +452,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final success = await _loginService.confirmPasswordReset(
+      final response = await _loginService.confirmPasswordReset(
         widget.email,
         widget.otp,
         _passController.text,
@@ -452,10 +461,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         
-        if (success) {
+        if (response.success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password changed successfully!'),
+            SnackBar(
+              content: Text(response.message ?? 'Password changed successfully!'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.green,
             ),
@@ -463,8 +472,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Navigator.of(context).popUntil((route) => route.isFirst);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to reset password. Please try again.'),
+            SnackBar(
+              content: Text(response.message ?? 'Failed to reset password. Please try again.'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: AppTheme.paleRed,
             ),
@@ -545,7 +554,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   : Colors.grey.withValues(alpha: 0.05),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                             ),
-                            validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Password is required';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              if (!value.contains(RegExp(r'[a-zA-Z]'))) {
+                                return 'Password must contain at least one letter';
+                              }
+                              if (!value.contains(RegExp(r'[0-9]'))) {
+                                return 'Password must contain at least one number';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

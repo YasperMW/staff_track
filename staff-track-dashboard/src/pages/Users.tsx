@@ -4,14 +4,17 @@ import type { User } from '../services/api';
 import { usersApi } from '../services/api';
 import DataTable from '../components/DataTable';
 import UserEditModal from '../components/UserEditModal';
+import RoleChangeModal from '../components/RoleChangeModal';
 import type { Column, Action } from '../components/DataTable';
-import { UserPlus, Edit, Trash2, Eye, Shield, UserCheck, UserX } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Eye, Shield, UserCheck, UserX, Key } from 'lucide-react';
+import { useSystemAdmin } from '../hooks/useSystemAdmin';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     perPage: 25,
@@ -19,6 +22,7 @@ const Users: React.FC = () => {
   });
 
   const navigate = useNavigate();
+  const { isSystemAdmin } = useSystemAdmin();
 
   useEffect(() => {
     loadUsers();
@@ -75,6 +79,25 @@ const Users: React.FC = () => {
 
   const handleCloseModal = () => {
     setIsEditModalOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleChangeRole = (user: User) => {
+    setSelectedUser(user);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleRoleChangeSuccess = (updatedUser: User) => {
+    // Update the user in the local state
+    setUsers(prev => prev.map(user => 
+      user.user_id === updatedUser.user_id ? updatedUser : user
+    ));
+    setIsRoleModalOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleCloseRoleModal = () => {
+    setIsRoleModalOpen(false);
     setSelectedUser(null);
   };
 
@@ -151,6 +174,38 @@ const Users: React.FC = () => {
       )
     },
     {
+      key: 'role_name',
+      label: 'Role',
+      sortable: true,
+      filterable: true,
+      render: (value) => {
+        const roleColors = {
+          'admin': 'bg-purple-500',
+          'administrator': 'bg-purple-500',
+          'hr': 'bg-blue-500',
+          'manager': 'bg-indigo-500',
+          'employee': 'bg-gray-500',
+          'staff': 'bg-green-500',
+          'doctor': 'bg-red-500',
+          'nurse': 'bg-pink-500',
+          'system admin': 'bg-red-600',
+          'system administrator': 'bg-red-600',
+          'principal hospital administrator': 'bg-purple-600',
+          'accountant': 'bg-yellow-600',
+          'department supervisor': 'bg-indigo-600',
+          'medical director': 'bg-teal-600'
+        };
+        
+        const roleColor = roleColors[value?.toLowerCase() as keyof typeof roleColors] || 'bg-sky-blue';
+        
+        return (
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white ${roleColor}`}>
+            {value || 'Unknown'}
+          </span>
+        );
+      }
+    },
+    {
       key: 'status',
       label: 'Status',
       sortable: true,
@@ -182,6 +237,12 @@ const Users: React.FC = () => {
       onClick: handleEditUser,
       variant: 'secondary'
     },
+    ...(isSystemAdmin ? [{
+      label: 'Change Role',
+      icon: <Key className="w-4 h-4" />,
+      onClick: handleChangeRole,
+      variant: 'secondary' as const
+    }] : []),
     {
       label: row => row.status === 'active' ? 'Deactivate' : 'Activate',
       icon: row => row.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />,
@@ -304,6 +365,16 @@ const Users: React.FC = () => {
         onClose={handleCloseModal}
         onSave={handleUserSave}
       />
+
+      {/* Role Change Modal - Only for System Admins */}
+      {isSystemAdmin && (
+        <RoleChangeModal
+          user={selectedUser}
+          isOpen={isRoleModalOpen}
+          onClose={handleCloseRoleModal}
+          onSuccess={handleRoleChangeSuccess}
+        />
+      )}
     </div>
   );
 };

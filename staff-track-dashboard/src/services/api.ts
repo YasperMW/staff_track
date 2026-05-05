@@ -247,6 +247,11 @@ export const usersApi = {
     return response.data;
   },
 
+  updateUserRole: async (userId: string, roleId: string): Promise<ApiResponse<User>> => {
+    const response = await api.put(`/users/users/${userId}/role`, { role_id: roleId });
+    return response.data;
+  },
+
   deleteUser: async (userId: string): Promise<ApiResponse<null>> => {
     const response = await api.delete(`/users/users/${userId}`);
     return response.data;
