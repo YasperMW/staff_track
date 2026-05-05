@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSystemAdmin } from '../hooks/useSystemAdmin';
 import { requestsApi } from '../services/api';
 import {
   LayoutDashboard,
@@ -28,6 +29,7 @@ interface SidebarItem {
   path: string;
   badge?: number;
   section: string;
+  systemAdminOnly?: boolean;
 }
 
 const Layout: React.FC = () => {
@@ -36,10 +38,11 @@ const Layout: React.FC = () => {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { isSystemAdmin } = useSystemAdmin();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const sidebarItems: SidebarItem[] = [
+  const allSidebarItems: SidebarItem[] = [
     {
       label: 'Dashboard',
       icon: LayoutDashboard,
@@ -51,6 +54,7 @@ const Layout: React.FC = () => {
       icon: Users,
       path: '/users',
       section: 'main',
+      systemAdminOnly: true,
     },
     {
       label: 'Departments',
@@ -63,6 +67,7 @@ const Layout: React.FC = () => {
       icon: Shield,
       path: '/roles',
       section: 'management',
+      systemAdminOnly: true,
     },
     {
       label: 'Attendance',
@@ -100,8 +105,14 @@ const Layout: React.FC = () => {
       icon: Settings,
       path: '/settings',
       section: 'system',
+      systemAdminOnly: true,
     },
   ];
+
+  // Filter sidebar items based on system admin permissions
+  const sidebarItems = allSidebarItems.filter(item => 
+    !item.systemAdminOnly || isSystemAdmin
+  );
 
   const sections = [
     { key: 'main', label: 'Main' },

@@ -32,6 +32,8 @@ class AttendanceRecord {
   final String? deviceId;
   final double? accuracy;
   final String? shiftType;
+  final String? lateReason;
+  final String? earlyCheckoutReason;
 
   AttendanceRecord({
     required this.id,
@@ -44,6 +46,8 @@ class AttendanceRecord {
     this.deviceId,
     this.accuracy,
     this.shiftType,
+    this.lateReason,
+    this.earlyCheckoutReason,
   });
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
@@ -64,6 +68,8 @@ class AttendanceRecord {
       deviceId: json['device_id'],
       accuracy: json['accuracy']?.toDouble(),
       shiftType: json['shift_type'],
+      lateReason: json['late_reason'],
+      earlyCheckoutReason: json['early_checkout_reason'],
     );
   }
 
@@ -82,6 +88,8 @@ class AttendanceRecord {
       'device_id': deviceId,
       'accuracy': accuracy,
       'shift_type': shiftType,
+      'late_reason': lateReason,
+      'early_checkout_reason': earlyCheckoutReason,
     };
   }
 
@@ -265,6 +273,10 @@ class TeamAttendanceMember {
   final String status;
   final String? checkInTime;
   final String? checkOutTime;
+  final String? lateReason;
+  final String? earlyCheckoutReason;
+  final String? shiftType;
+  final double? workHours;
 
   TeamAttendanceMember({
     required this.userId,
@@ -273,6 +285,10 @@ class TeamAttendanceMember {
     required this.status,
     this.checkInTime,
     this.checkOutTime,
+    this.lateReason,
+    this.earlyCheckoutReason,
+    this.shiftType,
+    this.workHours,
   });
 
   factory TeamAttendanceMember.fromJson(Map<String, dynamic> json) {
@@ -283,6 +299,10 @@ class TeamAttendanceMember {
       status: json['status'] as String? ?? '',
       checkInTime: json['check_in_time'] as String?,
       checkOutTime: json['check_out_time'] as String?,
+      lateReason: json['late_reason'] as String?,
+      earlyCheckoutReason: json['early_checkout_reason'] as String?,
+      shiftType: json['shift_type'] as String?,
+      workHours: (json['work_hours'] as num?)?.toDouble(),
     );
   }
 }

@@ -14,6 +14,7 @@ import 'announcements_management_screen.dart';
 import 'admin_requests_screen.dart';
 import 'admin_leave_policies_screen.dart';
 import 'admin_attendance_screen.dart';
+import 'hr_organization_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -260,6 +261,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       const SizedBox(height: 32),
                       // Holidays card removed; holidays now appear within announcements
                       _buildRequestsSummaryCard(context),
+                      const SizedBox(height: 32),
+                      _buildOrganizationCard(context),
                       const SizedBox(height: 32),
                       _buildTeamAttendanceHeader(context),
                       const SizedBox(height: 16),
@@ -866,6 +869,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       default:
         return Icons.event;
     }
+  }
+
+  Widget _buildOrganizationCard(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final isHr = user?.role.toLowerCase().contains('hr') ?? false;
+
+    if (!isHr) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.lightGold, Color(0xFFE8C96A)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.lightGold.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_outlined,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'HR Access',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Organization Overview',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'View all departments and their attendance records',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HrOrganizationScreen(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppTheme.lightGold,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text(
+                      'View Departments',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTeamAttendanceHeader(BuildContext context) {

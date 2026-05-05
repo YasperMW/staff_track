@@ -371,20 +371,25 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
 
     switch (error.code) {
       case 'outside_work_area':
-        _showErrorSnackBar(error.message);
-        break;
       case 'location_required':
-        _showErrorSnackBar(error.message);
-        break;
+      case 'already_checked_in':
+      case 'unresolved_night_shift':
+      case 'late_check_in':
+      case 'early_check_in':
+      case 'no_active_check_in':
+      case 'already_checked_out':
+      case 'invalid_shift':
+      case 'bad_request':
+      case 'server_error':
       case 'unauthorized':
-        _showErrorSnackBar(error.message);
-        break;
       case 'network_error':
         _showErrorSnackBar(error.message);
         break;
       default:
         _showErrorSnackBar(
-          'Check-in failed. Please try again or contact your administrator if the problem persists.',
+          error.message.isNotEmpty 
+            ? error.message 
+            : 'Check-in failed. Please try again or contact your administrator if the problem persists.',
         );
     }
   }
@@ -480,20 +485,25 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
 
     switch (error.code) {
       case 'outside_work_area':
-        _showErrorSnackBar(error.message);
-        break;
       case 'location_required':
-        _showErrorSnackBar(error.message);
-        break;
+      case 'already_checked_in':
+      case 'unresolved_night_shift':
+      case 'late_check_in':
+      case 'early_check_in':
+      case 'no_active_check_in':
+      case 'already_checked_out':
+      case 'invalid_shift':
+      case 'bad_request':
+      case 'server_error':
       case 'unauthorized':
-        _showErrorSnackBar(error.message);
-        break;
       case 'network_error':
         _showErrorSnackBar(error.message);
         break;
       default:
         _showErrorSnackBar(
-          'Check-out failed. Please try again or contact your administrator if the problem persists.',
+          error.message.isNotEmpty 
+            ? error.message 
+            : 'Check-out failed. Please try again or contact your administrator if the problem persists.',
         );
     }
   }

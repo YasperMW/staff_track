@@ -463,68 +463,320 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
         ? Colors.green
         : (member.status == 'Absent' ? AppTheme.paleRed : AppTheme.lightGold);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
-            child: Text(
-              member.name.isNotEmpty ? member.name[0] : '?',
-              style: const TextStyle(color: AppTheme.skyBlue),
+    return GestureDetector(
+      onTap: () => _showAttendanceDetailDialog(context, member),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  member.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (member.role.isNotEmpty)
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
+              child: Text(
+                member.name.isNotEmpty ? member.name[0] : '?',
+                style: const TextStyle(color: AppTheme.skyBlue),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    member.role,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    member.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (member.role.isNotEmpty)
+                    Text(
+                      member.role,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (member.lateReason != null || member.earlyCheckoutReason != null)
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: (member.lateReason != null ? AppTheme.lightGold : AppTheme.paleRed).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          member.lateReason != null ? Icons.warning_amber_rounded : Icons.exit_to_app,
+                          size: 12,
+                          color: member.lateReason != null ? AppTheme.lightGold : AppTheme.paleRed,
+                        ),
+                      ),
+                    Text(
+                      member.status,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+                if (member.checkInTime != null || member.checkOutTime != null)
+                  Text(
+                    [
+                      if (member.checkInTime != null) 'In: ${member.checkInTime}',
+                      if (member.checkOutTime != null) 'Out: ${member.checkOutTime}',
+                    ].join('  '),
+                    style: const TextStyle(fontSize: 10, color: AppTheme.textLightBlue),
                   ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAttendanceDetailDialog(BuildContext context, TeamAttendanceMember member) {
+    final theme = Theme.of(context);
+    final statusColor = member.status == 'Present'
+        ? Colors.green
+        : (member.status == 'Absent' ? AppTheme.paleRed : AppTheme.lightGold);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppTheme.skyBlue.withValues(alpha: 0.1),
+              child: Text(
+                member.name.isNotEmpty ? member.name[0] : '?',
+                style: const TextStyle(color: AppTheme.skyBlue, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.name,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  if (member.role.isNotEmpty)
+                    Text(
+                      member.role,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                member.status,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
+              // Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  member.status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-              if (member.checkInTime != null || member.checkOutTime != null)
-                Text(
-                  [
-                    if (member.checkInTime != null) 'In: ${member.checkInTime}',
-                    if (member.checkOutTime != null) 'Out: ${member.checkOutTime}',
-                  ].join('  '),
-                  style: const TextStyle(fontSize: 10, color: AppTheme.textLightBlue),
+              const SizedBox(height: 20),
+
+              // Time Details
+              _buildDetailRow(
+                context: context,
+                icon: Icons.login_rounded,
+                label: 'Check-in Time',
+                value: member.checkInTime ?? 'Not checked in',
+                color: Colors.green,
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context: context,
+                icon: Icons.logout_rounded,
+                label: 'Check-out Time',
+                value: member.checkOutTime ?? 'Not checked out',
+                color: AppTheme.paleRed,
+              ),
+              const SizedBox(height: 12),
+              _buildDetailRow(
+                context: context,
+                icon: Icons.schedule,
+                label: 'Shift Type',
+                value: member.shiftType ?? 'Day Shift',
+                color: AppTheme.skyBlue,
+              ),
+              if (member.workHours != null) ...[
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  context: context,
+                  icon: Icons.timelapse,
+                  label: 'Work Hours',
+                  value: '${member.workHours!.toStringAsFixed(1)} hrs',
+                  color: AppTheme.lightGold,
                 ),
+              ],
+
+              // Late Reason
+              if (member.lateReason != null && member.lateReason!.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                _buildReasonCard(
+                  context: context,
+                  icon: Icons.warning_amber_rounded,
+                  title: 'Late Check-in Reason',
+                  reason: member.lateReason!,
+                  color: AppTheme.lightGold,
+                ),
+              ],
+
+              // Early Checkout Reason
+              if (member.earlyCheckoutReason != null && member.earlyCheckoutReason!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildReasonCard(
+                  context: context,
+                  icon: Icons.exit_to_app,
+                  title: 'Early Check-out Reason',
+                  reason: member.earlyCheckoutReason!,
+                  color: AppTheme.paleRed,
+                ),
+              ],
             ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReasonCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String reason,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            reason,
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              height: 1.4,
+            ),
           ),
         ],
       ),

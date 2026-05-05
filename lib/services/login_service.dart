@@ -136,7 +136,7 @@ class LoginService {
     }
   }
 
-  Future<bool> confirmPasswordReset(String email, String otp, String newPassword) async {
+  Future<LoginResponse> confirmPasswordReset(String email, String otp, String newPassword) async {
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/auth/confirm-password-reset'),
@@ -147,9 +147,23 @@ class LoginService {
           'new_password': newPassword,
         }),
       );
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return LoginResponse(
+          success: true,
+          message: data['message'],
+        );
+      }
+      return LoginResponse(
+        success: false,
+        message: _detailFromBody(response.body),
+      );
+    } catch (e) {
+      return LoginResponse(
+        success: false,
+        message: 'Network error. Check server and try again.',
+      );
     }
   }
 
