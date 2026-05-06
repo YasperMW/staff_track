@@ -7,8 +7,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+
+  const allowedRoles = ['HR', 'System Admin', 'Principal Hospital Administrator'];
+  const hasAccess = user?.role_name && allowedRoles.includes(user.role_name);
 
   if (isLoading) {
     return (
@@ -22,8 +25,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page with return url
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!hasAccess) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

@@ -15,6 +15,7 @@ import Announcements from './pages/Announcements';
 import Settings from './pages/Settings';
 import PushNotifications from './pages/PushNotifications';
 import Reports from './pages/Reports';
+import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Placeholder components for other routes
@@ -27,6 +28,7 @@ function App() {
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route
                 path="/dashboard"
