@@ -876,18 +876,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         leading: const Icon(Icons.camera_alt),
                         title: const Text('Take Photo'),
                         onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           Navigator.of(context).pop();
                           final result = await imageService.capturePhoto();
+                          if (!mounted) return;
                           if (result.path != null) {
                             setState(() {
                               _profilePhotoPath = result.path;
                               _profilePhotoUrl = null; // Clear any previous uploaded URL
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Photo captured! Will upload after form submission.')),
-                              );
                             });
+                            messenger.showSnackBar(
+                              const SnackBar(content: Text('Photo captured! Will upload after form submission.')),
+                            );
                           } else if (result.error != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(content: Text(result.error!)),
                             );
                           }
@@ -897,18 +899,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         leading: const Icon(Icons.photo_library),
                         title: const Text('Choose from Gallery'),
                         onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           Navigator.of(context).pop();
                           final result = await imageService.pickFromGallery();
+                          if (!mounted) return;
                           if (result.path != null) {
                             setState(() {
                               _profilePhotoPath = result.path;
                               _profilePhotoUrl = null; // Clear any previous uploaded URL
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Image selected! Will upload after form submission.')),
-                              );
                             });
+                            messenger.showSnackBar(
+                              const SnackBar(content: Text('Image selected! Will upload after form submission.')),
+                            );
                           } else if (result.error != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(content: Text(result.error!)),
                             );
                           }

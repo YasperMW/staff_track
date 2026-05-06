@@ -183,6 +183,7 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
     try {
       final holidays = await HolidaysService.getHolidays();
       final match = holidays.firstWhere((h) => h.id == announcement.id, orElse: () => throw Exception('Holiday not found'));
+      if (!mounted) return;
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,

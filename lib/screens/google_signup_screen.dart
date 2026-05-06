@@ -315,6 +315,7 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
         if (response.token != null) {
           final authProvider = context.read<AuthProvider>();
           await authProvider.saveToken(response.token!, response.user ?? {});
+          if (!mounted) return;
         }
 
         Navigator.of(context).pushReplacement(

@@ -173,6 +173,7 @@ class FCMService {
       // Show explanation dialog before requesting
       final ctx = context ?? _appContext;
       if (ctx != null) {
+        if (!ctx.mounted) return false;
         final shouldRequest = await showDialog<bool>(
           context: ctx,
           barrierDismissible: false,
@@ -205,6 +206,7 @@ class FCMService {
         ) ?? false;
 
         if (!shouldRequest) return false;
+        if (ctx == null || !ctx.mounted) return false;
       }
 
       final result = await Permission.ignoreBatteryOptimizations.request();

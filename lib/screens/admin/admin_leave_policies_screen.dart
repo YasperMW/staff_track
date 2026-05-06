@@ -114,7 +114,7 @@ class _AdminLeavePoliciesScreenState extends State<AdminLeavePoliciesScreen> {
                         roleName: roleName,
                         departmentName: departmentName,
                       );
-                      if (mounted) Navigator.of(ctx).pop();
+                      if (ctx.mounted) Navigator.of(ctx).pop();
                       await _load();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Policy applied')));

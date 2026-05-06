@@ -90,6 +90,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
         return;
       }
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating report...')));
       
       final response = await http.get(
@@ -106,11 +107,13 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
         final file = File('${directory.path}/$fileName');
         await file.writeAsBytes(response.bodyBytes);
         
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: _reportType == 'individual' 
-              ? 'Attendance Report - ${_selectedStaff['first_name']} ${_selectedStaff['surname']}'
-              : 'Department Attendance Report',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: _reportType == 'individual'
+                ? 'Attendance Report - ${_selectedStaff['first_name']} ${_selectedStaff['surname']}'
+                : 'Department Attendance Report',
+          ),
         );
       } else {
         _showError('Failed to generate report: ${response.statusCode}');

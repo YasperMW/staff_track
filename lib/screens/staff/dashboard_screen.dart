@@ -345,6 +345,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                         onPressed: _shouldDisableCheckIn() ? null : () {
                           if (todayAttendance == null || !todayAttendance.isCheckedIn) {
                             // Check in
+                            final attendanceProvider = context.read<AttendanceProvider>();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -352,8 +353,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                               ),
                             ).then(
                               (_) {
-                                if (context.mounted) {
-                                  context.read<AttendanceProvider>().loadTodayAttendance();
+                                if (mounted) {
+                                  attendanceProvider.loadTodayAttendance();
                                   // Schedule reminders after check-in
                                   _scheduleAttendanceReminders();
                                 }
@@ -361,6 +362,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                             );
                           } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
                             // Check out
+                            final attendanceProvider = context.read<AttendanceProvider>();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -368,8 +370,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                               ),
                             ).then(
                               (_) {
-                                if (context.mounted) {
-                                  context.read<AttendanceProvider>().loadTodayAttendance();
+                                if (mounted) {
+                                  attendanceProvider.loadTodayAttendance();
                                   // Schedule reminders after check-out
                                   _scheduleAttendanceReminders();
                                 }
@@ -377,6 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                             );
                           } else {
                             // View details (already completed)
+                            final attendanceProvider = context.read<AttendanceProvider>();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -384,10 +387,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                               ),
                             ).then(
                               (_) {
-                                if (context.mounted) {
-                                  context
-                                      .read<AttendanceProvider>()
-                                      .loadTodayAttendance();
+                                if (mounted) {
+                                  attendanceProvider.loadTodayAttendance();
                                 }
                               },
                             );
