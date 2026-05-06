@@ -1,47 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { reportsApi, type MonthlyReportRequest, type MonthlyReportResponse, type DepartmentOption, type EmployeeOption } from '../services/api';
+import { reportsApi, type DepartmentOption, type EmployeeOption, type StaffReportPreview, type DepartmentReportPreview, type StaffRecord } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { 
   FileText, 
   Download, 
   Calendar, 
-  Users, 
   Building, 
   User,
-  Filter,
   Loader2,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  TrendingDown,
+  ChevronDown,
   Clock
 } from 'lucide-react';
 
+type ReportType = 'department' | 'staff';
+
 const Reports: React.FC = () => {
   const { success, error: showError } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [generatingReport, setGeneratingReport] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   
-  // Form state
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [reportType, setReportType] = useState<ReportType>('department');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  });
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   
-  // Options
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
-  
-  // Report data
-  const [reportData, setReportData] = useState<MonthlyReportResponse | null>(null);
-  const [showReport, setShowReport] = useState(false);
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  const [staffPreview, setStaffPreview] = useState<StaffReportPreview | null>(null);
+  const [deptPreview, setDeptPreview] = useState<DepartmentReportPreview | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     loadDepartments();
@@ -53,7 +51,14 @@ const Reports: React.FC = () => {
     } else {
       loadEmployees();
     }
+    setSelectedEmployee('');
   }, [selectedDepartment]);
+
+  useEffect(() => {
+    setShowPreview(false);
+    setStaffPreview(null);
+    setDeptPreview(null);
+  }, [reportType]);
 
   const loadDepartments = async () => {
     try {
@@ -81,374 +86,366 @@ const Reports: React.FC = () => {
     }
   };
 
-  const handleGenerateReport = async (format: 'json' | 'pdf') => {
-    if (!year || !month) {
-      showError('Please select year and month');
+  const handleGeneratePreview = async () => {
+    if (!startDate || !endDate) {
+      showError('Please select a date range');
+      return;
+    }
+    if (startDate > endDate) {
+      showError('Start date must be before end date');
+      return;
+    }
+    if (reportType === 'staff' && !selectedEmployee) {
+      showError('Please select an employee');
       return;
     }
 
     try {
-      setGeneratingReport(true);
-      
-      const request: MonthlyReportRequest = {
-        year,
-        month,
-        department_id: selectedDepartment || undefined,
-        user_id: selectedEmployee || undefined
-      };
+      setLoadingPreview(true);
+      setShowPreview(false);
 
-      if (format === 'pdf') {
-        // For PDF, handle as blob download
-        const response = await reportsApi.getMonthlyReport(request, 'pdf');
-        const blob = new Blob([response as Blob], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `attendance_report_${year}_${month.toString().padStart(2, '0')}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        success('PDF report downloaded successfully');
+      if (reportType === 'department') {
+        const data = await reportsApi.getDepartmentPreview(startDate, endDate, selectedDepartment || undefined);
+        setDeptPreview(data);
       } else {
-        // For JSON, display in UI
-        const data = await reportsApi.getMonthlyReport(request, 'json') as MonthlyReportResponse;
-        setReportData(data);
-        setShowReport(true);
-        success('Report generated successfully');
+        const data = await reportsApi.getStaffPreview(selectedEmployee, startDate, endDate);
+        setStaffPreview(data);
+      }
+      setShowPreview(true);
+    } catch (err: any) {
+      console.error('Error loading preview:', err);
+      showError(err.response?.data?.detail || 'Failed to load report data');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!startDate || !endDate) {
+      showError('Please select a date range');
+      return;
+    }
+    if (startDate > endDate) {
+      showError('Start date must be before end date');
+      return;
+    }
+    if (reportType === 'staff' && !selectedEmployee) {
+      showError('Please select an employee');
+      return;
+    }
+
+    try {
+      setDownloading(true);
+
+      if (reportType === 'department') {
+        await reportsApi.downloadDepartmentPdf(startDate, endDate, selectedDepartment || undefined);
+        const deptName = departments.find(d => d.department_id === selectedDepartment)?.name || 'All Departments';
+        success(`Downloading ${deptName} attendance report`);
+      } else {
+        const empName = employees.find(e => e.user_id === selectedEmployee)?.name || 'Staff';
+        await reportsApi.downloadStaffPdf(selectedEmployee, empName, startDate, endDate);
+        success(`Downloading attendance report for ${empName}`);
       }
     } catch (err: any) {
-      console.error('Error generating report:', err);
-      showError(err.response?.data?.detail || 'Failed to generate report');
+      console.error('Error downloading report:', err);
+      showError(err.response?.data?.detail || 'Failed to download report');
     } finally {
-      setGeneratingReport(false);
+      setDownloading(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'absent':
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      case 'late':
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case 'early_checkout':
-      case 'late_early_checkout':
-        return <TrendingDown className="w-4 h-4 text-orange-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
-    }
+  const renderDepartmentPreview = () => {
+    if (!deptPreview) return null;
+
+    return (
+      <div className="card">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+              {deptPreview.department_name} — Staff Attendance Summary
+            </h2>
+            <p className="text-sm text-text-grey dark:text-text-grey-dark">
+              {deptPreview.start_date} to {deptPreview.end_date} · {deptPreview.total_staff} total staff · {deptPreview.staff_records.length} with records
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employee Name</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Days Present</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Days Absent</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">On Time</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Late</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Early Out</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Hours</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Hours</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {deptPreview.staff_records.length === 0 ? (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-text-grey">No attendance records found for this period</td></tr>
+              ) : (
+                deptPreview.staff_records.map((record: StaffRecord, i: number) => (
+                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{record.staff_name}</td>
+                    <td className="px-4 py-3 text-center text-sm text-green-600 font-medium">{record.days_present}</td>
+                    <td className="px-4 py-3 text-center text-sm text-red-600 font-medium">{record.days_absent}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-900 dark:text-gray-100">{record.on_time}</td>
+                    <td className="px-4 py-3 text-center text-sm text-yellow-600 font-medium">{record.late}</td>
+                    <td className="px-4 py-3 text-center text-sm text-orange-600 font-medium">{record.early_out}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-900 dark:text-gray-100">{record.total_hours.toFixed(1)}h</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-900 dark:text-gray-100">{record.avg_hours.toFixed(1)}h</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'text-green-600 bg-green-100';
-      case 'absent':
-        return 'text-red-600 bg-red-100';
-      case 'late':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'early_checkout':
-      case 'late_early_checkout':
-        return 'text-orange-600 bg-orange-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
-  };
+  const renderStaffPreview = () => {
+    if (!staffPreview) return null;
+    const { summary, records } = staffPreview;
 
-  const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return (
+      <>
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+                {staffPreview.user_name} — Attendance Summary
+              </h2>
+              <p className="text-sm text-text-grey dark:text-text-grey-dark">
+                {staffPreview.department || 'No department'} · {staffPreview.start_date} to {staffPreview.end_date}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            {[
+              { label: 'Days Present', value: summary.present_days, color: 'text-green-600' },
+              { label: 'Days Absent', value: summary.absent_days, color: 'text-red-600' },
+              { label: 'On Time', value: summary.on_time, color: 'text-sky-blue' },
+              { label: 'Late', value: summary.late, color: 'text-yellow-600' },
+              { label: 'Early Out', value: summary.early_out, color: 'text-orange-600' },
+              { label: 'Total Hours', value: `${summary.total_work_hours.toFixed(1)}h`, color: 'text-text-dark dark:text-text-dark-light' },
+              { label: 'Avg Hours', value: `${summary.avg_hours.toFixed(1)}h`, color: 'text-text-dark dark:text-text-dark-light' },
+            ].map((stat, i) => (
+              <div key={i} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-xs text-text-grey dark:text-text-grey-dark mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-2 mb-4">
+            <Clock className="w-4 h-4 text-sky-blue" />
+            <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+              Detailed Attendance Records
+            </h2>
+            <span className="text-sm text-text-grey dark:text-text-grey-dark">({records.length} records)</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Check In</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Check Out</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Shift</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hours</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Late Reason</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Early Out Reason</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {records.length === 0 ? (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-text-grey">No attendance records found for this period</td></tr>
+                ) : (
+                  records.map((record, i: number) => (
+                    <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{record.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{record.check_in_time}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{record.check_out_time || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{record.shift_type || 'Day Shift'}</td>
+                      <td className="px-4 py-3 text-center text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {record.work_hours ? `${record.work_hours.toFixed(1)}h` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-yellow-600 max-w-[200px] truncate" title={record.late_reason || ''}>
+                        {record.late_reason || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-orange-600 max-w-[200px] truncate" title={record.early_checkout_reason || ''}>
+                        {record.early_checkout_reason || '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-dark dark:text-text-dark-light">
-            Monthly Reports
-          </h1>
-          <p className="text-text-grey dark:text-text-grey-dark">
-            Generate and download monthly attendance reports
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-text-dark dark:text-text-dark-light">Attendance Reports</h1>
+        <p className="text-text-grey dark:text-text-grey-dark">Generate PDF reports for departments or individual staff</p>
       </div>
 
       {/* Report Configuration */}
       <div className="card">
         <div className="flex items-center space-x-2 mb-6">
           <FileText className="w-5 h-5 text-sky-blue" />
-          <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-            Report Configuration
-          </h2>
+          <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">Report Configuration</h2>
+        </div>
+
+        {/* Report Type Selector */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">Report Type</label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setReportType('department')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                reportType === 'department'
+                  ? 'border-sky-blue bg-sky-blue/10 text-sky-blue'
+                  : 'border-gray-200 dark:border-gray-700 text-text-grey hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <Building className="w-5 h-5" />
+              <span className="font-medium">Department Report</span>
+            </button>
+            <button
+              onClick={() => setReportType('staff')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                reportType === 'staff'
+                  ? 'border-sky-blue bg-sky-blue/10 text-sky-blue'
+                  : 'border-gray-200 dark:border-gray-700 text-text-grey hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span className="font-medium">Staff Report</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Year */}
+          {/* Start Date */}
           <div>
             <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Year
+              <Calendar className="w-4 h-4 inline mr-1" />Start Date
             </label>
-            <select
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               className="input-field w-full"
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
-          {/* Month */}
+          {/* End Date */}
           <div>
             <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-              <Calendar className="w-4 h-4 inline mr-1" />
-              Month
+              <Calendar className="w-4 h-4 inline mr-1" />End Date
             </label>
-            <select
-              value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value))}
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
               className="input-field w-full"
-            >
-              {monthNames.map((name, index) => (
-                <option key={index + 1} value={index + 1}>
-                  {name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Department */}
-          <div className="lg:col-span-1">
+          <div>
             <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-              <Building className="w-4 h-4 inline mr-1" />
-              Department
+              <Building className="w-4 h-4 inline mr-1" />Department
             </label>
-            <select
-              value={selectedDepartment}
-              onChange={(e) => {
-                setSelectedDepartment(e.target.value);
-                setSelectedEmployee(''); // Reset employee when department changes
-              }}
-              className="input-field w-full"
-              disabled={loadingDepartments}
-            >
-              <option value="">All Departments</option>
-              {departments.map((dept) => (
-                <option key={dept.department_id} value={dept.department_id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="input-field w-full appearance-none pr-10"
+                disabled={loadingDepartments}
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept.department_id} value={dept.department_id}>{dept.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           {/* Employee */}
-          <div className="lg:col-span-1">
-            <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-              <User className="w-4 h-4 inline mr-1" />
-              Employee
-            </label>
-            <select
-              value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="input-field w-full"
-              disabled={loadingEmployees}
-            >
-              <option value="">All Employees</option>
-              {employees.map((emp) => (
-                <option key={emp.user_id} value={emp.user_id}>
-                  {emp.name} ({emp.employee_number})
-                </option>
-              ))}
-            </select>
-          </div>
+          {reportType === 'staff' && (
+            <div>
+              <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                <User className="w-4 h-4 inline mr-1" />Employee
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="input-field w-full appearance-none pr-10"
+                  disabled={loadingEmployees}
+                >
+                  <option value="">Select Employee</option>
+                  {employees.map((emp) => (
+                    <option key={emp.user_id} value={emp.user_id}>{emp.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
-            onClick={() => handleGenerateReport('json')}
-            disabled={generatingReport}
+            onClick={handleGeneratePreview}
+            disabled={loadingPreview}
             className="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
-            {generatingReport ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Filter className="w-4 h-4" />
-            )}
-            <span>Generate Report</span>
+            {loadingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            <span>Generate Preview</span>
           </button>
-          
           <button
-            onClick={() => handleGenerateReport('pdf')}
-            disabled={generatingReport}
+            onClick={handleDownloadPdf}
+            disabled={downloading}
             className="btn-outline flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
-            {generatingReport ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
+            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span>Download PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Report Results */}
-      {showReport && reportData && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-5 h-5 text-sky-blue" />
-              <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-                Monthly Attendance Report - {monthNames[reportData.month - 1]} {reportData.year}
-              </h2>
-            </div>
-            <div className="text-sm text-text-grey dark:text-text-grey-dark">
-              Total Employees: {reportData.total_employees}
-            </div>
-          </div>
-
-          {/* Summary Table */}
-          <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Employee
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
-                    Department
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Present
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Absent
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Late
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Early Out
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Total Hours
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Avg Hours
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {reportData.data.map((employee) => (
-                  <React.Fragment key={employee.employee_name}>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px]">
-                            {employee.employee_name}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {employee.employee_number}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 hidden sm:table-cell">
-                        <span className="truncate max-w-[120px] block">
-                          {employee.department}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.present_days}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.absent_days}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.late_days}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.early_checkout_days}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.total_hours.toFixed(1)}h
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-900 dark:text-gray-100">
-                        {employee.average_hours.toFixed(1)}h
-                      </td>
-                    </tr>
-                    
-                    {/* Detailed Records */}
-                    <tr>
-                      <td colSpan={8} className="px-4 py-0">
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg m-1">
-                          <div className="px-3 py-2">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                              Detailed Attendance Records
-                            </h4>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full text-sm">
-                                <thead>
-                                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Date</th>
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Check In</th>
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Check Out</th>
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Status</th>
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Hours</th>
-                                    <th className="text-left py-2 px-2 text-gray-600 dark:text-gray-400">Shift</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {employee.attendance_records.map((record, index) => (
-                                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                                      <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                        {new Date(record.date).toLocaleDateString()}
-                                      </td>
-                                      <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                        {formatTime(record.check_in_time)}
-                                      </td>
-                                      <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                        {record.check_out_time ? formatTime(record.check_out_time) : 'N/A'}
-                                      </td>
-                                      <td className="py-2 px-2">
-                                        <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${getStatusColor(record.status)}`}>
-                                          {getStatusIcon(record.status)}
-                                          <span className="capitalize">
-                                            {record.status.replace('_', ' ')}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                        {record.work_hours.toFixed(1)}h
-                                      </td>
-                                      <td className="py-2 px-2 text-gray-900 dark:text-gray-100">
-                                        {record.shift_type || 'N/A'}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Preview Tables */}
+      {loadingPreview && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-sky-blue" />
+          <span className="ml-3 text-text-grey">Loading report data...</span>
         </div>
       )}
+      {showPreview && reportType === 'department' && renderDepartmentPreview()}
+      {showPreview && reportType === 'staff' && renderStaffPreview()}
     </div>
   );
 };

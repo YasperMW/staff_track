@@ -6,9 +6,11 @@ import Modal from '../components/Modal';
 import DesignationForm from '../components/DesignationForm';
 import StatsCard from '../components/StatsCard';
 import type { Column, Action } from '../components/DataTable';
-import { Plus, Briefcase, Edit, Trash2, Eye, Building2, Users } from 'lucide-react';
+import { Plus, Briefcase, Edit, Trash2, Eye, Building2, Users, X } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 
 const Designations: React.FC = () => {
+  const { success, error: showError } = useToast();
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,10 @@ const Designations: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDesignation, setSelectedDesignation] = useState<Designation | undefined>();
   const [filterDepartment, setFilterDepartment] = useState('');
+  const [deleteDesignation, setDeleteDesignation] = useState<Designation | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [viewDesignation, setViewDesignation] = useState<Designation | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
     loadDesignations();
@@ -69,31 +75,29 @@ const Designations: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteDesignation = async (designation: Designation) => {
-    if (!window.confirm(`Are you sure you want to delete the designation "${designation.name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteDesignation = (designation: Designation) => {
+    setDeleteDesignation(designation);
+    setIsDeleteModalOpen(true);
+  };
 
+  const confirmDeleteDesignation = async () => {
+    if (!deleteDesignation) return;
     try {
-      await designationsApi.deleteDesignation(designation.designation_id);
+      await designationsApi.deleteDesignation(deleteDesignation.designation_id);
+      success('Designation deleted successfully');
       loadDesignations();
     } catch (error: any) {
       console.error('Error deleting designation:', error);
-      const errorMessage = error.response?.data?.detail || 'Failed to delete designation';
-      alert(errorMessage);
+      showError(error.response?.data?.detail || 'Failed to delete designation');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteDesignation(null);
     }
   };
 
   const handleViewDesignation = (designation: Designation) => {
-    const departmentName = designation.department_name || 'Unknown Department';
-    alert(`
-Designation Details:
-
-Name: ${designation.name}
-Department: ${departmentName}
-Description: ${designation.description || 'No description'}
-Created: ${designation.created_at ? new Date(designation.created_at).toLocaleDateString() : 'N/A'}
-    `.trim());
+    setViewDesignation(designation);
+    setIsViewModalOpen(true);
   };
 
   const handleModalClose = () => {
@@ -290,6 +294,72 @@ Created: ${designation.created_at ? new Date(designation.created_at).toLocaleDat
           onClose={handleModalClose}
           onSave={handleModalSave}
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => { setIsDeleteModalOpen(false); setDeleteDesignation(null); }}
+        title="Confirm Delete"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete the designation <strong>"{deleteDesignation?.name}"</strong>? This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => { setIsDeleteModalOpen(false); setDeleteDesignation(null); }}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDeleteDesignation}
+              className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* View Details Modal */}
+      <Modal
+        isOpen={isViewModalOpen}
+        onClose={() => { setIsViewModalOpen(false); setViewDesignation(null); }}
+        title="Designation Details"
+        size="md"
+      >
+        {viewDesignation && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+              <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{viewDesignation.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{viewDesignation.department_name || 'Unknown Department'}</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Description</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{viewDesignation.description || 'No description'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Created</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{viewDesignation.created_at ? new Date(viewDesignation.created_at).toLocaleDateString() : 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

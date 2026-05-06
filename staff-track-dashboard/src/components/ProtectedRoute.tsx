@@ -11,7 +11,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
 
   const allowedRoles = ['HR', 'System Admin', 'Principal Hospital Administrator'];
-  const hasAccess = user?.role_name && allowedRoles.includes(user.role_name);
+  const userRole = user?.role_name || user?.role;
+  const hasAccess = !!userRole && allowedRoles.includes(userRole);
 
   if (isLoading) {
     return (

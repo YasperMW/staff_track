@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { attendanceApi, requestsApi, announcementsApi, dashboardApi } from '../services/api';
 import type { WeeklyTrendData, DepartmentDistributionData, AnalyticsStats, PerformanceMetrics, WeeklyActivity } from '../services/api';
 import {
@@ -225,8 +226,75 @@ const Dashboard: React.FC = () => {
   };
 
   const handleNavigateToAnnouncements = () => navigate('/announcements');
+
   const handleNavigateToAttendance = () => navigate('/attendance');
+
   const handleNavigateToRequests = () => navigate('/requests');
+
+  const { success, error, info } = useToast();
+
+  const handleMoreClick = (chartType: string) => {
+    switch (chartType) {
+      case 'trend':
+        navigate('/attendance?view=trend');
+        break;
+      case 'department':
+        navigate('/departments');
+        break;
+      case 'team':
+        navigate('/attendance');
+        break;
+      default:
+        info(`View more details for ${chartType}`);
+    }
+  };
+
+  const handleDownloadChart = (chartType: string) => {
+    try {
+      let data: any[] = [];
+      let filename = '';
+      
+      switch (chartType) {
+        case 'trend':
+          data = weeklyTrend;
+          filename = 'weekly_attendance_trend';
+          break;
+        case 'activity':
+          data = [
+            { label: 'Check-ins', value: weeklyActivity.check_ins },
+            { label: 'Check-outs', value: weeklyActivity.check_outs },
+            { label: 'Overtime', value: weeklyActivity.overtime }
+          ];
+          filename = 'weekly_activity';
+          break;
+        case 'heatmap':
+          data = activityHeatmap.heatmap_data || [];
+          filename = 'activity_heatmap';
+          break;
+        default:
+          return;
+      }
+      
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = window.URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      success(`${chartType} data downloaded successfully`);
+    } catch (err: any) {
+      error(`Failed to download ${chartType} data`);
+    }
+  };
+
+  const handleFilterHeatmap = () => {
+    info('Heatmap filtering options coming soon');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -616,7 +684,11 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Staff presence over the last 7 days</p>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={() => handleMoreClick('trend')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="View more details"
+              >
                 <MoreVertical className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -635,7 +707,11 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Current staffing across departments</p>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={() => handleMoreClick('department')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="View departments"
+              >
                 <MoreVertical className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -691,7 +767,11 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">Total activities this week</p>
             </div>
             <div className="flex items-center space-x-2">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={() => handleDownloadChart('activity')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Download activity data"
+              >
                 <Download className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -715,10 +795,18 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-500 dark:text-gray-400">Daily activity patterns over the last 4 weeks</p>
           </div>
           <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button 
+              onClick={handleFilterHeatmap}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Filter heatmap"
+            >
               <Filter className="w-4 h-4 text-gray-500" />
             </button>
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button 
+              onClick={() => handleDownloadChart('heatmap')}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Download heatmap data"
+            >
               <Download className="w-4 h-4 text-gray-500" />
             </button>
           </div>
@@ -810,7 +898,11 @@ const Dashboard: React.FC = () => {
                 <Activity className="w-4 h-4" />
                 <span>Live View</span>
               </button>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={() => handleMoreClick('team')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="View all team attendance"
+              >
                 <MoreVertical className="w-4 h-4 text-gray-500" />
               </button>
             </div>

@@ -7,8 +7,9 @@ import { useAuth } from '../contexts/AuthContext';
 export const useSystemAdmin = () => {
   const { user } = useAuth();
   
-  const isSystemAdmin = user?.role_name?.toLowerCase().includes('system admin') || 
-                       user?.role_name?.toLowerCase().includes('system administrator');
+  const roleName = user?.role_name || user?.role || '';
+  const isSystemAdmin = roleName.toLowerCase().includes('system admin') || 
+                       roleName.toLowerCase().includes('system administrator');
   
   return {
     isSystemAdmin: !!isSystemAdmin,

@@ -7,6 +7,7 @@ interface CreateAnnouncementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  announcement?: any | null; // For edit mode
 }
 
 interface Department {
@@ -18,11 +19,13 @@ interface Department {
 const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  announcement = null
 }) => {
   const { success, error } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const isEditMode = !!announcement;
   
   // Form state
   const [formData, setFormData] = useState({
@@ -53,9 +56,23 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadDepartments();
-      resetForm();
+      if (announcement) {
+        // Edit mode - populate form with announcement data
+        setFormData({
+          title: announcement.title || '',
+          message: announcement.message || announcement.content || '',
+          type: announcement.type || 'general',
+          target_departments: announcement.target_departments || [],
+          target_role: announcement.target_role || '',
+          is_active: announcement.is_active !== false,
+          expires_at: announcement.expires_at ? announcement.expires_at.slice(0, 16) : '',
+          send_notifications: false // Don't send notifications when editing
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, announcement]);
 
   const loadDepartments = async () => {
     try {
@@ -97,13 +114,20 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
         expires_at: formData.expires_at || undefined
       };
 
-      await announcementsApi.createAnnouncement(announcementData);
-      success('Announcement created successfully');
+      if (isEditMode && announcement) {
+        // Update existing announcement
+        await announcementsApi.updateAnnouncement(announcement.id, announcementData);
+        success('Announcement updated successfully');
+      } else {
+        // Create new announcement
+        await announcementsApi.createAnnouncement(announcementData);
+        success('Announcement created successfully');
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Failed to create announcement:', err);
-      error(err.response?.data?.message || 'Failed to create announcement');
+      console.error('Failed to save announcement:', err);
+      error(err.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} announcement`);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +151,7 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Create New Announcement
+            {isEditMode ? 'Edit Announcement' : 'Create New Announcement'}
           </h2>
           <button
             onClick={onClose}
@@ -287,10 +311,10 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Creating...</span>
+                  <span>{isEditMode ? 'Updating...' : 'Creating...'}</span>
                 </>
               ) : (
-                <span>Create Announcement</span>
+                <span>{isEditMode ? 'Update Announcement' : 'Create Announcement'}</span>
               )}
             </button>
           </div>
