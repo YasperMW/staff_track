@@ -206,7 +206,7 @@ class FCMService {
         ) ?? false;
 
         if (!shouldRequest) return false;
-        if (ctx == null || !ctx.mounted) return false;
+        if (!ctx.mounted) return false;
       }
 
       final result = await Permission.ignoreBatteryOptimizations.request();
