@@ -3,6 +3,7 @@ import { useToast } from '../contexts/ToastContext';
 import { usersApi, rolesApi, departmentsApi, designationsApi } from '../services/api';
 import type { User, Role, Department, Designation } from '../services/api';
 import { X, Save, AlertTriangle, Shield, Briefcase } from 'lucide-react';
+import Modal from './Modal';
 
 interface UserEditModalProps {
   user: User | null;
@@ -35,11 +36,15 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
 
   const [originalRole, setOriginalRole] = useState('');
   const [originalDepartment, setOriginalDepartment] = useState('');
+  const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       loadDropdownData();
       if (user) {
+        // Edit mode
         setFormData({
           first_name: user.first_name || '',
           surname: user.surname || '',
@@ -54,6 +59,22 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
         });
         setOriginalRole(user.role_id || '');
         setOriginalDepartment(user.department_id || '');
+      } else {
+        // Create mode - reset form
+        setFormData({
+          first_name: '',
+          surname: '',
+          other_names: '',
+          email: '',
+          phone: '',
+          role_id: '',
+          department_id: '',
+          designation_id: '',
+          status: 'active',
+          is_head_of_department: false
+        });
+        setOriginalRole('');
+        setOriginalDepartment('');
       }
     }
   }, [isOpen, user]);
@@ -112,14 +133,21 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
     
     // Show confirmation for sensitive changes
     if (roleChanged || departmentChanged) {
-      const confirmMessage = roleChanged 
+      const message = roleChanged 
         ? `Are you sure you want to change this user's role? This will affect their system permissions.`
         : `Are you sure you want to change this user's department?`;
       
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
+      setConfirmMessage(message);
+      setPendingSubmit(true);
+      setIsConfirmModalOpen(true);
+      return;
     }
+
+    await performUpdate();
+  };
+
+  const performUpdate = async () => {
+    if (!user) return;
 
     setLoading(true);
     try {
@@ -184,8 +212,9 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
   if (!isOpen || !user) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-3">
@@ -432,8 +461,46 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
             </button>
           </div>
         </form>
+
+        {/* Confirmation Modal */}
+        <Modal
+          isOpen={isConfirmModalOpen}
+          onClose={() => { setIsConfirmModalOpen(false); setPendingSubmit(false); }}
+          title="Confirm Changes"
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+              <p className="text-sm text-gray-700 dark:text-gray-300">{confirmMessage}</p>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => { setIsConfirmModalOpen(false); setPendingSubmit(false); }}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsConfirmModalOpen(false);
+                  if (pendingSubmit) {
+                    await performUpdate();
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Confirm & Save</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
+    </>
   );
 };
 

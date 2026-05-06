@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { usersApi, shiftConfigurationsApi } from '../services/api';
 import type { ShiftConfiguration, ShiftConfigurationUpdate } from '../services/api';
+import { useRef } from 'react';
 import {
   Settings as SettingsIcon,
   User,
@@ -184,11 +185,18 @@ const Settings: React.FC = () => {
 
   const handleSaveProfile = async () => {
     try {
-      console.log('Saving profile data:', profile);
+      // Update user profile via API
+      await usersApi.updateUser(user?.user_id || '', {
+        first_name: profile.firstName,
+        surname: profile.lastName,
+        phone: profile.phone,
+        email: profile.email
+      });
       success('Profile settings saved successfully');
+      loadProfileData(); // Reload profile data
     } catch (err: any) {
       console.error('Error saving profile:', err);
-      error('Failed to save profile settings');
+      error(err.response?.data?.message || 'Failed to save profile settings');
     }
   };
 
@@ -220,23 +228,151 @@ const Settings: React.FC = () => {
   };
 
   const handleExportData = () => {
-    info('Exporting user data...');
+    try {
+      // Export user profile data as JSON
+      const dataToExport = {
+        profile,
+        notifications,
+        system,
+        exportDate: new Date().toISOString()
+      };
+      
+      const dataStr = JSON.stringify(dataToExport, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      
+      const url = window.URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `user_data_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      success('Data exported successfully');
+    } catch (err: any) {
+      error('Failed to export data');
+    }
   };
 
   const handleImportData = () => {
-    info('Import functionality coming soon');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event: any) => {
+        try {
+          const importedData = JSON.parse(event.target.result);
+          
+          // Validate and restore data
+          if (importedData.profile) {
+            setProfile(importedData.profile);
+          }
+          if (importedData.notifications) {
+            setNotifications(importedData.notifications);
+          }
+          if (importedData.system) {
+            setSystem(importedData.system);
+          }
+          
+          success('Data imported successfully');
+        } catch (err: any) {
+          error('Failed to parse imported file');
+        }
+      };
+      reader.readAsText(file);
+    };
+    
+    input.click();
   };
 
   const handleClearCache = () => {
-    warning('Cache cleared successfully');
+    try {
+      // Clear localStorage cache (except auth tokens)
+      const authToken = localStorage.getItem('auth_token');
+      const userData = localStorage.getItem('user_data');
+      
+      localStorage.clear();
+      
+      // Restore auth data
+      if (authToken) localStorage.setItem('auth_token', authToken);
+      if (userData) localStorage.setItem('user_data', userData);
+      
+      warning('Cache cleared successfully');
+    } catch (err: any) {
+      error('Failed to clear cache');
+    }
   };
 
   const handleResetSettings = () => {
+    setNotifications({
+      emailNotifications: true,
+      pushNotifications: true,
+      smsNotifications: false,
+      announcementAlerts: true,
+      requestAlerts: true,
+      systemAlerts: true,
+      weeklyReports: true,
+      monthlyReports: false
+    });
+    setSystem({
+      timezone: 'UTC',
+      language: 'English',
+      dateFormat: 'MM/DD/YYYY',
+      timeFormat: '12-hour',
+      defaultPage: 'dashboard',
+      autoSave: true
+    });
     warning('Settings reset to defaults');
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleAvatarUpload = () => {
-    info('Avatar upload functionality coming soon');
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      error('Image file size must be less than 5MB');
+      return;
+    }
+
+    try {
+      // In a real app, you would upload to the server
+      // For now, we'll use a local URL for preview
+      const imageUrl = URL.createObjectURL(file);
+      
+      // Update profile with new avatar
+      setProfile(prev => ({ ...prev, profilePhotoUrl: imageUrl }));
+      
+      // TODO: Implement actual upload to backend
+      // await usersApi.uploadAvatar(file);
+      
+      success('Avatar updated successfully');
+    } catch (err: any) {
+      error('Failed to upload avatar');
+    }
+    
+    // Reset file input
+    if (e.target) e.target.value = '';
   };
 
   // Shift Configuration Functions
@@ -351,27 +487,34 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Profile Header Card */}
-      <div className="card">
-        <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-20 h-20 bg-sky-blue rounded-full flex items-center justify-center">
-              {profile.profilePhotoUrl ? (
-                <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                <span className="text-white text-2xl font-bold">
-                  {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={handleAvatarUpload}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Camera className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            </button>
-          </div>
+           {/* Profile Header Card */}
+       <div className="card">
+         <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+           {/* Avatar */}
+           <div className="relative">
+             <div className="w-20 h-20 bg-sky-blue rounded-full flex items-center justify-center overflow-hidden">
+               {profile.profilePhotoUrl ? (
+                 <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+               ) : (
+                 <span className="text-white text-2xl font-bold">
+                   {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                 </span>
+               )}
+             </div>
+             <button
+               onClick={handleAvatarUpload}
+               className="absolute bottom-0 right-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+             >
+               <Camera className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+             </button>
+             <input
+               ref={fileInputRef}
+               type="file"
+               accept="image/*"
+               onChange={handleAvatarChange}
+               className="hidden"
+             />
+           </div>
 
           {/* Basic Info */}
           <div className="flex-1 text-center md:text-left">

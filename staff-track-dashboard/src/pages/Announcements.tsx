@@ -3,7 +3,7 @@ import { useToast } from '../contexts/ToastContext';
 import DataTable from '../components/DataTable';
 import CreateAnnouncementModal from '../components/CreateAnnouncementModal';
 import type { Column, Action } from '../components/DataTable';
-import { announcementsApi } from '../services/api';
+import { announcementsApi, notificationsApi } from '../services/api';
 import { 
   Megaphone, 
   Calendar, 
@@ -16,7 +16,9 @@ import {
   Info,
   CheckCircle,
   Send,
-  Filter
+  Filter,
+  X,
+  Mail
 } from 'lucide-react';
 
 interface Announcement {
@@ -45,6 +47,9 @@ const Announcements: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'published' | 'draft' | 'scheduled'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     published: 0,
@@ -122,21 +127,45 @@ const Announcements: React.FC = () => {
   };
 
   const handleEdit = (announcement: Announcement) => {
-    info(`Editing "${announcement.title}"`);
-    // TODO: Implement edit modal
+    setSelectedAnnouncement(announcement);
+    setIsEditModalOpen(true);
   };
 
   const handleView = (announcement: Announcement) => {
-    info(`Viewing "${announcement.title}"`);
-    // TODO: Implement view modal
+    setSelectedAnnouncement(announcement);
+    setIsViewModalOpen(true);
   };
 
   const handleSendNotification = async (announcement: Announcement) => {
     try {
-      // TODO: Implement send notification endpoint
+      // Send push notification to target users
+      const notificationData = {
+        title: announcement.title,
+        body: announcement.message || announcement.content || '',
+        notification_type: announcement.type || 'general',
+        target: 'all' as const,
+        data: {
+          announcement_id: announcement.id
+        }
+      };
+
+      // If there are specific target departments, use advanced broadcast
+      if (announcement.target_departments && announcement.target_departments.length > 0) {
+        await notificationsApi.sendAdvancedBroadcast({
+          title: announcement.title,
+          body: announcement.message || announcement.content || '',
+          notification_type: announcement.type || 'general',
+          target_audience: 'department',
+          department_filter: announcement.target_departments.join(','),
+          data: { announcement_id: announcement.id }
+        });
+      } else {
+        await notificationsApi.sendBroadcast(notificationData);
+      }
+
       success(`Notification sent for "${announcement.title}"`);
     } catch (err: any) {
-      error('Failed to send notification');
+      error(`Failed to send notification: ${err.response?.data?.message || err.message}`);
     }
   };
 
@@ -492,17 +521,137 @@ const Announcements: React.FC = () => {
         emptyMessage="No announcements found matching the selected filter."
       />
 
-      {/* Create Announcement Modal */}
-      <CreateAnnouncementModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
-          setIsCreateModalOpen(false);
-          loadAnnouncements();
-        }}
-      />
-    </div>
-  );
-};
+       {/* Create Announcement Modal */}
+       <CreateAnnouncementModal
+         isOpen={isCreateModalOpen}
+         onClose={() => setIsCreateModalOpen(false)}
+         onSuccess={() => {
+           setIsCreateModalOpen(false);
+           loadAnnouncements();
+         }}
+       />
+
+       {/* Edit Announcement Modal */}
+       <CreateAnnouncementModal
+         isOpen={isEditModalOpen}
+         announcement={selectedAnnouncement}
+         onClose={() => {
+           setIsEditModalOpen(false);
+           setSelectedAnnouncement(null);
+         }}
+         onSuccess={() => {
+           setIsEditModalOpen(false);
+           setSelectedAnnouncement(null);
+           loadAnnouncements();
+           success('Announcement updated successfully');
+         }}
+       />
+
+       {/* View Announcement Modal */}
+       {isViewModalOpen && selectedAnnouncement && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                 View Announcement
+               </h2>
+               <button
+                 onClick={() => {
+                   setIsViewModalOpen(false);
+                   setSelectedAnnouncement(null);
+                 }}
+                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+               >
+                 <X className="w-5 h-5 text-gray-500" />
+               </button>
+             </div>
+             <div className="p-6 space-y-4">
+               <div>
+                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                   {selectedAnnouncement.title}
+                 </h3>
+                 <div className="flex items-center space-x-2 mb-4">
+                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedAnnouncement.priority || 'low')}`}>
+                     {(selectedAnnouncement.priority || 'low').toUpperCase()}
+                   </span>
+                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedAnnouncement.status || 'draft')}`}>
+                     {(selectedAnnouncement.status || 'draft').toUpperCase()}
+                   </span>
+                   <span className="text-sm text-gray-500 dark:text-gray-400">
+                     {selectedAnnouncement.type}
+                   </span>
+                 </div>
+               </div>
+               <div className="prose dark:prose-invert max-w-none">
+                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                   {selectedAnnouncement.message || selectedAnnouncement.content || 'No content available'}
+                 </p>
+               </div>
+               {selectedAnnouncement.target_departments && selectedAnnouncement.target_departments.length > 0 && (
+                 <div>
+                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                     Target Departments:
+                   </h4>
+                   <div className="flex flex-wrap gap-2">
+                     {selectedAnnouncement.target_departments.map((dept: string, idx: number) => (
+                       <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                         {dept}
+                       </span>
+                     ))}
+                   </div>
+                 </div>
+               )}
+               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                 <div>
+                   <p className="text-sm text-gray-500 dark:text-gray-400">Published Date</p>
+                   <p className="text-sm font-medium text-gray-900 dark:text-white">
+                     {selectedAnnouncement.published_at
+                       ? formatDate(selectedAnnouncement.published_at)
+                       : 'Not published'}
+                   </p>
+                 </div>
+                 <div>
+                   <p className="text-sm text-gray-500 dark:text-gray-400">View Count</p>
+                   <p className="text-sm font-medium text-gray-900 dark:text-white">
+                     {selectedAnnouncement.view_count || 0} views
+                   </p>
+                 </div>
+                 {selectedAnnouncement.expires_at && (
+                   <div className="col-span-2">
+                     <p className="text-sm text-gray-500 dark:text-gray-400">Expires At</p>
+                     <p className="text-sm font-medium text-gray-900 dark:text-white">
+                       {formatDate(selectedAnnouncement.expires_at)}
+                     </p>
+                   </div>
+                 )}
+               </div>
+             </div>
+             <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+               <button
+                 onClick={() => {
+                   setIsViewModalOpen(false);
+                   setSelectedAnnouncement(null);
+                 }}
+                 className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+               >
+                 Close
+               </button>
+               <button
+                 onClick={() => {
+                   setIsViewModalOpen(false);
+                   handleEdit(selectedAnnouncement);
+                 }}
+                 className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors flex items-center space-x-2"
+               >
+                 <Edit className="w-4 h-4" />
+                 <span>Edit</span>
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ };
 
 export default Announcements;

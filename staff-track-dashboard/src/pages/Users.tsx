@@ -6,8 +6,9 @@ import DataTable from '../components/DataTable';
 import UserEditModal from '../components/UserEditModal';
 import RoleChangeModal from '../components/RoleChangeModal';
 import type { Column, Action } from '../components/DataTable';
-import { UserPlus, Edit, Trash2, Eye, Shield, UserCheck, UserX, Key } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Eye, Shield, UserCheck, UserX, Key, AlertTriangle } from 'lucide-react';
 import { useSystemAdmin } from '../hooks/useSystemAdmin';
+import { useToast } from '../contexts/ToastContext';
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -15,6 +16,9 @@ const Users: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     perPage: 25,
@@ -23,6 +27,7 @@ const Users: React.FC = () => {
 
   const navigate = useNavigate();
   const { isSystemAdmin } = useSystemAdmin();
+  const { success, error, info } = useToast();
 
   useEffect(() => {
     loadUsers();
@@ -50,22 +55,42 @@ const Users: React.FC = () => {
   };
 
   const handleDeleteUser = (user: User) => {
-    console.log('Delete user:', user);
-    // TODO: Show confirmation dialog
+    setUserToDelete(user);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    try {
+      await usersApi.deleteUser(userToDelete.user_id);
+      success(`User "${userToDelete.first_name} ${userToDelete.surname}" deleted successfully`);
+      setIsDeleteConfirmOpen(false);
+      setUserToDelete(null);
+      loadUsers();
+    } catch (err: any) {
+      error(`Failed to delete user: ${err.response?.data?.message || err.message}`);
+    }
   };
 
   const handleViewUser = (user: User) => {
     navigate(`/users/${user.user_id}`);
   };
 
-  const handleToggleUserStatus = (user: User) => {
-    console.log('Toggle status:', user);
-    // TODO: Toggle active/inactive status
+  const handleToggleUserStatus = async (user: User) => {
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+    try {
+      await usersApi.updateUser(user.user_id, { status: newStatus });
+      success(`User "${user.first_name} ${user.surname}" ${action}d successfully`);
+      loadUsers();
+    } catch (err: any) {
+      error(`Failed to ${action} user: ${err.response?.data?.message || err.message}`);
+    }
   };
 
   const handleAddUser = () => {
-    console.log('Add new user');
-    // TODO: Open add user modal
+    setSelectedUser(null);
+    setIsAddModalOpen(true);
   };
 
   const handleUserSave = (updatedUser: User) => {
@@ -231,12 +256,6 @@ const Users: React.FC = () => {
       onClick: handleViewUser,
       variant: 'primary'
     },
-    {
-      label: 'Edit',
-      icon: <Edit className="w-4 h-4" />,
-      onClick: handleEditUser,
-      variant: 'secondary'
-    },
     ...(isSystemAdmin ? [{
       label: 'Change Role',
       icon: <Key className="w-4 h-4" />,
@@ -248,12 +267,6 @@ const Users: React.FC = () => {
       icon: row => row.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />,
       onClick: handleToggleUserStatus,
       variant: 'secondary'
-    },
-    {
-      label: 'Delete',
-      icon: <Trash2 className="w-4 h-4" />,
-      onClick: handleDeleteUser,
-      variant: 'danger'
     }
   ];
 
@@ -271,7 +284,10 @@ const Users: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-3">
-          <button className="btn-outline flex items-center space-x-2">
+          <button 
+            onClick={() => navigate('/roles')}
+            className="btn-outline flex items-center space-x-2"
+          >
             <Shield className="w-4 h-4" />
             <span>Manage Roles</span>
           </button>
@@ -366,6 +382,21 @@ const Users: React.FC = () => {
         onSave={handleUserSave}
       />
 
+      {/* Add User Modal */}
+      <UserEditModal
+        user={null}
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onSave={(newUser) => {
+          success(`User "${newUser.first_name} ${newUser.surname}" created successfully`);
+          setIsAddModalOpen(false);
+          loadUsers();
+        }}
+      />
+
       {/* Role Change Modal - Only for System Admins */}
       {isSystemAdmin && (
         <RoleChangeModal
@@ -374,6 +405,49 @@ const Users: React.FC = () => {
           onClose={handleCloseRoleModal}
           onSuccess={handleRoleChangeSuccess}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+                  Delete User
+                </h3>
+                <p className="text-sm text-text-grey dark:text-text-grey-dark">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+            <p className="mb-4 text-text-dark dark:text-text-dark-light">
+              Are you sure you want to delete user <span className="font-semibold">
+                {userToDelete?.first_name} {userToDelete?.surname}
+              </span>?
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setIsDeleteConfirmOpen(false);
+                  setUserToDelete(null);
+                }}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteUser}
+                className="btn-danger"
+              >
+                Delete User
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

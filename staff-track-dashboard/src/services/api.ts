@@ -43,6 +43,7 @@ export interface User {
   deleted_at?: string;
   deleted_by?: string;
   role_name: string;
+  role?: string;
   department_name?: string;
 }
 
@@ -63,7 +64,10 @@ export interface UserDetailsResponse {
 export interface Role {
   role_id: string;
   name: string;
+  description?: string;
   created_at: string;
+  updated_at?: string;
+  user_count?: number;
 }
 
 export interface Department {
@@ -284,23 +288,27 @@ export const departmentsApi = {
 // Roles API
 export const rolesApi = {
   getAllRoles: async (): Promise<PaginatedResponse<Role>> => {
-    const response = await api.get('/lookup/roles');
+    const response = await api.get('/roles/');
     return response.data;
   },
 
-  createRole: async (roleData: Partial<Role>): Promise<ApiResponse<Role>> => {
-    const response = await api.post('/lookup/roles', roleData);
+  getRole: async (roleId: string): Promise<Role> => {
+    const response = await api.get(`/roles/${roleId}`);
     return response.data;
   },
 
-  updateRole: async (roleId: string, roleData: Partial<Role>): Promise<ApiResponse<Role>> => {
-    const response = await api.put(`/lookup/roles/${roleId}`, roleData);
+  createRole: async (roleData: { name: string; description?: string }): Promise<Role> => {
+    const response = await api.post('/roles/', roleData);
     return response.data;
   },
 
-  deleteRole: async (roleId: string): Promise<ApiResponse<null>> => {
-    const response = await api.delete(`/lookup/roles/${roleId}`);
+  updateRole: async (roleId: string, roleData: { name?: string; description?: string }): Promise<Role> => {
+    const response = await api.put(`/roles/${roleId}`, roleData);
     return response.data;
+  },
+
+  deleteRole: async (roleId: string): Promise<void> => {
+    await api.delete(`/roles/${roleId}`);
   },
 };
 
@@ -616,6 +624,55 @@ export interface EmployeeOption {
   department: string;
 }
 
+export interface AttendanceRecord {
+  date: string;
+  check_in_time: string;
+  check_out_time: string;
+  work_hours: number | null;
+  shift_type: string;
+  late_reason: string | null;
+  early_checkout_reason: string | null;
+}
+
+export interface AttendanceSummary {
+  total_days: number;
+  present_days: number;
+  absent_days: number;
+  on_time: number;
+  late: number;
+  early_out: number;
+  total_work_hours: number;
+  avg_hours: number;
+}
+
+export interface StaffReportPreview {
+  user_name: string;
+  department: string | null;
+  start_date: string;
+  end_date: string;
+  summary: AttendanceSummary;
+  records: AttendanceRecord[];
+}
+
+export interface StaffRecord {
+  staff_name: string;
+  days_present: number;
+  days_absent: number;
+  on_time: number;
+  late: number;
+  early_out: number;
+  total_hours: number;
+  avg_hours: number;
+}
+
+export interface DepartmentReportPreview {
+  department_name: string;
+  start_date: string;
+  end_date: string;
+  total_staff: number;
+  staff_records: StaffRecord[];
+}
+
 export const reportsApi = {
   getMonthlyReport: async (request: MonthlyReportRequest, format: 'json' | 'pdf' = 'json'): Promise<MonthlyReportResponse | Blob> => {
     const params = new URLSearchParams({ format });
@@ -634,6 +691,58 @@ export const reportsApi = {
     const params = departmentId ? `?department_id=${departmentId}` : '';
     const response = await api.get(`/reports/employees${params}`);
     return response.data;
+  },
+
+  downloadDepartmentPdf: async (startDate: string, endDate: string, departmentId?: string): Promise<void> => {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    if (departmentId) {
+      params.append('department_id', departmentId);
+    }
+    const response = await api.get(`/attendance/reports/department/pdf?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const deptName = departmentId ? `department_${departmentId}` : 'all_departments';
+    a.download = `${deptName}_attendance_${startDate}_to_${endDate}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  getDepartmentPreview: async (startDate: string, endDate: string, departmentId?: string): Promise<DepartmentReportPreview> => {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    if (departmentId) {
+      params.append('department_id', departmentId);
+    }
+    const response = await api.get(`/attendance/reports/department?${params.toString()}`);
+    return response.data;
+  },
+
+  getStaffPreview: async (userId: string, startDate: string, endDate: string): Promise<StaffReportPreview> => {
+    const params = new URLSearchParams({ user_id: userId, start_date: startDate, end_date: endDate });
+    const response = await api.get(`/attendance/reports/attendance?${params.toString()}`);
+    return response.data;
+  },
+
+  downloadStaffPdf: async (userId: string, userName: string, startDate: string, endDate: string): Promise<void> => {
+    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
+    const response = await api.get(`/attendance/reports/attendance/pdf/${userId}?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = userName.replace(/\s+/g, '_');
+    a.download = `${safeName}_attendance_${startDate}_to_${endDate}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   },
 };
 
