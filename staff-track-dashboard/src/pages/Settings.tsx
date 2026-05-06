@@ -8,14 +8,10 @@ import { useRef } from 'react';
 import {
   Settings as SettingsIcon,
   User,
-  Bell,
-  Database,
   Moon,
   Sun,
   Save,
   RefreshCw,
-  Download,
-  Upload,
   Key,
   Lock,
   Eye,
@@ -25,38 +21,17 @@ import {
   Trash2,
   Mail,
   Phone,
-  MapPin,
-  Calendar,
   Briefcase,
   Camera,
-  Shield,
-  Activity,
   Users,
-  Target,
-  TrendingUp,
-  Award
 } from 'lucide-react';
 
-interface Achievement {
-  title: string;
-  description: string;
-  date: string;
-  type: 'award' | 'certification' | 'milestone';
-}
-
-interface UserStats {
-  totalHours: number;
-  attendanceRate: number;
-  projectsCompleted: number;
-  teamSize: number;
-}
-
 const Settings: React.FC = () => {
-  const { success, error, warning, info } = useToast();
+  const { success, error } = useToast();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'security' | 'achievements'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'security'>('account');
 
   // Profile Settings
   const [profile, setProfile] = useState({
@@ -74,36 +49,6 @@ const Settings: React.FC = () => {
     joinDate: '',
     position: ''
   });
-
-  // User stats for achievements tab
-  const [userStats, setUserStats] = useState<UserStats>({
-    totalHours: 8760,
-    attendanceRate: 96.5,
-    projectsCompleted: 12,
-    teamSize: 25
-  });
-
-  // Achievements
-  const [achievements] = useState<Achievement[]>([
-    {
-      title: 'Employee of the Year 2023',
-      description: 'Recognized for outstanding leadership and innovation in hospital operations',
-      date: '2023-12-15',
-      type: 'award'
-    },
-    {
-      title: 'Healthcare Management Certification',
-      description: 'Advanced certification in healthcare administration and management',
-      date: '2022-06-20',
-      type: 'certification'
-    },
-    {
-      title: '1000 Days Service Milestone',
-      description: 'Celebrated 1000 days of dedicated service to the hospital',
-      date: '2023-03-15',
-      type: 'milestone'
-    }
-  ]);
 
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -149,27 +94,20 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Notification Settings
-  const [notifications, setNotifications] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    announcementAlerts: true,
-    requestAlerts: true,
-    systemAlerts: true,
-    weeklyReports: true,
-    monthlyReports: false
-  });
-
-  // System Settings
-  const [system, setSystem] = useState({
-    timezone: 'UTC',
-    language: 'English',
-    dateFormat: 'MM/DD/YYYY',
-    timeFormat: '12-hour',
-    defaultPage: 'dashboard',
-    autoSave: true
-  });
+  const handleSaveProfile = async () => {
+    try {
+      await usersApi.updateUser(user?.user_id || '', {
+        first_name: profile.firstName,
+        surname: profile.lastName,
+        phone: profile.phone
+      });
+      success('Profile settings saved successfully');
+      loadProfileData();
+    } catch (err: any) {
+      console.error('Error saving profile:', err);
+      error(err.response?.data?.message || 'Failed to save profile settings');
+    }
+  };
 
   // Password visibility states
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -182,31 +120,7 @@ const Settings: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
-
-  const handleSaveProfile = async () => {
-    try {
-      // Update user profile via API
-      await usersApi.updateUser(user?.user_id || '', {
-        first_name: profile.firstName,
-        surname: profile.lastName,
-        phone: profile.phone,
-        email: profile.email
-      });
-      success('Profile settings saved successfully');
-      loadProfileData(); // Reload profile data
-    } catch (err: any) {
-      console.error('Error saving profile:', err);
-      error(err.response?.data?.message || 'Failed to save profile settings');
-    }
-  };
-
-  const handleSaveNotifications = () => {
-    success('Notification preferences updated');
-  };
-
-  const handleSaveSystem = () => {
-    success('System preferences saved');
-  };
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   const handlePasswordChange = () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -227,110 +141,6 @@ const Settings: React.FC = () => {
     });
   };
 
-  const handleExportData = () => {
-    try {
-      // Export user profile data as JSON
-      const dataToExport = {
-        profile,
-        notifications,
-        system,
-        exportDate: new Date().toISOString()
-      };
-      
-      const dataStr = JSON.stringify(dataToExport, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      
-      const url = window.URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `user_data_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      success('Data exported successfully');
-    } catch (err: any) {
-      error('Failed to export data');
-    }
-  };
-
-  const handleImportData = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (event: any) => {
-        try {
-          const importedData = JSON.parse(event.target.result);
-          
-          // Validate and restore data
-          if (importedData.profile) {
-            setProfile(importedData.profile);
-          }
-          if (importedData.notifications) {
-            setNotifications(importedData.notifications);
-          }
-          if (importedData.system) {
-            setSystem(importedData.system);
-          }
-          
-          success('Data imported successfully');
-        } catch (err: any) {
-          error('Failed to parse imported file');
-        }
-      };
-      reader.readAsText(file);
-    };
-    
-    input.click();
-  };
-
-  const handleClearCache = () => {
-    try {
-      // Clear localStorage cache (except auth tokens)
-      const authToken = localStorage.getItem('auth_token');
-      const userData = localStorage.getItem('user_data');
-      
-      localStorage.clear();
-      
-      // Restore auth data
-      if (authToken) localStorage.setItem('auth_token', authToken);
-      if (userData) localStorage.setItem('user_data', userData);
-      
-      warning('Cache cleared successfully');
-    } catch (err: any) {
-      error('Failed to clear cache');
-    }
-  };
-
-  const handleResetSettings = () => {
-    setNotifications({
-      emailNotifications: true,
-      pushNotifications: true,
-      smsNotifications: false,
-      announcementAlerts: true,
-      requestAlerts: true,
-      systemAlerts: true,
-      weeklyReports: true,
-      monthlyReports: false
-    });
-    setSystem({
-      timezone: 'UTC',
-      language: 'English',
-      dateFormat: 'MM/DD/YYYY',
-      timeFormat: '12-hour',
-      defaultPage: 'dashboard',
-      autoSave: true
-    });
-    warning('Settings reset to defaults');
-  };
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarUpload = () => {
@@ -343,35 +153,24 @@ const Settings: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       error('Please select an image file');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       error('Image file size must be less than 5MB');
       return;
     }
 
     try {
-      // In a real app, you would upload to the server
-      // For now, we'll use a local URL for preview
       const imageUrl = URL.createObjectURL(file);
-      
-      // Update profile with new avatar
       setProfile(prev => ({ ...prev, profilePhotoUrl: imageUrl }));
-      
-      // TODO: Implement actual upload to backend
-      // await usersApi.uploadAvatar(file);
-      
       success('Avatar updated successfully');
     } catch (err: any) {
       error('Failed to upload avatar');
     }
-    
-    // Reset file input
+
     if (e.target) e.target.value = '';
   };
 
@@ -447,32 +246,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const getAchievementIcon = (type: string) => {
-    switch (type) {
-      case 'award':
-        return <Award className="w-5 h-5" />;
-      case 'certification':
-        return <Shield className="w-5 h-5" />;
-      case 'milestone':
-        return <Target className="w-5 h-5" />;
-      default:
-        return <Award className="w-5 h-5" />;
-    }
-  };
-
-  const getAchievementColor = (type: string) => {
-    switch (type) {
-      case 'award':
-        return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-400';
-      case 'certification':
-        return 'text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-400';
-      case 'milestone':
-        return 'text-purple-600 bg-purple-100 dark:bg-purple-900 dark:text-purple-400';
-      default:
-        return 'text-gray-600 bg-gray-100 dark:bg-gray-900 dark:text-gray-400';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -487,34 +260,34 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-           {/* Profile Header Card */}
-       <div className="card">
-         <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-           {/* Avatar */}
-           <div className="relative">
-             <div className="w-20 h-20 bg-sky-blue rounded-full flex items-center justify-center overflow-hidden">
-               {profile.profilePhotoUrl ? (
-                 <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
-               ) : (
-                 <span className="text-white text-2xl font-bold">
-                   {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-                 </span>
-               )}
-             </div>
-             <button
-               onClick={handleAvatarUpload}
-               className="absolute bottom-0 right-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-             >
-               <Camera className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-             </button>
-             <input
-               ref={fileInputRef}
-               type="file"
-               accept="image/*"
-               onChange={handleAvatarChange}
-               className="hidden"
-             />
-           </div>
+      {/* Profile Header Card */}
+      <div className="card">
+        <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+          {/* Avatar */}
+          <div className="relative">
+            <div className="w-20 h-20 bg-sky-blue rounded-full flex items-center justify-center overflow-hidden">
+              {profile.profilePhotoUrl ? (
+                <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <span className="text-white text-2xl font-bold">
+                  {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleAvatarUpload}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Camera className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </div>
 
           {/* Basic Info */}
           <div className="flex-1 text-center md:text-left">
@@ -535,25 +308,13 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-sky-blue">{userStats.attendanceRate}%</p>
-              <p className="text-xs text-text-grey dark:text-text-grey-dark">Attendance</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{userStats.projectsCompleted}</p>
-              <p className="text-xs text-text-grey dark:text-text-grey-dark">Projects</p>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex space-x-8">
-          {(['account', 'preferences', 'security', 'achievements'] as const).map((tab) => (
+          {(['account', 'preferences', 'security'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -592,9 +353,8 @@ const Settings: React.FC = () => {
                     <input
                       type="email"
                       value={profile.email}
-                      onChange={(e) => setProfile({...profile, email: e.target.value})}
-                      disabled={loading}
-                      className="input-field"
+                      readOnly
+                      className="input-field bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -692,48 +452,6 @@ const Settings: React.FC = () => {
         {activeTab === 'preferences' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {/* Notification Settings */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <Bell className="w-5 h-5 text-sky-blue" />
-                  <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-                    Notification Preferences
-                  </h2>
-                </div>
-
-                <div className="space-y-4">
-                  {[
-                    { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive notifications via email' },
-                    { key: 'pushNotifications', label: 'Push Notifications', desc: 'Browser push notifications' },
-                    { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive text message alerts' },
-                    { key: 'announcementAlerts', label: 'Announcement Alerts', desc: 'New announcements' },
-                  ].map((item) => (
-                    <div key={item.key} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-text-dark dark:text-text-dark-light">{item.label}</p>
-                        <p className="text-sm text-text-grey dark:text-text-grey-dark">{item.desc}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={notifications[item.key as keyof typeof notifications]}
-                          onChange={(e) => setNotifications({...notifications, [item.key]: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-blue dark:peer-focus:ring-sky-blue dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-blue"></div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <button onClick={handleSaveNotifications} className="btn-primary flex items-center space-x-2">
-                    <Save className="w-4 h-4" />
-                    <span>Save Notifications</span>
-                  </button>
-                </div>
-              </div>
-
               {/* Shift Configuration Management - HR Admin Only */}
               {(profile.role === 'HR Admin' || profile.role === 'System Admin') && (
                 <div className="card">
@@ -826,229 +544,119 @@ const Settings: React.FC = () => {
                   </button>
                 </div>
               </div>
-
-              {/* System Settings */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <Database className="w-5 h-5 text-sky-blue" />
-                  <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-                    System
-                  </h2>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Timezone</label>
-                    <select value={system.timezone} onChange={(e) => setSystem({...system, timezone: e.target.value})} className="input-field">
-                      <option value="UTC">UTC</option>
-                      <option value="EST">Eastern Time</option>
-                      <option value="PST">Pacific Time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Language</label>
-                    <select value={system.language} onChange={(e) => setSystem({...system, language: e.target.value})} className="input-field">
-                      <option value="English">English</option>
-                      <option value="Spanish">Spanish</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <button onClick={handleSaveSystem} className="btn-primary flex items-center space-x-2">
-                    <Save className="w-4 h-4" />
-                    <span>Save System</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Data Management */}
-              <div className="card">
-                <div className="flex items-center space-x-3 mb-6">
-                  <Database className="w-5 h-5 text-sky-blue" />
-                  <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-                    Data Management
-                  </h2>
-                </div>
-
-                <div className="space-y-3">
-                  <button onClick={handleExportData} className="w-full btn-outline flex items-center justify-center space-x-2">
-                    <Download className="w-4 h-4" />
-                    <span>Export Data</span>
-                  </button>
-                  <button onClick={handleImportData} className="w-full btn-outline flex items-center justify-center space-x-2">
-                    <Upload className="w-4 h-4" />
-                    <span>Import Data</span>
-                  </button>
-                  <button onClick={handleClearCache} className="w-full btn-outline flex items-center justify-center space-x-2">
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Clear Cache</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         )}
 
         {/* Security Tab */}
         {activeTab === 'security' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl space-y-6">
             <div className="card">
-              <div className="flex items-center space-x-3 mb-6">
-                <Lock className="w-5 h-5 text-sky-blue" />
-                <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
-                  Change Password
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-                    Current Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      value={passwordForm.currentPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                      className="input-field pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
-                    >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Lock className="w-5 h-5 text-sky-blue" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light">
+                      Change Password
+                    </h2>
+                    <p className="text-sm text-text-grey dark:text-text-grey-dark">
+                      Update your password to keep your account secure
+                    </p>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={passwordForm.newPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                      className="input-field pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                      className="input-field pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                {!showPasswordForm && (
+                  <button
+                    onClick={() => setShowPasswordForm(true)}
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>Change Password</span>
+                  </button>
+                )}
               </div>
 
-              <div className="mt-6">
-                <button onClick={handlePasswordChange} className="btn-primary flex items-center space-x-2">
-                  <Key className="w-4 h-4" />
-                  <span>Change Password</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="card mt-6">
-              <h2 className="text-lg font-semibold text-text-dark dark:text-text-dark-light mb-4">
-                Privacy Settings
-              </h2>
-              <div className="space-y-4">
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-text-dark dark:text-text-dark-light">Profile Visibility</span>
-                  <select className="input-field w-auto">
-                    <option>Public</option>
-                    <option>Team Only</option>
-                    <option>Private</option>
-                  </select>
-                </label>
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-text-dark dark:text-text-dark-light">Show Activity Status</span>
-                  <input type="checkbox" defaultChecked className="toggle" />
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Achievements Tab */}
-        {activeTab === 'achievements' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 card">
-              <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light mb-6">
-                Achievements & Recognition
-              </h3>
-              <div className="space-y-4">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                    <div className={`p-2 rounded-lg ${getAchievementColor(achievement.type)}`}>
-                      {getAchievementIcon(achievement.type)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-text-dark dark:text-text-dark-light">
-                        {achievement.title}
-                      </h4>
-                      <p className="text-sm text-text-grey dark:text-text-grey-dark mt-1">
-                        {achievement.description}
-                      </p>
-                      <p className="text-xs text-text-grey dark:text-text-grey-dark mt-2">
-                        {new Date(achievement.date).toLocaleDateString()}
-                      </p>
+              {showPasswordForm && (
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                        className="input-field pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="card">
-              <h3 className="text-lg font-semibold text-text-dark dark:text-text-dark-light mb-4">
-                Performance Stats
-              </h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-text-grey dark:text-text-grey-dark">Total Hours</span>
-                  <span className="text-lg font-bold text-text-dark dark:text-text-dark-light">
-                    {userStats.totalHours}
-                  </span>
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                        className="input-field pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-text-dark dark:text-text-dark-light mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                        className="input-field pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-grey hover:text-text-dark"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button onClick={handlePasswordChange} className="btn-primary flex items-center space-x-2">
+                      <Key className="w-4 h-4" />
+                      <span>Change Password</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      }}
+                      className="btn-outline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-text-grey dark:text-text-grey-dark">Team Size</span>
-                  <span className="text-lg font-bold text-text-dark dark:text-text-dark-light">
-                    {userStats.teamSize}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-text-grey dark:text-text-grey-dark">Attendance Rate</span>
-                  <span className="text-lg font-bold text-sky-blue">
-                    {userStats.attendanceRate}%
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
