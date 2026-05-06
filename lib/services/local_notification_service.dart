@@ -46,7 +46,7 @@ class LocalNotificationService {
           InitializationSettings(android: androidSettings, iOS: iosSettings);
 
       await _notifications.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
 
@@ -149,14 +149,12 @@ class LocalNotificationService {
       final scheduledTimeUtc = scheduledTime.isUtc ? scheduledTime : scheduledTime.toUtc();
 
       await _notifications.zonedSchedule(
-        id,
-        title,
-        body,
-        tz.TZDateTime.from(scheduledTimeUtc, tz.local),
-        notificationDetails,
+        id: id,
+        scheduledDate: tz.TZDateTime.from(scheduledTimeUtc, tz.local),
+        notificationDetails: notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+        title: title,
+        body: body,
         payload: jsonEncode({
           'id': id,
           'type': type,
@@ -284,7 +282,7 @@ class LocalNotificationService {
   /// Cancel a specific scheduled notification
   Future<void> cancelNotification(int id) async {
     try {
-      await _notifications.cancel(id);
+      await _notifications.cancel(id: id);
       await _removeScheduledNotification(id);
       debugPrint('Cancelled notification: $id');
     } catch (e) {

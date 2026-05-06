@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../config/app_config.dart';
@@ -27,44 +28,52 @@ class GoogleAuthService {
   static const String _serverClientId =
       '152077619782-2kkf1h0rakope2d5l4pmnhbolkjv1mom.apps.googleusercontent.com';
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: _serverClientId,
-    scopes: [
-      'email',
-      'profile',
-    ],
-  );
+  bool _initialized = false;
+
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: _serverClientId,
+      );
+      _initialized = true;
+    }
+  }
 
   /// Sign in with Google and get user data
   Future<GoogleSignInAccount?> signInWithGoogle() async {
+    await _ensureInitialized();
     try {
-      final account = await _googleSignIn.signIn();
+      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (account == null) {
+        return await GoogleSignIn.instance.authenticate();
+      }
       return account;
     } catch (e) {
-
       return null;
     }
   }
 
   /// Sign out from Google
   Future<void> signOut() async {
+    await _ensureInitialized();
     try {
-      await _googleSignIn.signOut();
+      await GoogleSignIn.instance.signOut();
     } catch (e) {
-      print('Google Sign-Out error: $e');
+      debugPrint('Google Sign-Out error: $e');
     }
   }
 
   /// Get ID token from Google
   Future<String?> getIdToken() async {
+    await _ensureInitialized();
     try {
-      final account = _googleSignIn.currentUser;
+      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
       if (account == null) return null;
 
-      final auth = await account.authentication;
+      final auth = account.authentication;
       return auth.idToken;
     } catch (e) {
-      print('Error getting ID token: $e');
+      debugPrint('Error getting ID token: $e');
       return null;
     }
   }

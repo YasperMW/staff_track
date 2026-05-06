@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../services/auth_storage.dart';
@@ -7,7 +6,7 @@ import '../models/models.dart';
 
 class DepartmentTodaySummary {
   final String departmentId;
-  final String name;
+  final String departmentName;
   final int totalStaff;
   final int present;
   final int absent;
@@ -15,17 +14,19 @@ class DepartmentTodaySummary {
 
   DepartmentTodaySummary({
     required this.departmentId,
-    required this.name,
+    required this.departmentName,
     required this.totalStaff,
     required this.present,
     required this.absent,
     required this.late,
   });
 
+  String get name => departmentName;
+
   factory DepartmentTodaySummary.fromJson(Map<String, dynamic> json) {
     return DepartmentTodaySummary(
       departmentId: json['department_id'] as String? ?? '',
-      name: json['name'] as String? ?? 'Unknown',
+      departmentName: json['name'] as String? ?? 'Unknown',
       totalStaff: (json['total_staff'] as num?)?.toInt() ?? 0,
       present: (json['present'] as num?)?.toInt() ?? 0,
       absent: (json['absent'] as num?)?.toInt() ?? 0,
@@ -176,6 +177,28 @@ class OrganizationService {
       return UserAttendanceHistory.fromJson(data);
     } else {
       throw Exception('Failed to load user history: ${response.statusCode}');
+    }
+  }
+
+  static Future<List<AppUser>> getAllStaff() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/lookup/all-staff'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => AppUser.fromJson(e as Map<String, dynamic>)).toList();
+    } else {
+      throw Exception('Failed to load staff: ${response.statusCode}');
     }
   }
 }

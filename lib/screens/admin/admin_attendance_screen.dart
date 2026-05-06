@@ -12,31 +12,33 @@ class AdminAttendanceScreen extends StatefulWidget {
   State<AdminAttendanceScreen> createState() => _AdminAttendanceScreenState();
 }
 
-class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
+class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? teamSummary;
   bool isLoadingTeam = false;
   List<TeamAttendanceMember> _teamAttendance = [];
   bool _isLoadingStaff = false;
   final AttendanceService _attendanceService = const AttendanceService();
-  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTeamSummary();
     _loadStaffList();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when page becomes visible
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadTeamSummary();
+      _loadStaffList();
     }
-    _loadTeamSummary();
-    _loadStaffList();
   }
 
   Future<void> _onRefresh() async {
@@ -383,38 +385,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color.withValues(alpha: 0.8),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildStaffList(BuildContext context) {
     if (_isLoadingStaff) {
       return const Center(
@@ -458,7 +428,6 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> {
   }
 
   Widget _buildStaffItem(BuildContext context, TeamAttendanceMember member) {
-    bool isPresent = member.status == 'Present';
     Color statusColor = member.status == 'Present'
         ? Colors.green
         : (member.status == 'Absent' ? AppTheme.paleRed : AppTheme.lightGold);

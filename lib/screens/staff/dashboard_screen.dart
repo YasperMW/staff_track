@@ -19,18 +19,17 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   late Timer _timer;
   String _timeString = '';
-  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _timeString = _formatDateTime(DateTime.now());
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getTime());
 
-    // Defer provider calls to avoid setState() during build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final attendanceProvider = context.read<AttendanceProvider>();
       attendanceProvider.loadTodayAttendance();
@@ -40,20 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Schedule daily reminders after loading data
       _scheduleDailyReminders();
     });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when navigating back to this tab
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
-    }
-    final attendanceProvider = context.read<AttendanceProvider>();
-    attendanceProvider.loadTodayAttendance();
-    attendanceProvider.loadRecentAttendance(limit: 5);
-    attendanceProvider.loadProfileMetrics();
   }
 
   String _getAttendanceStatusText() {
@@ -192,8 +177,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final attendanceProvider = context.read<AttendanceProvider>();
+      attendanceProvider.loadTodayAttendance();
+      attendanceProvider.loadRecentAttendance(limit: 5);
+      attendanceProvider.loadProfileMetrics();
+      _scheduleDailyReminders();
+    }
   }
 
   @override
@@ -355,9 +352,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ).then(
                               (_) {
-                                context.read<AttendanceProvider>().loadTodayAttendance();
-                                // Schedule reminders after check-in
-                                _scheduleAttendanceReminders();
+                                if (context.mounted) {
+                                  context.read<AttendanceProvider>().loadTodayAttendance();
+                                  // Schedule reminders after check-in
+                                  _scheduleAttendanceReminders();
+                                }
                               },
                             );
                           } else if (todayAttendance.isCheckedIn && !todayAttendance.isCheckedOut) {
@@ -369,9 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ).then(
                               (_) {
-                                context.read<AttendanceProvider>().loadTodayAttendance();
-                                // Schedule reminders after check-out
-                                _scheduleAttendanceReminders();
+                                if (context.mounted) {
+                                  context.read<AttendanceProvider>().loadTodayAttendance();
+                                  // Schedule reminders after check-out
+                                  _scheduleAttendanceReminders();
+                                }
                               },
                             );
                           } else {
@@ -382,9 +383,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 builder: (context) => const CheckInOutScreen(),
                               ),
                             ).then(
-                              (_) => context
-                                  .read<AttendanceProvider>()
-                                  .loadTodayAttendance(),
+                              (_) {
+                                if (context.mounted) {
+                                  context
+                                      .read<AttendanceProvider>()
+                                      .loadTodayAttendance();
+                                }
+                              },
                             );
                           }
                         },

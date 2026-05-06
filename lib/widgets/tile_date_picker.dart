@@ -30,11 +30,10 @@ class _TileDatePickerState extends State<TileDatePicker> {
   late DateTime _currentMonth;
   DateTime? _startDate;
   DateTime? _endDate;
-  late DateTime _firstDate;
+late DateTime _firstDate;
   late DateTime _lastDate;
-  String _selectionMode = 'start'; // 'start', 'end', or 'complete'
   List<PublicHoliday> _holidays = [];
-  bool _isLoadingHolidays = false;
+  String _selectionMode = 'start';
 
   @override
   void initState() {
@@ -58,23 +57,16 @@ class _TileDatePickerState extends State<TileDatePicker> {
   }
 
   Future<void> _loadHolidays() async {
-    setState(() {
-      _isLoadingHolidays = true;
-    });
-
     try {
       final holidays = await HolidaysService.getHolidays(year: _currentMonth.year);
       if (mounted) {
         setState(() {
           _holidays = holidays;
-          _isLoadingHolidays = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingHolidays = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -85,10 +77,6 @@ class _TileDatePickerState extends State<TileDatePicker> {
 
   String _formatDay(DateTime date) {
     return DateFormat('d').format(date);
-  }
-
-  String _formatWeekday(DateTime date) {
-    return DateFormat('EEE').format(date);
   }
 
   bool _isDateSelectable(DateTime date) {
@@ -122,14 +110,6 @@ class _TileDatePickerState extends State<TileDatePicker> {
 
   bool _isHoliday(DateTime date) {
     return _holidays.any((holiday) => holiday.matchesDate(date));
-  }
-
-  PublicHoliday? _getHolidayForDate(DateTime date) {
-    try {
-      return _holidays.firstWhere((holiday) => holiday.matchesDate(date));
-    } catch (e) {
-      return null;
-    }
   }
 
   void _selectDate(DateTime date) {

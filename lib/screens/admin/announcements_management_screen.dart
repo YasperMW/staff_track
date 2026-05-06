@@ -296,37 +296,6 @@ class _AnnouncementsManagementScreenState extends State<AnnouncementsManagementS
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Announcements',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.skyBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '${_filteredAnnouncements.length} announcements',
-            style: const TextStyle(
-              color: AppTheme.skyBlue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFilters() {
     return Row(
       children: [

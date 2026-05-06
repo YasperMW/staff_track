@@ -122,7 +122,6 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
   Future<void> _refreshLookupData() async {
     // Store current form data to preserve it during refresh
     final String currentDepartment = _selectedDepartment ?? '';
-    final String? currentDepartmentId = _selectedDepartmentId;
     final String? currentGrade = _selectedGrade;
     final String currentDesignation = _designationController.text;
     

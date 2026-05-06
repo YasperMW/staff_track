@@ -849,28 +849,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   // Holidays card removed
 
-  Color _getHolidayTypeColor(String? type) {
-    switch (type) {
-      case 'national':
-        return AppTheme.skyBlue;
-      case 'religious':
-        return AppTheme.paleRed;
-      default:
-        return AppTheme.lightGold;
-    }
-  }
-
-  IconData _getHolidayTypeIcon(String? type) {
-    switch (type) {
-      case 'national':
-        return Icons.flag;
-      case 'religious':
-        return Icons.church;
-      default:
-        return Icons.event;
-    }
-  }
-
   Widget _buildOrganizationCard(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
     final isHr = user?.role.toLowerCase().contains('hr') ?? false;

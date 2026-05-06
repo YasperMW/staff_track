@@ -79,7 +79,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        print('Error loading user profile: $e');
+        debugPrint('Error loading user profile: $e');
       }
     }
   }
@@ -94,7 +94,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        print('Error loading grades: $e');
+        debugPrint('Error loading grades: $e');
       }
     }
   }
@@ -232,15 +232,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           SnackBar(content: Text('Failed to withdraw request: $e')),
         );
       }
-    }
-  }
-
-  Future<void> _handleApprove(AdminTeamRequest req) async {
-    try {
-      await RequestsService.approveRequest(req.id);
-      await _loadRequests();
-    } catch (e) {
-      //error
     }
   }
 
@@ -399,26 +390,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     );
   }
 
-  Future<void> _handleWithdraw(AdminTeamRequest req) async {
-    try {
-      await RequestsService.withdrawRequest(req.id);
-      await _loadRequests();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Request withdrawn successfully'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to withdraw request: $e')),
-        );
-      }
-    }
-  }
-
   Widget _buildLeaveBalanceSummary(BuildContext context) {
     // Find annual leave balance from API
     final annualBalance = _leaveBalances.firstWhere(
@@ -500,7 +471,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     // Count requests by status for both my and team requests
     int myApprovedCount = 0;
     int myPendingCount = 0;
-    int myRejectedCount = 0;
     int teamPendingCount = 0;
 
     // Count my requests
@@ -510,8 +480,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         myApprovedCount++;
       } else if (status == 'pending') {
         myPendingCount++;
-      } else if (status == 'rejected' || status == 'denied') {
-        myRejectedCount++;
       }
     }
 
@@ -1171,18 +1139,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         ],
       ),
     );
-  }
-
-  List<AdminTeamRequest> _applyFilters(List<AdminTeamRequest> list) {
-    return list.where((r) {
-      final statusMatch = _filterStatus == 'all' ? true : r.status.toLowerCase() == _filterStatus;
-      final typeMatch = _filterType == 'all' ? true : r.type.toLowerCase().contains(_filterType);
-      final searchMatch = _searchQuery.isEmpty
-          ? true
-          : r.userName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            r.type.toLowerCase().contains(_searchQuery.toLowerCase());
-      return statusMatch && typeMatch && searchMatch;
-    }).toList();
   }
 
   Future<void> _showApprovalDetail(BuildContext context, AdminTeamRequest req) async {
@@ -2049,66 +2005,6 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildPendingRequestsList(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: AppTheme.skyBlue,
-          ),
-        ),
-      );
-    }
-
-    if (_requests.isEmpty) {
-      return Center(
-        child: Column(
-          children: [
-            Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 12),
-            Text(
-              'No pending team requests',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Team Requests',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            Text(
-              '${_requests.length} Total',
-              style: const TextStyle(
-                color: AppTheme.skyBlue,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Column(
-          children: _requests
-              .map((req) => _buildRequestItem(context, req))
-              .toList(),
-        ),
-      ],
     );
   }
 
