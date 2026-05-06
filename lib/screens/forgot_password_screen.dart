@@ -367,6 +367,7 @@ class _OTPScreenState extends State<OTPScreen> {
                         const SizedBox(height: 32),
                         TextButton(
                           onPressed: _isResending ? null : () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             setState(() => _isResending = true);
                             
                             try {
@@ -376,7 +377,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                 setState(() => _isResending = false);
                                 
                                 if (success) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(
                                       content: Text('New code sent successfully'),
                                       behavior: SnackBarBehavior.floating,
@@ -384,7 +385,7 @@ class _OTPScreenState extends State<OTPScreen> {
                                     ),
                                   );
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(
                                       content: Text('Failed to resend code. Please try again.'),
                                       behavior: SnackBarBehavior.floating,
@@ -396,7 +397,7 @@ class _OTPScreenState extends State<OTPScreen> {
                             } catch (e) {
                               if (mounted) {
                                 setState(() => _isResending = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('Network error. Please check your connection.'),
                                     behavior: SnackBarBehavior.floating,

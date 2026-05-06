@@ -122,6 +122,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         debugPrint('Downloading PDF from: $url');
       }
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Generating report...')),
       );
@@ -140,9 +141,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         final file = File('${directory.path}/$fileName');
         await file.writeAsBytes(response.bodyBytes);
         
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Attendance Report',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: 'Attendance Report',
+          ),
         );
         
         if (kDebugMode) {

@@ -71,6 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
     
     // Initialize FCM service after auth is established
     if (authProvider.isLoggedIn) {
+      if (!mounted) return;
       await FCMService.initialize(context);
       // Initialize local notification service for offline reminders
       await LocalNotificationService().initialize();

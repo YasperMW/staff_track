@@ -108,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (response.token != null) {
             final authProvider = context.read<AuthProvider>();
             await authProvider.saveToken(response.token!, response.user ?? {});
+            if (!mounted) return;
 
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const HomeScreen()),

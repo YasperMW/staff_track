@@ -1223,6 +1223,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       );
     }
 
+    if (!context.mounted) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1926,7 +1927,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               onPressed: () async {
                                 try {
                                   await RequestsService.denyRequest(req.id);
-                                  if (mounted) Navigator.of(ctx).pop();
+                                  if (ctx.mounted) Navigator.of(ctx).pop();
                                   await _loadRequests();
                                 } catch (_) {}
                               },
@@ -1982,7 +1983,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               }
 
                               await RequestsService.approveRequest(req.id, extraFields: extraFields);
-                                if (mounted) Navigator.of(ctx).pop();
+                                if (ctx.mounted) Navigator.of(ctx).pop();
                                 await _loadRequests();
                               } catch (_) {}
                             },
