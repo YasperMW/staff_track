@@ -76,7 +76,7 @@ class EmployeeFilesService {
   }) async {
     final token = await AuthStorage.getToken();
     if (token == null) return null;
-    final result = await FilePicker.platform.pickFiles(withReadStream: true);
+    final result = await FilePicker.pickFiles(withData: true);
     if (result == null || result.files.isEmpty) return null;
     final file = result.files.first;
 

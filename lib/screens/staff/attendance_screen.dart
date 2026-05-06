@@ -16,31 +16,33 @@ class AttendanceScreen extends StatefulWidget {
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> {
+class _AttendanceScreenState extends State<AttendanceScreen> with WidgetsBindingObserver {
   List<AttendanceRecord> attendanceHistory = [];
   bool isLoading = false;
   final AttendanceService _attendanceService = const AttendanceService();
   Map<String, dynamic>? summary;
-  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAttendanceData();
     final attendanceProvider = context.read<AttendanceProvider>();
     attendanceProvider.loadTodayAttendance();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when page becomes visible
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadAttendanceData();
+      context.read<AttendanceProvider>().loadTodayAttendance();
     }
-    _loadAttendanceData();
-    context.read<AttendanceProvider>().loadTodayAttendance();
   }
 
   Future<void> _loadAttendanceData() async {
@@ -49,9 +51,20 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
 
     try {
-      final history =
-          await _attendanceService.getAttendanceHistory(limit: 10);
-      final summaryData = await _attendanceService.getAttendanceSummary();
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final todayStr = now.toIso8601String().split('T')[0];
+      final monthStartStr = firstDayOfMonth.toIso8601String().split('T')[0];
+
+      final history = await _attendanceService.getAttendanceHistory(
+        startDate: monthStartStr,
+        endDate: todayStr,
+        limit: 50,
+      );
+      final summaryData = await _attendanceService.getAttendanceSummary(
+        startDate: monthStartStr,
+        endDate: todayStr,
+      );
       
       setState(() {
         attendanceHistory = history;
@@ -67,8 +80,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _onRefresh() async {
     await _loadAttendanceData();
-    final attendanceProvider = context.read<AttendanceProvider>();
-    attendanceProvider.loadTodayAttendance();
+    if (!mounted) return;
+    context.read<AttendanceProvider>().loadTodayAttendance();
   }
 
   @override
@@ -102,25 +115,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Attendance',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Attendance',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            Text(
-                              'Your attendance history',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              Text(
+                                'Your attendance history',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         _buildCheckInButton(context),
                       ],
@@ -223,7 +239,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               MaterialPageRoute(
                 builder: (context) => const CheckInOutScreen(),
               ),
-            ).then((_) => context.read<AttendanceProvider>().loadTodayAttendance());
+            ).then((_) {
+              if (context.mounted) {
+                context.read<AttendanceProvider>().loadTodayAttendance();
+              }
+            });
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
@@ -252,21 +272,21 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
     final DateTime today = now;
     
-    // Calculate working days in current month (excluding weekends)
-    int workingDaysInMonth = 0;
+    // Calculate all days in current month (including weekends)
+    int totalDaysInMonth = 0;
     for (DateTime day = firstDayOfMonth; 
          day.isBefore(today.add(const Duration(days: 1))); 
          day = day.add(const Duration(days: 1))) {
-      if (day.weekday != DateTime.saturday && day.weekday != DateTime.sunday) {
-        workingDaysInMonth++;
-      }
+      totalDaysInMonth++;
     }
     
     // Count actual attendance from history
-    int presentDays = 0;
+    int totalCheckIns = 0;          // All attendance records
+    int daysPresent = 0;            // Distinct days checked in
     int onTimeDays = 0;
     int lateDays = 0;
     final Set<DateTime> checkedInDays = {};
+    final Map<DateTime, DateTime> firstCheckInByDay = {};
     
     for (final record in attendanceHistory) {
       if (record.checkInTime != null) {
@@ -276,31 +296,39 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           record.date.day
         );
         
+        totalCheckIns++;
+        
+        // Track first check-in time for each day
+        if (!firstCheckInByDay.containsKey(checkInDate) || 
+            record.checkInTime!.isBefore(firstCheckInByDay[checkInDate]!)) {
+          firstCheckInByDay[checkInDate] = record.checkInTime!;
+        }
+        
+        // Track distinct days
         if (!checkedInDays.contains(checkInDate)) {
           checkedInDays.add(checkInDate);
-          
-          // Check if it's a working day (exclude weekends)
-          if (record.date.weekday != DateTime.saturday && 
-              record.date.weekday != DateTime.sunday) {
-            
-            // Count all check-ins as present
-            presentDays++;
-            
-            // Check if late (after 9:05 AM to allow 5-minute grace period)
-            if (record.checkInTime!.hour > 9 || 
-                (record.checkInTime!.hour == 9 && record.checkInTime!.minute > 5)) {
-              lateDays++;
-            } else {
-              onTimeDays++;
-            }
-          }
         }
       }
     }
     
-    final int absentDays = workingDaysInMonth - presentDays;
-    final double attendanceRate = workingDaysInMonth > 0 ? 
-        (presentDays / workingDaysInMonth * 100) : 0.0;
+    // Calculate on-time/late based on first check-in of each day
+    for (final entry in firstCheckInByDay.entries) {
+      final firstCheckIn = entry.value;
+      
+      // Count all days (including weekends)
+      daysPresent++;
+      
+      // Check if late (after 9:05 AM to allow 5-minute grace period)
+      if (firstCheckIn.hour > 9 || 
+          (firstCheckIn.hour == 9 && firstCheckIn.minute > 5)) {
+        lateDays++;
+      } else {
+        onTimeDays++;
+      }
+    }
+    
+    final double attendanceRate = totalDaysInMonth > 0 ? 
+        (daysPresent / totalDaysInMonth * 100) : 0.0;
     
     return Container(
       width: double.infinity,
@@ -352,22 +380,29 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               _EnhancedSummaryItem(
                 value: '$onTimeDays',
                 label: 'On Time',
-                percentage: workingDaysInMonth > 0 ? '${(onTimeDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                percentage: totalDaysInMonth > 0 ? '${(onTimeDays / totalDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.check_circle_outline,
                 color: Colors.white,
               ),
               _EnhancedSummaryItem(
                 value: '$lateDays',
                 label: 'Late',
-                percentage: workingDaysInMonth > 0 ? '${(lateDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                percentage: totalDaysInMonth > 0 ? '${(lateDays / totalDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.access_time,
                 color: Colors.white,
               ),
               _EnhancedSummaryItem(
-                value: '$presentDays',
-                label: 'Present',
-                percentage: workingDaysInMonth > 0 ? '${(presentDays / workingDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
-                icon: Icons.person_outline,
+                value: '$daysPresent',
+                label: 'Days',
+                percentage: totalDaysInMonth > 0 ? '${(daysPresent / totalDaysInMonth * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.calendar_today,
+                color: Colors.white,
+              ),
+              _EnhancedSummaryItem(
+                value: '$totalCheckIns',
+                label: 'Check-ins',
+                percentage: '',
+                icon: Icons.login,
                 color: Colors.white,
               ),
             ],
@@ -389,7 +424,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Attendance Rate: ${attendanceRate.toStringAsFixed(1)}%',
+                  'Check-in Rate: ${attendanceRate.toStringAsFixed(1)}% ($daysPresent of $totalDaysInMonth days)',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 12,
@@ -593,37 +628,6 @@ class _EnhancedSummaryItem extends StatelessWidget {
           style: TextStyle(
             color: color.withValues(alpha: 0.6),
             fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _SummaryItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha:0.8),
-            fontSize: 14,
           ),
         ),
       ],

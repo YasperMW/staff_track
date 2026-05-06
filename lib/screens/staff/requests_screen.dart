@@ -13,30 +13,32 @@ class RequestsScreen extends StatefulWidget {
   State<RequestsScreen> createState() => _RequestsScreenState();
 }
 
-class _RequestsScreenState extends State<RequestsScreen> {
+class _RequestsScreenState extends State<RequestsScreen> with WidgetsBindingObserver {
   List<Map<String, dynamic>> requestsHistory = [];
   List<LeaveBalance> leaveBalances = [];
   bool isLoading = false;
   CompleteUserProfile? userProfile;
   List<Grade> grades = [];
-  int userAnnualLeaveDays = 21; // Default fallback
-  bool _initialLoadDone = false;
+  int userAnnualLeaveDays = 21;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadInitialData();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when page becomes visible
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadInitialData();
     }
-    _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
@@ -59,7 +61,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        print('Error loading user profile: $e');
+        debugPrint('Error loading user profile: $e');
       }
     }
   }
@@ -74,7 +76,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        print('Error loading grades: $e');
+        debugPrint('Error loading grades: $e');
       }
     }
   }
@@ -161,46 +163,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
       _loadGrades(),
     ]);
     _calculateUserAnnualLeaveDays();
-  }
-
-  int _parseDuration(String? duration) {
-    if (duration == null) return 0;
-    final match = RegExp(r'(\d+)').firstMatch(duration);
-    if (match != null) {
-      return int.parse(match.group(1)!);
-    }
-    return 0;
-  }
-
-  Map<String, int> _calculateStats() {
-    int annualUsed = 0;
-    int sickUsed = 0;
-    int personalUsed = 0;
-
-    for (var request in requestsHistory) {
-      // The status from API is capitalized in get_my_requests
-      if (request['status'] == 'Approved') {
-        int days = _parseDuration(request['duration']);
-        String type = (request['type'] as String).toLowerCase();
-
-        if (type.contains('annual')) {
-          annualUsed += days;
-        } else if (type.contains('sick')) {
-          sickUsed += days;
-        } else if (type.contains('personal')) {
-          personalUsed += days;
-        } else if (type == 'leave') {
-          // Default 'Leave' to Annual if no specific type
-          annualUsed += days;
-        }
-      }
-    }
-
-    return {
-      'annual': annualUsed,
-      'sick': sickUsed,
-      'personal': personalUsed,
-    };
   }
 
   @override
@@ -569,37 +531,6 @@ class _RequestsScreenState extends State<RequestsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSummaryCard(BuildContext context, String count, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha:0.05)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.skyBlue,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

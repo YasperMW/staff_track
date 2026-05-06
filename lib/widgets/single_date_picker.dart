@@ -30,7 +30,6 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
   late DateTime _firstDate;
   late DateTime _lastDate;
   List<PublicHoliday> _holidays = [];
-  bool _isLoadingHolidays = false;
   bool _isSelectingMonth = false;
   bool _isSelectingYear = false;
 
@@ -45,23 +44,16 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
   }
 
   Future<void> _loadHolidays() async {
-    setState(() {
-      _isLoadingHolidays = true;
-    });
-
     try {
       final holidays = await HolidaysService.getHolidays(year: _currentMonth.year);
       if (mounted) {
         setState(() {
           _holidays = holidays;
-          _isLoadingHolidays = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingHolidays = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -72,10 +64,6 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
 
   String _formatDay(DateTime date) {
     return DateFormat('d').format(date);
-  }
-
-  String _formatWeekday(DateTime date) {
-    return DateFormat('EEE').format(date);
   }
 
   bool _isDateSelectable(DateTime date) {
@@ -91,14 +79,6 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
 
   bool _isHoliday(DateTime date) {
     return _holidays.any((holiday) => holiday.matchesDate(date));
-  }
-
-  PublicHoliday? _getHolidayForDate(DateTime date) {
-    try {
-      return _holidays.firstWhere((holiday) => holiday.matchesDate(date));
-    } catch (e) {
-      return null;
-    }
   }
 
   void _selectDate(DateTime date) {
@@ -579,7 +559,6 @@ class _SingleDatePickerState extends State<SingleDatePicker> {
     final isCurrentMonth = date.month == _currentMonth.month;
     final isToday = date.isAtSameMomentAs(DateTime.now());
     final isHoliday = _isHoliday(date);
-    final holiday = _getHolidayForDate(date);
 
     Color backgroundColor;
     Color textColor;

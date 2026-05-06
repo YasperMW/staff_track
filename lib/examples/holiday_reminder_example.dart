@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../../services/holidays_service.dart';
 import '../../services/reminder_integration_service.dart';
@@ -10,7 +11,7 @@ class HolidayReminderExample {
   /// Schedule reminders for a specific holiday
   static Future<void> scheduleSingleHolidayReminder(PublicHoliday holiday) async {
     try {
-      print('Scheduling reminders for holiday: ${holiday.name}');
+      debugPrint('Scheduling reminders for holiday: ${holiday.name}');
       
       // This will create multiple reminders:
       // - 7 days before holiday
@@ -20,36 +21,36 @@ class HolidayReminderExample {
         holidays: [holiday],
       );
       
-      print('Holiday reminders scheduled successfully!');
+      debugPrint('Holiday reminders scheduled successfully!');
     } catch (e) {
-      print('Error scheduling holiday reminders: $e');
+      debugPrint('Error scheduling holiday reminders: $e');
     }
   }
   
   /// Schedule reminders for all upcoming holidays
   static Future<void> scheduleAllUpcomingHolidays() async {
     try {
-      print('Loading upcoming holidays...');
+      debugPrint('Loading upcoming holidays...');
       
       // Get holidays for next 6 months
       final upcomingHolidays = await HolidaysService.getUpcomingHolidays(monthsAhead: 6);
       
-      print('Found ${upcomingHolidays.length} upcoming holidays');
+      debugPrint('Found ${upcomingHolidays.length} upcoming holidays');
       
       // Schedule reminders for all of them
       await ReminderIntegrationService.scheduleHolidayReminders(
         holidays: upcomingHolidays,
       );
       
-      print('Scheduled reminders for all upcoming holidays!');
+      debugPrint('Scheduled reminders for all upcoming holidays!');
       
       // Print what was scheduled
       for (final holiday in upcomingHolidays) {
-        print('  - ${holiday.name} on ${holiday.date}');
+        debugPrint('  - ${holiday.name} on ${holiday.date}');
       }
       
     } catch (e) {
-      print('Error scheduling upcoming holidays: $e');
+      debugPrint('Error scheduling upcoming holidays: $e');
     }
   }
   

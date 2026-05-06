@@ -10,34 +10,36 @@ class AdminReportsScreen extends StatefulWidget {
   State<AdminReportsScreen> createState() => _AdminReportsScreenState();
 }
 
-class _AdminReportsScreenState extends State<AdminReportsScreen> {
+class _AdminReportsScreenState extends State<AdminReportsScreen> with WidgetsBindingObserver {
   bool _isLoadingOverview = false;
   AdminReportsOverview? _overview;
   bool _isLoadingWeekly = false;
   List<WeeklyAttendancePoint> _weeklyPoints = [];
   bool _isLoadingTop = false;
   List<TopPerformer> _topPerformers = [];
-  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadOverview();
     _loadWeekly();
     _loadTopPerformers();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when page becomes visible
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadOverview();
+      _loadWeekly();
+      _loadTopPerformers();
     }
-    _loadOverview();
-    _loadWeekly();
-    _loadTopPerformers();
   }
 
   Future<void> _refreshAll() async {

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../services/attendance_service.dart';
-import '../../controllers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/tile_date_picker.dart';
 import '../../widgets/async_content.dart';
-import 'home_screen.dart';
+import '../../config/app_config.dart';
+import '../../services/auth_storage.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -96,12 +100,73 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 
+  Future<void> _generateReport() async {
+    try {
+      final startStr = startDate?.toIso8601String().split('T')[0];
+      final endStr = endDate?.toIso8601String().split('T')[0];
+      
+      final params = <String>[];
+      if (startStr != null) params.add('start_date=$startStr');
+      if (endStr != null) params.add('end_date=$endStr');
+      
+      final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
+      final url = '${AppConfig.apiBaseUrl}/attendance/reports/attendance/pdf$queryString';
+      
+      final token = await AuthStorage.getToken();
+      if (token == null) {
+        _showErrorSnackBar('Authentication required');
+        return;
+      }
+      
+      if (kDebugMode) {
+        debugPrint('Downloading PDF from: $url');
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Generating report...')),
+      );
+      
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final directory = await getTemporaryDirectory();
+        final stamp = DateTime.now().millisecondsSinceEpoch;
+        final fileName = 'attendance_report_$stamp.pdf';
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsBytes(response.bodyBytes);
+        
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Attendance Report',
+        );
+        
+        if (kDebugMode) {
+          debugPrint('PDF ready to share: ${file.path}');
+        }
+      } else {
+        _showErrorSnackBar('Failed to generate report: ${response.statusCode}');
+      }
+} catch (e) {
+      _showErrorSnackBar('Error generating report: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: SimpleHeader(
         title: 'Attendance History',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: _generateReport,
+            tooltip: 'Generate PDF report',
+          ),
           IconButton(
             icon: const Icon(Icons.date_range),
             onPressed: _selectDateRange,
@@ -138,13 +203,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildSummaryCard() {
     // Calculate proper working days and attendance from the history data
-    int totalWorkingDays = 0;
-    int presentDays = 0;
+    int totalDaysInPeriod = 0;
+    int totalCheckIns = 0;          // All attendance records
+    int daysPresent = 0;            // Distinct days checked in
     int onTimeDays = 0;
     int lateDays = 0;
     double totalWorkHours = 0;
     double totalOvertimeHours = 0;
     final Set<DateTime> processedDays = {};
+    final Map<DateTime, DateTime> firstCheckInByDay = {};
     
     // Determine date range
     DateTime start;
@@ -157,13 +224,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     }
     final DateTime end = endDate ?? DateTime.now();
     
-    // Count working days in the selected period (excluding weekends)
+    // Count all days in the selected period (including weekends)
     for (DateTime day = start; 
          day.isBefore(end.add(const Duration(days: 1))); 
          day = day.add(const Duration(days: 1))) {
-      if (day.weekday != DateTime.saturday && day.weekday != DateTime.sunday) {
-        totalWorkingDays++;
-      }
+      totalDaysInPeriod++;
     }
     
     // Process attendance records
@@ -174,42 +239,58 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         record.date.day
       );
       
+      totalCheckIns++;
+      
+      // Track first check-in time for each day
+      if (!firstCheckInByDay.containsKey(recordDate) || 
+          record.checkInTime!.isBefore(firstCheckInByDay[recordDate]!)) {
+        firstCheckInByDay[recordDate] = record.checkInTime!;
+      }
+      
+      // Track distinct days
       if (!processedDays.contains(recordDate)) {
         processedDays.add(recordDate);
-        
-        // Only count weekdays
-        if (record.date.weekday != DateTime.saturday && 
-            record.date.weekday != DateTime.sunday) {
-          
-          if (record.checkInTime != null) {
-            // Count all check-ins as present
-            presentDays++;
-            
-            // Check if late (after 9:05 AM to allow 5-minute grace period)
-            if (record.checkInTime!.hour > 9 || 
-                (record.checkInTime!.hour == 9 && record.checkInTime!.minute > 5)) {
-              lateDays++;
-            } else {
-              onTimeDays++;
-            }
-            
-            // Add work hours and overtime
-            if (record.workHours != null) {
-              totalWorkHours += record.workHours!;
-              if (record.workHours! > 8) {
-                totalOvertimeHours += record.workHours! - 8;
-              }
-            }
-          }
+      }
+    }
+    
+    // Calculate on-time/late based on first check-in of each day
+    final Map<DateTime, double> workHoursByDay = {};
+    for (final record in attendanceHistory) {
+      final recordDate = DateTime(record.date.year, record.date.month, record.date.day);
+      if (record.workHours != null) {
+        workHoursByDay[recordDate] = (workHoursByDay[recordDate] ?? 0) + record.workHours!;
+      }
+    }
+    
+    for (final entry in firstCheckInByDay.entries) {
+      final day = entry.key;
+      final firstCheckIn = entry.value;
+      
+      // Count all days (including weekends)
+      daysPresent++;
+      
+      // Check if late (after 9:05 AM to allow 5-minute grace period)
+      if (firstCheckIn.hour > 9 || 
+          (firstCheckIn.hour == 9 && firstCheckIn.minute > 5)) {
+        lateDays++;
+      } else {
+        onTimeDays++;
+      }
+      
+      // Add work hours and overtime for this day
+      final dayWorkHours = workHoursByDay[day] ?? 0;
+      if (dayWorkHours > 0) {
+        totalWorkHours += dayWorkHours;
+        if (dayWorkHours > 8) {
+          totalOvertimeHours += dayWorkHours - 8;
         }
       }
     }
     
-    final int absentDays = totalWorkingDays - presentDays;
-    final double averageWorkHours = presentDays > 0 ? 
-        totalWorkHours / presentDays : 0.0;
-    final double attendanceRate = totalWorkingDays > 0 ? 
-        (presentDays / totalWorkingDays * 100) : 0.0;
+    final double averageWorkHours = daysPresent > 0 ? 
+        totalWorkHours / daysPresent : 0.0;
+    final double attendanceRate = totalDaysInPeriod > 0 ? 
+        (daysPresent / totalDaysInPeriod * 100) : 0.0;
     
     return Container(
       width: double.infinity,
@@ -264,22 +345,29 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               _enhancedHistorySummaryItem(
                 value: '$onTimeDays',
                 label: 'On Time',
-                percentage: totalWorkingDays > 0 ? '${(onTimeDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
+                percentage: totalDaysInPeriod > 0 ? '${(onTimeDays / totalDaysInPeriod * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.check_circle_outline,
                 color: Colors.white,
               ),
               _enhancedHistorySummaryItem(
                 value: '$lateDays',
                 label: 'Late',
-                percentage: totalWorkingDays > 0 ? '${(lateDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
+                percentage: totalDaysInPeriod > 0 ? '${(lateDays / totalDaysInPeriod * 100).toStringAsFixed(0)}%' : '0%',
                 icon: Icons.access_time,
                 color: Colors.white,
               ),
               _enhancedHistorySummaryItem(
-                value: '$presentDays',
-                label: 'Present',
-                percentage: totalWorkingDays > 0 ? '${(presentDays / totalWorkingDays * 100).toStringAsFixed(0)}%' : '0%',
-                icon: Icons.person_outline,
+                value: '$daysPresent',
+                label: 'Days',
+                percentage: totalDaysInPeriod > 0 ? '${(daysPresent / totalDaysInPeriod * 100).toStringAsFixed(0)}%' : '0%',
+                icon: Icons.calendar_today,
+                color: Colors.white,
+              ),
+              _enhancedHistorySummaryItem(
+                value: '$totalCheckIns',
+                label: 'Check-ins',
+                percentage: '',
+                icon: Icons.login,
                 color: Colors.white,
               ),
             ],
@@ -323,7 +411,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Attendance Rate: ${attendanceRate.toStringAsFixed(1)}%',
+                  'Attendance Rate: ${attendanceRate.toStringAsFixed(1)}% ($daysPresent of $totalDaysInPeriod days)',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 12,
@@ -419,30 +507,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
     );
   }
 
@@ -554,12 +618,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                               color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              '$attendanceShift (${ShiftUtils.getShiftTimeRange(attendanceShift)})',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                            Expanded(
+                              child: Text(
+                                '$attendanceShift (${ShiftUtils.getShiftTimeRange(attendanceShift)})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isCurrentShift ? AppTheme.skyBlue : AppTheme.lightGold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -797,125 +864,5 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       // Show hours for 1 hour or more
       return '${hours.toStringAsFixed(1)}h';
     }
-  }
-}
-
-class _AttendanceHistoryBottomNavigation extends StatelessWidget {
-  const _AttendanceHistoryBottomNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    if (user == null) return const SizedBox.shrink();
-
-    final isAdmin = user.role.toLowerCase().contains('admin') ||
-        user.role.toLowerCase().contains('hr') ||
-        user.role.toLowerCase().contains('manager');
-
-    const currentIndex = 1;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(initialIndex: index),
-            ),
-            (route) => false,
-          );
-        },
-        selectedItemColor: AppTheme.skyBlue,
-        unselectedItemColor: Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withValues(alpha: 0.4),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              0,
-              isAdmin ? Icons.dashboard : Icons.home,
-              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Dashboard' : 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              1,
-              Icons.access_time,
-              Icons.access_time_outlined,
-              currentIndex,
-            ),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              2,
-              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
-              isAdmin
-                  ? Icons.assignment_turned_in_outlined
-                  : Icons.bar_chart_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Requests' : 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              3,
-              isAdmin ? Icons.analytics : Icons.description,
-              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Analytics' : 'Requests',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavIcon(
-    BuildContext context,
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    int currentIndex,
-  ) {
-    final isActive = currentIndex == index;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isActive)
-          Container(
-            width: 24,
-            height: 2,
-            decoration: BoxDecoration(
-              color: AppTheme.skyBlue,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        const SizedBox(height: 4),
-        Icon(isActive ? activeIcon : inactiveIcon),
-      ],
-    );
   }
 }

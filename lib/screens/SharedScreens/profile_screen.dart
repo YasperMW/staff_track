@@ -7,9 +7,8 @@ import '../../controllers/auth_provider.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../utils/connectivity_handler.dart';
-import '../login_screen.dart';
-import '../home_screen.dart';
 import '../../services/user_profile_service.dart';
+import '../login_screen.dart';
 import 'profile_details_screen.dart';
 import 'edit_profile_screen.dart';
 import 'notification_settings_screen.dart';
@@ -522,124 +521,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ProfileBottomNavigation extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    if (user == null) return const SizedBox.shrink();
-
-    final isAdmin = user.role.toLowerCase().contains('admin') ||
-        user.role.toLowerCase().contains('hr') ||
-        user.role.toLowerCase().contains('manager');
-
-    const currentIndex = 0;
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.2),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(initialIndex: index),
-            ),
-            (route) => false,
-          );
-        },
-        selectedItemColor: AppTheme.skyBlue,
-        unselectedItemColor: Theme.of(context)
-            .colorScheme
-            .onSurface
-            .withValues(alpha: 0.4),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        items: [
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              0,
-              isAdmin ? Icons.dashboard : Icons.home,
-              isAdmin ? Icons.dashboard_outlined : Icons.home_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Dashboard' : 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              1,
-              Icons.access_time,
-              Icons.access_time_outlined,
-              currentIndex,
-            ),
-            label: 'Attendance',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              2,
-              isAdmin ? Icons.assignment_turned_in : Icons.bar_chart,
-              isAdmin
-                  ? Icons.assignment_turned_in_outlined
-                  : Icons.bar_chart_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Requests' : 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: _buildNavIcon(
-              context,
-              3,
-              isAdmin ? Icons.analytics : Icons.description,
-              isAdmin ? Icons.analytics_outlined : Icons.description_outlined,
-              currentIndex,
-            ),
-            label: isAdmin ? 'Analytics' : 'Requests',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavIcon(
-    BuildContext context,
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    int currentIndex,
-  ) {
-    final isActive = currentIndex == index;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isActive)
-          Container(
-            width: 24,
-            height: 2,
-            decoration: BoxDecoration(
-              color: AppTheme.skyBlue,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        const SizedBox(height: 4),
-        Icon(isActive ? activeIcon : inactiveIcon),
-      ],
     );
   }
 }

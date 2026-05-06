@@ -51,10 +51,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   if (notification != null && android != null) {
     await notifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
+      id: notification.hashCode,
+      title: notification.title,
+      body: notification.body,
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'staff_track_channel',
           'Staff Track Notifications',
@@ -327,7 +327,7 @@ class FCMService {
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _localNotifications.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         _handleNotificationClick(response.payload);
       },
@@ -600,10 +600,10 @@ class FCMService {
     );
 
     await _localNotifications.show(
-      message.hashCode,
-      message.notification?.title ?? 'New Notification',
-      message.notification?.body ?? 'You have a new notification',
-      platformDetails,
+      id: message.hashCode,
+      title: message.notification?.title ?? 'New Notification',
+      body: message.notification?.body ?? 'You have a new notification',
+      notificationDetails: platformDetails,
       payload: message.data.toString(),
     );
   }
@@ -660,10 +660,10 @@ class FCMService {
     );
 
     await _localNotifications.show(
-      id,
-      title,
-      body,
-      platformDetails,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: platformDetails,
       payload: data?.toString(),
     );
   }

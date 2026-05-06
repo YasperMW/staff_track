@@ -14,29 +14,31 @@ class AnnouncementsScreen extends StatefulWidget {
   State<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
 }
 
-class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
+class _AnnouncementsScreenState extends State<AnnouncementsScreen> with WidgetsBindingObserver {
   List<Announcement> _announcements = [];
   List<Announcement> _filteredAnnouncements = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  String _selectedFilter = 'all'; // 'all', 'urgent', 'policy', 'event'
-  bool _initialLoadDone = false;
+  String _selectedFilter = 'all';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAnnouncements();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when page becomes visible
-    if (!_initialLoadDone) {
-      _initialLoadDone = true;
-      return;
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadAnnouncements();
     }
-    _loadAnnouncements();
   }
 
   Future<void> _loadAnnouncements() async {

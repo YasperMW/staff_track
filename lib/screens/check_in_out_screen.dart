@@ -551,7 +551,7 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
     }
 
     // Get shift type from active attendance
-    final shift = activeAttendance!.shiftType ?? currentShift;
+    final shift = activeAttendance.shiftType ?? currentShift;
 
     if (shift.contains('Day Shift')) {
       // Early if before 16:30 for day shift

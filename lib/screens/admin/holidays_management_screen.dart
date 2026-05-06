@@ -305,37 +305,6 @@ class _HolidaysManagementScreenState extends State<HolidaysManagementScreen> {
       },
     );
   }
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Public Holidays',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.skyBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '${_filteredHolidays.length} holidays',
-            style: const TextStyle(
-              color: AppTheme.skyBlue,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFilters() {
     return Column(
       children: [
