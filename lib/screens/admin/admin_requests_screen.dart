@@ -16,17 +16,12 @@ class AdminRequestsScreen extends StatefulWidget {
 }
 
 class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
-  bool _isLoading = false;
-  List<AdminTeamRequest> _requests = [];
   List<AdminTeamRequest> _myRequests = [];
   List<AdminTeamRequest> _teamRequests = [];
   List<LeaveBalance> _leaveBalances = [];
   CompleteUserProfile? _userProfile;
   List<Grade> _grades = [];
   int _userAnnualLeaveDays = 21; // Default fallback
-  final String _filterStatus = 'pending';
-  final String _filterType = 'all';
-  final String _searchQuery = '';
   String? _userRole;
   bool _initialLoadDone = false;
 
@@ -165,39 +160,30 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   }
 
   Future<void> _loadRequests() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       // Load my requests and team requests separately
       final myRequestsFuture = RequestsService.getMyAdminRequests();
       final teamRequestsFuture = RequestsService.getAdminPendingRequests();
-      
+
       final results = await Future.wait([
-        myRequestsFuture, 
+        myRequestsFuture,
         teamRequestsFuture,
       ]);
-      
+
       // Load leave balances separately to avoid void result issue
       await _loadLeaveBalances();
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _myRequests = results[0];
         _teamRequests = results[1];
-        _requests = [..._myRequests, ..._teamRequests];
-        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       if (kDebugMode) {
         print('Error loading admin requests: $e');
       }
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load requests: $e')),
@@ -2009,178 +1995,4 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     );
   }
 
-  Widget _buildRequestItem(BuildContext context, AdminTeamRequest req) {
-    final bool isOwnRequest = req.isOwn;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: isOwnRequest
-            ? Border.all(
-                color: AppTheme.skyBlue.withValues(alpha: 0.3),
-                width: 1,
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: isOwnRequest
-                    ? AppTheme.lightGold.withValues(alpha: 0.1)
-                    : AppTheme.skyBlue.withValues(alpha: 0.1),
-                child: Text(
-                  req.userName.isNotEmpty ? req.userName[0] : '?',
-                  style: TextStyle(
-                    color: isOwnRequest ? AppTheme.lightGold : AppTheme.skyBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          req.userName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        if (isOwnRequest) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.lightGold.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'MY REQUEST',
-                              style: TextStyle(
-                                color: AppTheme.lightGold,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    Text(
-                      req.type,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.skyBlue,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                req.duration,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Icon(
-                Icons.calendar_today,
-                size: 14,
-                color: AppTheme.textLightBlue,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                req.dateRange,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textLightBlue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          if (isOwnRequest)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.hourglass_empty, size: 16, color: AppTheme.lightGold),
-                  SizedBox(width: 8),
-                  Text(
-                    'Pending Superior Approval',
-                    style: TextStyle(
-                      color: AppTheme.lightGold,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _handleDeny(req),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.paleRed,
-                      side: const BorderSide(color: AppTheme.paleRed),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Decline'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _showApprovalDetail(context, req),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Review'),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
 }
