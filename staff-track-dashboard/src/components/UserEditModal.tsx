@@ -101,6 +101,20 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
     }
   }, [formData.department_id, designations]);
 
+  // Auto-determine is_head_of_department based on selected designation name
+  useEffect(() => {
+    const selectedDesignation = designations.find(d => d.designation_id === formData.designation_id);
+    if (selectedDesignation) {
+      // Check if designation name contains "Head" or "HOD" (case insensitive)
+      const isHoD = selectedDesignation.name.toLowerCase().includes('head') || 
+                   selectedDesignation.name.toLowerCase().includes('hod');
+      setFormData(prev => ({ 
+        ...prev, 
+        is_head_of_department: isHoD
+      }));
+    }
+  }, [formData.designation_id, designations]);
+
   const loadDropdownData = async () => {
     try {
       const [rolesRes, departmentsRes, designationsRes, gradesRes] = await Promise.all([
@@ -132,7 +146,10 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!user) {
+      showError('No user selected');
+      return;
+    }
 
     // Check if role or department is being changed
     const roleChanged = formData.role_id !== originalRole;
@@ -157,7 +174,10 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
   };
 
   const performUpdate = async () => {
-    if (!user) return;
+    if (!user) {
+      showError('No user selected');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -186,8 +206,26 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
       
       if (response.success) {
         success('User updated successfully!');
-        onSave(response.data!);
-        onClose();
+        // Return updated user data - use existing user data as fallback
+        const updatedUser: User = {
+          ...(user || {}),
+          first_name: formData.first_name,
+          surname: formData.surname,
+          other_names: formData.other_names,
+          email: formData.email,
+          phone: formData.phone,
+          role_id: formData.role_id,
+          department_id: formData.department_id,
+          designation_id: formData.designation_id,
+          status: formData.status,
+          is_head_of_department: formData.is_head_of_department
+        };
+        if (onSave) {
+          onSave(updatedUser);
+        }
+        if (onClose) {
+          onClose();
+        }
       } else {
         showError(response.message || 'Failed to update user');
       }
@@ -433,18 +471,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="is_head_of_department"
-                  checked={formData.is_head_of_department}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Head of Department
-                </label>
               </div>
             </div>
           </div>

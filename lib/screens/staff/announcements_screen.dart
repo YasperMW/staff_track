@@ -122,8 +122,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> with WidgetsB
               onRefresh: _loadAnnouncements,
               color: AppTheme.skyBlue,
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppTheme.skyBlue),
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 200),
+                        Center(child: CircularProgressIndicator(color: AppTheme.skyBlue)),
+                      ],
                     )
                   : _buildAnnouncementsList(),
             ),
@@ -242,38 +246,46 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> with WidgetsB
 
   Widget _buildAnnouncementsList() {
     if (_filteredAnnouncements.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.announcement_outlined,
-              size: 64,
-              color: Colors.grey[400],
+      return ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.announcement_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No announcements found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Check back later for new announcements',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No announcements found',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Check back later for new announcements',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 24),
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: _filteredAnnouncements.length,
       itemBuilder: (context, index) {
         final announcement = _filteredAnnouncements[index];

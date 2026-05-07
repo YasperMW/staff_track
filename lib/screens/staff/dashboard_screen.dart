@@ -23,6 +23,15 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   late Timer _timer;
   String _timeString = '';
 
+  Future<void> _onRefresh() async {
+    final attendanceProvider = context.read<AttendanceProvider>();
+    await Future.wait([
+      attendanceProvider.loadTodayAttendance(),
+      attendanceProvider.loadRecentAttendance(limit: 5),
+      attendanceProvider.loadProfileMetrics(),
+    ]);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -197,39 +206,44 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Dashboard',
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Dashboard',
+                ),
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 16),
-                _buildGreeting(context),
-                const SizedBox(height: 24),
-                _buildClockInCard(),
-                const SizedBox(height: 24),
-                _buildStatsRow(context),
-                const SizedBox(height: 32),
-                _buildRecentActivityHeader(context),
-                const SizedBox(height: 16),
-                _buildRecentActivityList(context),
-                const SizedBox(height: 24),
-              ]),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 16),
+                  _buildGreeting(context),
+                  const SizedBox(height: 24),
+                  _buildClockInCard(),
+                  const SizedBox(height: 24),
+                  _buildStatsRow(context),
+                  const SizedBox(height: 32),
+                  _buildRecentActivityHeader(context),
+                  const SizedBox(height: 16),
+                  _buildRecentActivityList(context),
+                  const SizedBox(height: 24),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

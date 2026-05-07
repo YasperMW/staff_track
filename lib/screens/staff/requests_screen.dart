@@ -169,24 +169,25 @@ class _RequestsScreenState extends State<RequestsScreen> with WidgetsBindingObse
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Requests',
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Requests',
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: AppTheme.skyBlue,
+            SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -217,8 +218,8 @@ class _RequestsScreenState extends State<RequestsScreen> with WidgetsBindingObse
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -95,7 +95,7 @@ const Users: React.FC = () => {
 
   const handleUserSave = (updatedUser: User) => {
     // Update the user in the local state
-    setUsers(prev => prev.map(user => 
+    setUsers(prev => (prev || []).map(user => 
       user.user_id === updatedUser.user_id ? updatedUser : user
     ));
     setIsEditModalOpen(false);
@@ -114,7 +114,7 @@ const Users: React.FC = () => {
 
   const handleRoleChangeSuccess = (updatedUser: User) => {
     // Update the user in the local state
-    setUsers(prev => prev.map(user => 
+    setUsers(prev => (prev || []).map(user => 
       user.user_id === updatedUser.user_id ? updatedUser : user
     ));
     setIsRoleModalOpen(false);
@@ -260,6 +260,12 @@ const Users: React.FC = () => {
       label: 'Change Role',
       icon: <Key className="w-4 h-4" />,
       onClick: handleChangeRole,
+      variant: 'secondary' as const
+    }] : []),
+    ...(isSystemAdmin ? [{
+      label: 'Edit',
+      icon: <Edit className="w-4 h-4" />,
+      onClick: handleEditUser,
       variant: 'secondary' as const
     }] : []),
     {
