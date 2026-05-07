@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   BarChart3,
+  Award,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -66,6 +67,13 @@ const Layout: React.FC = () => {
       label: 'Roles',
       icon: Shield,
       path: '/roles',
+      section: 'management',
+      systemAdminOnly: true,
+    },
+    {
+      label: 'Grades',
+      icon: Award,
+      path: '/grades',
       section: 'management',
       systemAdminOnly: true,
     },
@@ -186,11 +194,11 @@ const Layout: React.FC = () => {
         }`}
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <img 
               src="/src/assets/logo.png" 
               alt="Staff Track Logo" 
-              className="w-10 h-10 rounded-xl object-contain"
+              className="w-20 h-20 rounded-xl object-contain"
             />
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white">Staff Track</h1>

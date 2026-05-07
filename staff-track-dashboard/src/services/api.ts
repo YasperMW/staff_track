@@ -47,6 +47,8 @@ export interface User {
   role_name: string;
   role?: string;
   department_name?: string;
+  grade_id?: string;
+  grade_name?: string;
 }
 
 export interface UserDocument {
@@ -87,6 +89,12 @@ export interface Designation {
   department_id: string;
   department_name?: string;
   created_at: string;
+}
+
+export interface Grade {
+  id: string;
+  name: string;
+  annual_leave_days: number;
 }
 
 export interface LoginRequest {
@@ -329,6 +337,33 @@ export const rolesApi = {
   },
 };
 
+// Grades API
+export const gradesApi = {
+  getAllGrades: async (): Promise<Grade[]> => {
+    const response = await api.get('/auth/grades');
+    return response.data;
+  },
+
+  createGrade: async (gradeData: { name: string; annual_leave_days: number }): Promise<Grade> => {
+    const response = await api.post('/api/grades', gradeData);
+    return response.data;
+  },
+
+  updateGrade: async (gradeId: string, gradeData: { name?: string; annual_leave_days?: number }): Promise<Grade> => {
+    const response = await api.put(`/api/grades/${gradeId}`, gradeData);
+    return response.data;
+  },
+
+  deleteGrade: async (gradeId: string): Promise<void> => {
+    await api.delete(`/api/grades/${gradeId}`);
+  },
+
+  updateUserGrade: async (userId: string, gradeId: string): Promise<any> => {
+    const response = await api.put(`/users/${userId}/grade`, { grade_id: gradeId });
+    return response.data;
+  },
+};
+
 // Attendance API
 export const attendanceApi = {
   getTodayAttendance: async (): Promise<any> => {
@@ -336,8 +371,9 @@ export const attendanceApi = {
     return response.data;
   },
 
-  getTeamTodaySummary: async (): Promise<any> => {
-    const response = await api.get('/attendance/team/today/summary');
+  getTeamTodaySummary: async (date?: string): Promise<any> => {
+    const url = date ? `/attendance/team/today/summary?date=${date}` : '/attendance/team/today/summary';
+    const response = await api.get(url);
     return response.data;
   },
 

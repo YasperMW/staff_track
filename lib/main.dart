@@ -7,6 +7,7 @@ import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'controllers/auth_provider.dart';
 import 'controllers/attendance_provider.dart';
+import 'controllers/navigation_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -33,6 +34,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
       child: const StaffTrackApp(),
     ),

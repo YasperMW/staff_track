@@ -180,14 +180,19 @@ class OrganizationService {
     }
   }
 
-  static Future<List<AppUser>> getAllStaff() async {
+  static Future<List<AppUser>> getAllStaff({String? departmentId}) async {
     final token = await AuthStorage.getToken();
     if (token == null) {
       throw Exception('User not authenticated');
     }
 
+    Uri uri = Uri.parse('${AppConfig.apiBaseUrl}/lookup/all-staff');
+    if (departmentId != null) {
+      uri = uri.replace(queryParameters: {'department_id': departmentId});
+    }
+
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/lookup/all-staff'),
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

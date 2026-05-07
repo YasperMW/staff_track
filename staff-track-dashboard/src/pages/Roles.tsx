@@ -107,28 +107,28 @@ const Roles: React.FC = () => {
 
   const getRoleColor = (roleName: string) => {
     const roleColors: Record<string, string> = {
-      'admin': 'bg-purple-500',
-      'administrator': 'bg-purple-500',
-      'hr': 'bg-blue-500',
-      'manager': 'bg-indigo-500',
-      'employee': 'bg-gray-500',
-      'staff': 'bg-green-500',
-      'doctor': 'bg-red-500',
-      'nurse': 'bg-pink-500',
+      'system admin': 'bg-purple-500',
+      'hr admin': 'bg-blue-500',
+      'head of department': 'bg-indigo-500',
+      'hr': 'bg-blue-400',
+      'accountant': 'bg-green-500',
+      'principal hospital administrator': 'bg-purple-400',
+      'system administrator': 'bg-purple-600',
+      'staff': 'bg-gray-500',
     };
     return roleColors[roleName.toLowerCase()] || 'bg-sky-blue';
   };
 
   const getRoleIcon = (roleName: string) => {
     const roleIcons: Record<string, React.ReactNode> = {
-      'admin': <Shield className="w-5 h-5" />,
-      'administrator': <Shield className="w-5 h-5" />,
+      'system admin': <Shield className="w-5 h-5" />,
+      'hr admin': <Users className="w-5 h-5" />,
+      'head of department': <Settings className="w-5 h-5" />,
       'hr': <Users className="w-5 h-5" />,
-      'manager': <Settings className="w-5 h-5" />,
-      'employee': <Users className="w-5 h-5" />,
+      'accountant': <Settings className="w-5 h-5" />,
+      'principal hospital administrator': <Shield className="w-5 h-5" />,
+      'system administrator': <Shield className="w-5 h-5" />,
       'staff': <Users className="w-5 h-5" />,
-      'doctor': <Shield className="w-5 h-5" />,
-      'nurse': <Users className="w-5 h-5" />,
     };
     return roleIcons[roleName.toLowerCase()] || <Shield className="w-5 h-5" />;
   };

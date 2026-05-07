@@ -41,16 +41,14 @@ Laravel Web Dashboard → FastAPI Backend
 FastAPI serves as the single source of business logic and API services. Laravel functions as a presentation layer for HR staff.
 
 ### 4. User Roles
-- HR Admin
-- Medical Director
-- Department Supervisor (Head of Department) – Can approve requests for their department
-- Doctor (potential approver depending on config)
-- Nurse
-- Clinical Officer
-- Support Staff
-- Accountant – Approves financial-impacting leaves
-- Principal Hospital Administrator – Final approver
-- System Admin (with managerial rights alongside HR)
+- System Admin – Full system access and technical management
+- HR Admin – Full HR system access and user management
+- Head of Department – Can approve requests for their department
+- HR – HR staff with limited HR functions
+- Accountant – Approves financial-impacting leaves and budgets
+- Principal Hospital Administrator – Final approver for hospital operations
+- System Administrator – IT infrastructure and system maintenance
+- Staff – Basic access for personal information
 
 **Note**: Approval permissions are role-based and configurable (e.g., via permissions matrix: can_approve_annual_leave, can_approve_maternity, etc.).
 
