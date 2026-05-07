@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../contexts/ToastContext';
-import { usersApi, rolesApi, departmentsApi, designationsApi } from '../services/api';
-import type { User, Role, Department, Designation } from '../services/api';
+import { usersApi, rolesApi, departmentsApi, designationsApi, gradesApi } from '../services/api';
+import type { User, Role, Department, Designation, Grade } from '../services/api';
 import { X, Save, AlertTriangle, Shield, Briefcase } from 'lucide-react';
 import Modal from './Modal';
 
@@ -19,6 +19,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
   const [departments, setDepartments] = useState<Department[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [filteredDesignations, setFilteredDesignations] = useState<Designation[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -30,12 +31,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
     role_id: '',
     department_id: '',
     designation_id: '',
+    grade_id: '',
     status: 'active',
     is_head_of_department: false
   });
 
   const [originalRole, setOriginalRole] = useState('');
   const [originalDepartment, setOriginalDepartment] = useState('');
+  const [originalGrade, setOriginalGrade] = useState('');
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
@@ -44,7 +47,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
     if (isOpen) {
       loadDropdownData();
       if (user) {
-        // Edit mode
         setFormData({
           first_name: user.first_name || '',
           surname: user.surname || '',
@@ -54,13 +56,14 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
           role_id: user.role_id || '',
           department_id: user.department_id || '',
           designation_id: user.designation_id || '',
+          grade_id: (user as any).grade_id || '',
           status: user.status || 'active',
           is_head_of_department: user.is_head_of_department || false
         });
         setOriginalRole(user.role_id || '');
         setOriginalDepartment(user.department_id || '');
+        setOriginalGrade((user as any).grade_id || '');
       } else {
-        // Create mode - reset form
         setFormData({
           first_name: '',
           surname: '',
@@ -70,11 +73,13 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
           role_id: '',
           department_id: '',
           designation_id: '',
+          grade_id: '',
           status: 'active',
           is_head_of_department: false
         });
         setOriginalRole('');
         setOriginalDepartment('');
+        setOriginalGrade('');
       }
     }
   }, [isOpen, user]);
@@ -98,15 +103,17 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
 
   const loadDropdownData = async () => {
     try {
-      const [rolesRes, departmentsRes, designationsRes] = await Promise.all([
+      const [rolesRes, departmentsRes, designationsRes, gradesRes] = await Promise.all([
         rolesApi.getAllRoles(),
         departmentsApi.getAllDepartments(),
-        designationsApi.getAllDesignations()
+        designationsApi.getAllDesignations(),
+        gradesApi.getAllGrades()
       ]);
 
       setRoles(rolesRes.roles || []);
       setDepartments(departmentsRes.departments || []);
       setDesignations(designationsRes.designations || []);
+      setGrades(gradesRes || []);
     } catch (err) {
       console.error('Error loading dropdown data:', err);
       showError('Failed to load dropdown options');
@@ -132,9 +139,12 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
     const departmentChanged = formData.department_id !== originalDepartment;
     
     // Show confirmation for sensitive changes
-    if (roleChanged || departmentChanged) {
+    const gradeChanged = formData.grade_id !== originalGrade;
+    if (roleChanged || departmentChanged || gradeChanged) {
       const message = roleChanged 
         ? `Are you sure you want to change this user's role? This will affect their system permissions.`
+        : gradeChanged
+        ? `Are you sure you want to change this user's grade? This will affect their annual leave entitlement.`
         : `Are you sure you want to change this user's department?`;
       
       setConfirmMessage(message);
@@ -151,6 +161,9 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
 
     setLoading(true);
     try {
+      const gradeChanged = formData.grade_id !== originalGrade;
+      
+      // Update user basic info
       const updateData = {
         first_name: formData.first_name,
         surname: formData.surname,
@@ -165,6 +178,11 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
       };
 
       const response = await usersApi.updateUser(user.user_id, updateData);
+      
+      // Update grade separately if changed
+      if (gradeChanged && formData.grade_id) {
+        await gradesApi.updateUserGrade(user.user_id, formData.grade_id);
+      }
       
       if (response.success) {
         success('User updated successfully!');
@@ -397,6 +415,24 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, isOpen, onClose, on
                     No designations available for this department
                   </p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Grade
+                </label>
+                <select
+                  name="grade_id"
+                  value={formData.grade_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                >
+                  <option value="">Select a grade</option>
+                  {grades.map(grade => (
+                    <option key={grade.id} value={grade.id}>
+                      {grade.name} ({grade.annual_leave_days} days)
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-center">
                 <input

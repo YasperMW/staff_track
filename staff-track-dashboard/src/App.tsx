@@ -9,6 +9,7 @@ import Users from './pages/Users';
 import UserDetails from './pages/UserDetails';
 import Departments from './pages/Departments';
 import Roles from './pages/Roles';
+import Grades from './pages/Grades';
 import Attendance from './pages/Attendance';
 import Requests from './pages/Requests';
 import Announcements from './pages/Announcements';
@@ -70,6 +71,16 @@ function App() {
                 }
               >
                 <Route index element={<Roles />} />
+              </Route>
+              <Route
+                path="/grades"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Grades />} />
               </Route>
               <Route
                 path="/attendance"

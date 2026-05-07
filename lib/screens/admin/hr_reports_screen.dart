@@ -24,6 +24,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
   List<DepartmentTodaySummary> _departments = [];
   dynamic _selectedStaff;
   DepartmentTodaySummary? _selectedDepartment;
+  DepartmentTodaySummary? _staffDepartmentFilter;
   DateTime? _startDate;
   DateTime? _endDate;
   String _reportType = 'individual';
@@ -37,21 +38,44 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoadingStaff = true);
     try {
-      final staffData = await OrganizationService.getAllStaff();
       final deptData = await OrganizationService.getAllDepartmentsToday();
       if (!mounted) return;
       setState(() {
-        _staffList = staffData;
         _departments = deptData;
         _isLoadingStaff = false;
         _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
         _endDate = DateTime.now();
       });
+      await _loadStaff();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoadingStaff = false);
       _showError('Failed to load data: $e');
     }
+  }
+
+  Future<void> _loadStaff({String? departmentId}) async {
+    setState(() => _isLoadingStaff = true);
+    try {
+      final staffData = await OrganizationService.getAllStaff(departmentId: departmentId);
+      if (!mounted) return;
+      setState(() {
+        _staffList = staffData;
+        _isLoadingStaff = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingStaff = false);
+      _showError('Failed to load staff: $e');
+    }
+  }
+
+  void _onDepartmentFilterChanged(DepartmentTodaySummary? department) {
+    setState(() {
+      _staffDepartmentFilter = department;
+      _selectedStaff = null;
+    });
+    _loadStaff(departmentId: department?.departmentId);
   }
 
   Future<void> _generateReport() async {
@@ -252,6 +276,32 @@ Widget _buildStaffSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text('Filter by Department (Optional)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _showDepartmentFilterPicker,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.filter_list, color: Colors.grey),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _staffDepartmentFilter?.departmentName ?? 'All Departments',
+                    style: TextStyle(fontSize: 16, color: _staffDepartmentFilter != null ? Colors.black87 : Colors.grey),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
         const Text('Select Staff Member', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
         const SizedBox(height: 12),
         GestureDetector(
@@ -320,6 +370,64 @@ Widget _buildStaffSelector() {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => _buildStaffPickerSheet(),
+    );
+  }
+
+  void _showDepartmentFilterPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => _buildDepartmentFilterPickerSheet(),
+    );
+  }
+
+  Widget _buildDepartmentFilterPickerSheet() {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.8,
+      expand: false,
+      builder: (ctx, scrollController) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Text('Filter by Department', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            title: const Text('All Departments'),
+            leading: const Icon(Icons.business),
+            onTap: () {
+              _onDepartmentFilterChanged(null);
+              Navigator.pop(context);
+            },
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollController,
+              itemCount: _departments.length,
+              itemBuilder: (ctx, index) {
+                final dept = _departments[index];
+                return ListTile(
+                  leading: const Icon(Icons.business),
+                  title: Text(dept.departmentName),
+                  onTap: () {
+                    _onDepartmentFilterChanged(dept);
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -231,20 +231,14 @@ class AnnouncementsService {
   // Helper to get available roles
   static List<String> getAvailableRoles() {
     return [
-      'Doctor',
-      'Nurse',
-      'Pharmacist',
-      'Lab Technician',
-      'Radiologist',
-      'Administrator',
+      'System Admin',
+      'HR Admin',
+      'Head of Department',
+      'HR',
       'Accountant',
-      'IT Support',
-      'HR Manager',
-      'Facility Manager',
-      'Security Officer',
-      'Cleaner',
-      'Cook',
-      'Receptionist',
+      'Principal Hospital Administrator',
+      'System Administrator',
+      'Staff',
     ];
   }
 }

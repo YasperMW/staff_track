@@ -136,15 +136,16 @@ staff-track-dashboard/
 
 ## User Roles and Access
 
-The dashboard supports multiple user roles with different access levels:
+The dashboard supports 8 system roles with different access levels:
 
-- **HR Admin** - Full system access and user management
-- **Medical Director** - Clinical staff oversight and approvals
-- **Department Supervisor** - Department-specific request approvals
-- **Doctor** - Limited clinical management functions
-- **Nurse** - Basic access for personal information
-- **Clinical Officer** - Mid-level clinical access
-- **Support Staff** - Basic access to personal information
+- **System Admin** - Full system access and technical management
+- **HR Admin** - Full HR system access and user management
+- **Head of Department** - Department-specific request approvals
+- **HR** - HR staff with limited HR functions
+- **Accountant** - Financial approvals and budget management
+- **Principal Hospital Administrator** - Final approver for hospital operations
+- **System Administrator** - IT infrastructure and system maintenance
+- **Staff** - Basic access for personal information
 
 ## Features
 

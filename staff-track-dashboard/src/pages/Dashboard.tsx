@@ -87,6 +87,7 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
+      const todayDate = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, '0')}-${String(currentTime.getDate()).padStart(2, '0')}`;
       const [
         attendanceSummary,
         requestsSummary,
@@ -95,7 +96,7 @@ const Dashboard: React.FC = () => {
         weeklyTrendData,
         deptDistData
       ] = await Promise.all([
-        attendanceApi.getTeamTodaySummary(),
+        attendanceApi.getTeamTodaySummary(todayDate),
         requestsApi.getRequestsSummary(),
         announcementsApi.getAnnouncements(3),
         attendanceApi.getRecentCheckIns(10),
@@ -235,11 +236,14 @@ const Dashboard: React.FC = () => {
 
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4 md:mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+            <div className="flex flex-col">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <p className="font-semibold text-sm md:text-base opacity-90">Today's Attendance</p>
               </div>
-              <p className="font-semibold text-sm md:text-base opacity-90">Today's Attendance</p>
+              <p className="text-xs md:text-sm opacity-75 mt-1 ml-11">{formatDate(currentTime)}</p>
             </div>
             <div className="px-2 py-1 md:px-3 md:py-1 bg-white bg-opacity-20 rounded-full text-xs font-semibold backdrop-blur-sm">
               {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

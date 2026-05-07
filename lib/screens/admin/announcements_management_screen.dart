@@ -1094,35 +1094,9 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
   }
 
   bool _isRoleInDepartment(String role, String department) {
-    // Simple mapping - in real app this would come from database
-    switch (department) {
-      case 'Medical':
-        return ['Doctor'].contains(role);
-      case 'Nursing':
-        return ['Nurse', 'Head Nurse'].contains(role);
-      case 'Pharmacy':
-        return ['Pharmacist'].contains(role);
-      case 'Laboratory':
-        return ['Lab Technician'].contains(role);
-      case 'Radiology':
-        return ['Radiologist'].contains(role);
-      case 'Administration':
-        return ['Administrator', 'Medical Director', 'Principal Hospital Administrator'].contains(role);
-      case 'Finance':
-        return ['Accountant'].contains(role);
-      case 'IT':
-        return ['IT Support'].contains(role);
-      case 'Human Resources':
-        return ['HR Manager'].contains(role);
-      case 'Facilities':
-        return ['Facility Manager'].contains(role);
-      case 'Security':
-        return ['Security Officer'].contains(role);
-      case 'Catering':
-        return ['Cook'].contains(role);
-      default:
-        return true;
-    }
+    // All system roles can receive announcements
+    // Department filtering is done at the department level, not role level
+    return true;
   }
 }
 
@@ -1411,34 +1385,8 @@ class _EditAnnouncementSheetState extends State<EditAnnouncementSheet> {
   }
 
   bool _isRoleInDepartment(String role, String department) {
-    // Simple mapping - in real app this would come from database
-    switch (department) {
-      case 'Medical':
-        return ['Doctor'].contains(role);
-      case 'Nursing':
-        return ['Nurse', 'Head Nurse'].contains(role);
-      case 'Pharmacy':
-        return ['Pharmacist'].contains(role);
-      case 'Laboratory':
-        return ['Lab Technician'].contains(role);
-      case 'Radiology':
-        return ['Radiologist'].contains(role);
-      case 'Administration':
-        return ['Administrator', 'Medical Director', 'Principal Hospital Administrator'].contains(role);
-      case 'Finance':
-        return ['Accountant'].contains(role);
-      case 'IT':
-        return ['IT Support'].contains(role);
-      case 'Human Resources':
-        return ['HR Manager'].contains(role);
-      case 'Facilities':
-        return ['Facility Manager'].contains(role);
-      case 'Security':
-        return ['Security Officer'].contains(role);
-      case 'Catering':
-        return ['Cook'].contains(role);
-      default:
-        return true;
-    }
+    // All system roles can receive announcements
+    // Department filtering is done at the department level, not role level
+    return true;
   }
 }

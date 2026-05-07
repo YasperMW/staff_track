@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../controllers/auth_provider.dart';
+import '../../controllers/navigation_provider.dart';
 import '../../models/models.dart';
 import '../../services/requests_service.dart';
 import '../../services/announcements_service.dart';
@@ -11,10 +12,8 @@ import 'package:intl/intl.dart';
 import '../../services/attendance_service.dart';
 import '../check_in_out_screen.dart';
 import 'announcements_management_screen.dart';
-import 'admin_requests_screen.dart';
-import 'admin_leave_policies_screen.dart';
-import 'admin_attendance_screen.dart';
 import 'hr_organization_screen.dart';
+import 'hr_reports_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -485,10 +484,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AdminRequestsScreen()),
-                  );
+                  context.read<NavigationProvider>().setIndex(2);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.paleRed,
@@ -501,30 +497,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 child: const Text(
                   'Review All Requests',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AdminLeavePoliciesScreen()),
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.skyBlue,
-                  side: const BorderSide(color: AppTheme.skyBlue),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  'Manage Leave Policies',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -565,37 +537,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildQuickAnalyticsSnapshot(BuildContext context) {
-    return Row(
+    final user = context.watch<AuthProvider>().user;
+    final role = user?.role.toLowerCase() ?? '';
+    final isHr = role.contains('hr') || role.contains('human resources') || role.contains('human resource');
+    final isSystemAdmin = role.contains('system admin') || role.contains('system administrator') || role.contains('sysadmin') || role.contains('it admin');
+    final canAccessReports = isHr || isSystemAdmin;
+
+    return Column(
       children: [
-        Expanded(
-          child: _buildAnalyticCard(
-            context,
-            Icons.group,
-            '$_teamPresentCount/$_teamTotalStaff',
-            'Staff Present',
-            AppTheme.skyBlue,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildAnalyticCard(
+                context,
+                Icons.group,
+                '$_teamPresentCount/$_teamTotalStaff',
+                'Staff Present',
+                AppTheme.skyBlue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildAnalyticCard(
+                context,
+                Icons.warning_amber_rounded,
+                '$_teamLateCount',
+                'Late Arrivals',
+                AppTheme.paleRed,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildAnalyticCard(
+                context,
+                Icons.person_off,
+                '$_teamAbsentCount',
+                'Absent',
+                AppTheme.paleRed,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildAnalyticCard(
-            context,
-            Icons.warning_amber_rounded,
-            '$_teamLateCount',
-            'Late Arrivals',
-            AppTheme.paleRed,
+        if (canAccessReports) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HrReportsScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.picture_as_pdf, size: 20),
+              label: const Text('Generate Reports'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.skyBlue,
+                side: const BorderSide(color: AppTheme.skyBlue),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildAnalyticCard(
-            context,
-            Icons.person_off,
-            '$_teamAbsentCount',
-            'Absent',
-            AppTheme.paleRed,
-          ),
-        ),
+        ],
       ],
     );
   }
@@ -851,9 +859,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildOrganizationCard(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final isHr = user?.role.toLowerCase().contains('hr') ?? false;
+    final role = user?.role.toLowerCase() ?? '';
+    final isHr = role.contains('hr') || role.contains('human resources') || role.contains('human resource');
+    final isSystemAdmin = role.contains('system admin') || role.contains('system administrator') || role.contains('sysadmin') || role.contains('it admin');
 
-    if (!isHr) return const SizedBox.shrink();
+    if (!isHr && !isSystemAdmin) return const SizedBox.shrink();
 
     return Container(
       width: double.infinity,
@@ -977,12 +987,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const Spacer(),
             TextButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdminAttendanceScreen(),
-                  ),
-                );
+                context.read<NavigationProvider>().setIndex(1);
               },
               child: const Row(
                 children: [

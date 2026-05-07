@@ -48,9 +48,8 @@ const CreateAnnouncementModal: React.FC<CreateAnnouncementModalProps> = ({
   ];
 
   const roles = [
-    'Doctor', 'Nurse', 'Pharmacist', 'Lab Technician', 'Radiologist',
-    'Administrator', 'Accountant', 'IT Support', 'HR Manager',
-    'Facility Manager', 'Security Officer', 'Cleaner', 'Cook', 'Receptionist'
+    'System Admin', 'HR Admin', 'Head of Department', 'HR',
+    'Accountant', 'Principal Hospital Administrator', 'System Administrator', 'Staff'
   ];
 
   useEffect(() => {

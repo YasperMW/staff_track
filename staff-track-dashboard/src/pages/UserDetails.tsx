@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, MapPin, Mail, Phone, User as UserIcon, Building, TrendingUp, Minus, FileText, Download, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
 import type { User, UserDocument } from '../services/api';
-import { usersApi } from '../services/api';
+import { usersApi, reportsApi } from '../services/api';
 import EmptyState from '../components/EmptyState';
 import { useSystemAdmin } from '../hooks/useSystemAdmin';
 import { useToast } from '../contexts/ToastContext';
@@ -58,101 +58,118 @@ const UserDetails: React.FC = () => {
     }
   };
 
+  const getAttendanceStatus = (checkInTime: string, shiftType?: string): string => {
+    if (!checkInTime) return 'absent';
+    
+    // Parse check-in time
+    const [hours, minutes] = checkInTime.split(':').map(Number);
+    const checkInMinutes = hours * 60 + minutes;
+    
+    // Determine expected start time based on shift type
+    let expectedStartMinutes = 7 * 60 + 30; // Default: 7:30 AM for Day Shift
+    
+    if (shiftType) {
+      const shift = shiftType.toLowerCase();
+      if (shift.includes('night')) {
+        expectedStartMinutes = 16 * 60 + 30; // 4:30 PM (16:30) for Night Shift
+      }
+      // Day Shift and Day Shift → Extended both start at 7:30 AM
+    }
+    
+    // On time if check-in is before or at exactly the start time
+    // Late if check-in is after the start time (e.g., after 07:30 for day shift)
+    const isLate = checkInMinutes > expectedStartMinutes;
+    
+    return isLate ? 'late' : 'on_time';
+  };
+
   const loadAttendanceHistory = async () => {
     try {
       setLoading(true);
-      // Mock attendance data for demonstration
-      const mockAttendance: AttendanceRecord[] = [
-        {
-          attendance_log_id: '1',
-          date: '2024-03-14',
-          check_in_time: '08:45',
-          check_out_time: '17:30',
-          work_hours: 8.75,
-          status: 'present',
-          shift_type: 'Day Shift',
-          location: 'Office - Main Building'
-        },
-        {
-          attendance_log_id: '2',
-          date: '2024-03-13',
-          check_in_time: '09:15',
-          check_out_time: '17:45',
-          work_hours: 8.5,
-          status: 'late',
-          shift_type: 'Day Shift',
-          location: 'Office - Main Building'
-        },
-        {
-          attendance_log_id: '3',
-          date: '2024-03-12',
-          check_in_time: '08:30',
-          check_out_time: '17:00',
-          work_hours: 8.5,
-          status: 'present',
-          shift_type: 'Day Shift',
-          location: 'Office - Main Building'
-        },
-        {
-          attendance_log_id: '4',
-          date: '2024-03-11',
-          check_in_time: '08:50',
-          check_out_time: undefined,
-          work_hours: undefined,
-          status: 'absent',
-          shift_type: undefined,
-          location: undefined
-        },
-        {
-          attendance_log_id: '5',
-          date: '2024-03-10',
-          check_in_time: '08:40',
-          check_out_time: '17:20',
-          work_hours: 8.67,
-          status: 'present',
-          shift_type: 'Day Shift',
-          location: 'Office - Main Building'
+      // Fetch last 30 days of attendance records
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const response = await reportsApi.getStaffPreview(userId!, startDate, endDate);
+      
+      console.log('Attendance API response:', response);
+      
+      // Transform the API response to match AttendanceRecord interface
+      const attendanceRecords: AttendanceRecord[] = (response.records || []).map((record: any, index: number) => {
+        const checkIn = record.check_in_time || '';
+        const checkOut = record.check_out_time || '';
+        
+        // Determine status based on check-in time and shift type
+        let status = 'absent';
+        if (checkIn) {
+          status = getAttendanceStatus(checkIn, record.shift_type);
         }
-      ];
-      setAttendance(mockAttendance);
+        
+        return {
+          attendance_log_id: `log_${index}`,
+          date: record.date,
+          check_in_time: checkIn,
+          check_out_time: checkOut || undefined,
+          work_hours: record.work_hours || undefined,
+          status: status,
+          shift_type: record.shift_type || undefined,
+          location: undefined
+        };
+      });
+      
+      setAttendance(attendanceRecords);
     } catch (error) {
       console.error('Error loading attendance history:', error);
+      setAttendance([]);
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusColors = {
+    const statusColors: Record<string, string> = {
       'present': 'status-present',
+      'on_time': 'status-present',
       'late': 'status-late',
       'absent': 'status-absent',
       'half_day': 'status-pending'
     };
     
-    return (
-      <span className={`status-badge ${statusColors[status as keyof typeof statusColors] || statusColors.present}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const getRoleBadge = (roleName: string) => {
-    const roleColors = {
-      'admin': 'bg-gradient-to-r from-purple-400 to-purple-600 text-white',
-      'hr': 'bg-gradient-to-r from-blue-400 to-blue-600 text-white',
-      'manager': 'bg-gradient-to-r from-indigo-400 to-indigo-600 text-white',
-      'employee': 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+    const statusLabels: Record<string, string> = {
+      'present': 'Present',
+      'on_time': 'On Time',
+      'late': 'Late',
+      'absent': 'Absent',
+      'half_day': 'Half Day'
     };
     
     return (
-      <span className={`status-badge ${roleColors[roleName.toLowerCase() as keyof typeof roleColors] || roleColors.employee}`}>
+      <span className={`status-badge ${statusColors[status] || statusColors.present}`}>
+        {statusLabels[status] || status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+     );
+    };
+
+    const getRoleBadge = (roleName: string) => {
+    const roleColors: Record<string, string> = {
+      'system admin': 'bg-gradient-to-r from-purple-400 to-purple-600 text-white',
+      'hr admin': 'bg-gradient-to-r from-blue-400 to-blue-600 text-white',
+      'head of department': 'bg-gradient-to-r from-indigo-400 to-indigo-600 text-white',
+      'hr': 'bg-gradient-to-r from-blue-300 to-blue-500 text-white',
+      'accountant': 'bg-gradient-to-r from-green-400 to-green-600 text-white',
+      'principal hospital administrator': 'bg-gradient-to-r from-purple-300 to-purple-500 text-white',
+      'system administrator': 'bg-gradient-to-r from-purple-500 to-purple-700 text-white',
+      'staff': 'bg-gradient-to-r from-gray-400 to-gray-600 text-white'
+    };
+
+    return (
+      <span className={`status-badge ${roleColors[roleName.toLowerCase()] || roleColors.staff}`}>
         {roleName}
       </span>
     );
   };
 
-  const formatDate = (dateString: string | null | undefined) => {
+    const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -162,26 +179,78 @@ const UserDetails: React.FC = () => {
     });
   };
 
-  const calculateStats = () => {
-    const totalDays = attendance.length;
-    const presentDays = attendance.filter(a => a.status === 'present').length;
-    const lateDays = attendance.filter(a => a.status === 'late').length;
-    const absentDays = attendance.filter(a => a.status === 'absent').length;
-    const totalHours = attendance.reduce((sum, a) => sum + (a.work_hours || 0), 0);
-    const avgHours = totalDays > 0 ? totalHours / presentDays : 0;
+    const calculateStats = () => {
+    const totalRecords = attendance.length;
+    
+    // Group records by date to get unique days
+    const recordsByDate = attendance.reduce((acc, record) => {
+      const date = record.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(record);
+      return acc;
+    }, {} as Record<string, AttendanceRecord[]>);
+    
+    const uniqueDays = Object.keys(recordsByDate).length;
+    
+    // For each unique day, determine status based on earliest check-in
+    let onTimeDays = 0;
+    let lateDays = 0;
+    
+    Object.values(recordsByDate).forEach(dayRecords => {
+      // Find the earliest check-in for that day
+      const earliestCheckIn = dayRecords
+        .filter(r => r.check_in_time)
+        .sort((a, b) => a.check_in_time.localeCompare(b.check_in_time))[0];
+      
+      if (earliestCheckIn) {
+        const shiftType = earliestCheckIn.shift_type;
+        const status = getAttendanceStatus(earliestCheckIn.check_in_time, shiftType);
+        if (status === 'on_time') {
+          onTimeDays++;
+        } else if (status === 'late') {
+          lateDays++;
+        }
+      }
+    });
+    
+    const presentDays = onTimeDays + lateDays;
+    
+    // Calculate days elapsed since first check-in
+    let totalElapsedDays = 0;
+    if (attendance.length > 0) {
+      // Find the earliest date in attendance records
+      const dates = attendance.map(r => new Date(r.date)).sort((a, b) => a.getTime() - b.getTime());
+      const firstCheckInDate = dates[0];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Calculate days elapsed from first check-in to today
+      const diffTime = today.getTime() - firstCheckInDate.getTime();
+      totalElapsedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+    }
+    
+    // Absent days = total elapsed days - unique days present
+    const absentDays = Math.max(0, totalElapsedDays - uniqueDays);
+    const totalHours = attendance.reduce((sum, a) => sum + (a.work_hours || 0),0);
+    const avgHours = presentDays > 0 ? totalHours / presentDays : 0;
 
     return {
-      totalDays,
+      totalRecords,
+      totalElapsedDays,
+      uniqueDays,
       presentDays,
+      onTimeDays,
       lateDays,
       absentDays,
       totalHours: Math.round(totalHours * 100) / 100,
       avgHours: Math.round(avgHours * 100) / 100,
-      attendanceRate: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+      attendanceRate: totalElapsedDays > 0 ? Math.round((presentDays / totalElapsedDays) * 100) : 0
     };
   };
 
-  if (!user) {
+    if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse">
@@ -372,68 +441,104 @@ const UserDetails: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Days</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalDays}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </div>
+         {/* Stats Cards */}
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Records</p>
+                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRecords}</p>
+               </div>
+               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
+                 <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+               </div>
+             </div>
+           </div>
 
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Present Days</p>
-                <p className="text-2xl font-bold text-green-600">{stats.presentDays}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </div>
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Days Elapsed</p>
+                 <p className="text-2xl font-bold text-indigo-600">{stats.totalElapsedDays || 0}</p>
+               </div>
+               <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-xl flex items-center justify-center">
+                 <Calendar className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+               </div>
+             </div>
+           </div>
 
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Late Days</p>
-                <p className="text-2xl font-bold text-amber-600">{stats.lateDays}</p>
-              </div>
-              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-          </div>
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">On Time</p>
+                 <p className="text-2xl font-bold text-green-600">{stats.onTimeDays || 0}</p>
+               </div>
+               <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
+                 <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+               </div>
+             </div>
+           </div>
 
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Absent Days</p>
-                <p className="text-2xl font-bold text-red-600">{stats.absentDays}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-xl flex items-center justify-center">
-                <Minus className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-          </div>
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Late Days</p>
+                 <p className="text-2xl font-bold text-amber-600">{stats.lateDays}</p>
+               </div>
+               <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-xl flex items-center justify-center">
+                 <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+               </div>
+             </div>
+           </div>
 
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Attendance Rate</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.attendanceRate}%</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-          </div>
-        </div>
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Present Days</p>
+                 <p className="text-2xl font-bold text-blue-600">{stats.presentDays}</p>
+               </div>
+               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
+                 <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+               </div>
+             </div>
+           </div>
+
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Absent Days</p>
+                 <p className="text-2xl font-bold text-red-600">{stats.absentDays}</p>
+               </div>
+               <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-xl flex items-center justify-center">
+                 <Minus className="w-6 h-6 text-red-600 dark:text-red-400" />
+               </div>
+             </div>
+           </div>
+
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Hours</p>
+                 <p className="text-2xl font-bold text-cyan-600">{stats.totalHours}</p>
+               </div>
+               <div className="w-12 h-12 bg-cyan-100 dark:bg-cyan-900 rounded-xl flex items-center justify-center">
+                 <Clock className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+               </div>
+             </div>
+           </div>
+
+           <div className="card">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-sm text-gray-600 dark:text-gray-400">Attendance Rate</p>
+                 <p className="text-2xl font-bold text-purple-600">{stats.attendanceRate}%</p>
+               </div>
+               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
+                 <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+               </div>
+             </div>
+           </div>
+         </div>
 
         {/* Tabs */}
         <div className="card">
@@ -551,9 +656,9 @@ const UserDetails: React.FC = () => {
                         {attendance.map((record) => (
                           <tr key={record.attendance_log_id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                             <td className="p-3">{formatDate(record.date)}</td>
-                            <td className="p-3">{record.check_in_time}</td>
-                            <td className="p-3">{record.check_out_time || '-'}</td>
-                            <td className="p-3">{record.work_hours || '-'}</td>
+                         <td className="p-3">{record.check_in_time}</td>
+                             <td className="p-3">{record.check_out_time || '-'}</td>
+                             <td className="p-3">{record.work_hours ? Number(record.work_hours).toFixed(1) : '-'}</td>
                             <td className="p-3">{getStatusBadge(record.status)}</td>
                             <td className="p-3">{record.shift_type || '-'}</td>
                           </tr>

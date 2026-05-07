@@ -267,12 +267,12 @@ class AppUser {
   bool get isApprover {
     final approverRoles = [
       'HR Admin',
-      'Medical Director',
-      'Department Supervisor',
-      'Doctor',
+      'Head of Department',
       'Accountant',
       'Principal Hospital Administrator',
       'System Admin',
+      'System Administrator',
+      'HR',
     ];
     return approverRoles.contains(role);
   }

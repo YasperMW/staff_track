@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_provider.dart';
 import '../../controllers/attendance_provider.dart';
+import '../../controllers/navigation_provider.dart';
 import '../../widgets/floating_navigation.dart';
 import 'staff/dashboard_screen.dart';
 import 'admin/admin_dashboard_screen.dart';
@@ -23,12 +24,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late int _currentIndex;
-
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    Future.microtask(() {
+      if (mounted) {
+        context.read<NavigationProvider>().setIndex(widget.initialIndex);
+      }
+    });
 
     Future.microtask(() {
       if (mounted) {
@@ -64,17 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screens = _getScreens();
+    final currentIndex = context.watch<NavigationProvider>().currentIndex;
     return FloatingNavigation(
-      currentIndex: _currentIndex,
+      currentIndex: currentIndex,
       onTap: (index) {
-        if (_currentIndex != index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        }
+        context.read<NavigationProvider>().setIndex(index);
       },
       child: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: screens,
       ),
     );
