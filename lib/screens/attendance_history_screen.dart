@@ -185,18 +185,17 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadAttendanceData,
-        child: Column(
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             if (summary != null) _buildSummaryCard(),
             if (startDate != null && endDate != null) _buildDateFilterInfo(),
-            Expanded(
-              child: AsyncContent(
-                isLoading: isLoading,
-                isEmpty: attendanceHistory.isEmpty,
-                loading: const Center(child: CircularProgressIndicator()),
-                empty: _buildEmptyState(),
-                builder: _buildAttendanceList,
-              ),
+            AsyncContent(
+              isLoading: isLoading,
+              isEmpty: attendanceHistory.isEmpty,
+              loading: const Center(child: CircularProgressIndicator()),
+              empty: _buildEmptyState(),
+              builder: _buildAttendanceList,
             ),
           ],
         ),
@@ -574,6 +573,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   Widget _buildAttendanceList() {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: attendanceHistory.length,
       itemBuilder: (context, index) {
         final attendance = attendanceHistory[index];

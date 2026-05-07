@@ -380,56 +380,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refreshLookupData,
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 20),
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(40),
-                        topRight: Radius.circular(40),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, -5),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 20),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(40),
+                          topRight: Radius.circular(40),
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildStepIndicator(),
-                          const SizedBox(height: 32),
-                          Expanded(
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                PageView(
-                                  controller: _pageController,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  onPageChanged: (int page) {
-                                    setState(() => _currentStep = page);
-                                    _checkScrollNeed();
-                                  },
-                                  children: [
-                                    _buildPersonalDetailsStep(theme),
-                                    _buildLocationStep(theme),
-                                    _buildFamilyDetailsStep(theme),
-                                    _buildWorkDetailsStep(theme),
-                                    _buildSecurityStep(theme),
-                                    _buildProfileStep(theme),
-                                  ],
-                                ),
-                                if (_showScrollHint)
-                                  _buildScrollHint(theme),
-                              ],
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, -5),
                           ),
-                          _buildNavigationButtons(theme),
                         ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            _buildStepIndicator(),
+                            const SizedBox(height: 32),
+                            _buildFormContent(theme),
+                            const SizedBox(height: 32),
+                            _buildNavigationButtons(theme),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -442,7 +422,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildScrollHint(ThemeData theme) {
+  Widget _buildFormContent(ThemeData theme) {
+  return Stack(
+    alignment: Alignment.bottomCenter,
+    children: [
+      PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (int page) {
+          setState(() => _currentStep = page);
+          _checkScrollNeed();
+        },
+        children: [
+          _buildPersonalDetailsStep(theme),
+          _buildLocationStep(theme),
+          _buildFamilyDetailsStep(theme),
+          _buildWorkDetailsStep(theme),
+          _buildSecurityStep(theme),
+          _buildProfileStep(theme),
+        ],
+      ),
+      if (_showScrollHint)
+        _buildScrollHint(theme),
+    ],
+  );
+}
+
+Widget _buildScrollHint(ThemeData theme) {
     return TweenAnimationBuilder<double>(
       duration: const Duration(milliseconds: 500),
       tween: Tween(begin: 0, end: 1),

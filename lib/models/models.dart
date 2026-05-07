@@ -233,9 +233,14 @@ class AppUser {
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
+    final rawName = json['name']?.toString();
+    final firstName = (json['first_name'] ?? json['firstName'])?.toString();
+    final surname = (json['surname'] ?? json['last_name'] ?? json['lastName'])?.toString();
+    final fallbackName = [firstName, surname].where((p) => p != null && p.trim().isNotEmpty).map((p) => p!.trim()).join(' ');
+
     return AppUser(
       id: json['id']?.toString() ?? json['user_id']?.toString() ?? '',
-      name: json['name']?.toString() ?? '',
+      name: (rawName != null && rawName.trim().isNotEmpty) ? rawName.trim() : fallbackName,
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString(),
       role: json['role']?.toString() ?? '',

@@ -88,24 +88,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> with WidgetsBinding
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Attendance',
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Attendance',
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: AppTheme.skyBlue,
+            SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -152,8 +153,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> with WidgetsBinding
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

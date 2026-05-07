@@ -119,52 +119,55 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: RefreshIndicator(
         onRefresh: _onRefresh,
         color: AppTheme.skyBlue,
-        child: Column(
-          children: [
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
             if (unreadCount > 0)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.skyBlue.withValues(alpha: 0.1),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: AppTheme.skyBlue.withValues(alpha: 0.2),
-                      width: 1,
+              SliverToBoxAdapter(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.skyBlue.withValues(alpha: 0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: AppTheme.skyBlue.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.mark_email_read_outlined,
-                      color: AppTheme.skyBlue,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          color: AppTheme.skyBlue,
-                          fontWeight: FontWeight.w600,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.mark_email_read_outlined,
+                        color: AppTheme.skyBlue,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '$unreadCount unread notification${unreadCount == 1 ? '' : 's'}',
+                          style: TextStyle(
+                            color: AppTheme.skyBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: _markAllAsRead,
-                      child: Text(
-                        'Mark all as read',
-                        style: TextStyle(
-                          color: AppTheme.skyBlue,
-                          fontWeight: FontWeight.w500,
+                      TextButton(
+                        onPressed: _markAllAsRead,
+                        child: Text(
+                          'Mark all as read',
+                          style: TextStyle(
+                            color: AppTheme.skyBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            Expanded(
+            SliverFillRemaining(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : notifications.isEmpty

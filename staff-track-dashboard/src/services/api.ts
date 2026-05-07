@@ -397,6 +397,18 @@ export const attendanceApi = {
     const response = await api.post('/attendance/checkout', locationData);
     return response.data;
   },
+
+  // New endpoint for all staff attendance with date filtering
+  getAllStaffAttendance: async (startDate?: string, endDate?: string, viewType: string = 'summary', page: number = 1, limit: number = 100): Promise<any> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    params.append('view_type', viewType);
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    const response = await api.get(`/attendance/all?${params.toString()}`);
+    return response.data;
+  },
 };
 
 // Requests API

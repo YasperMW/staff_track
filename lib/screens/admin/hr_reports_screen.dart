@@ -10,6 +10,7 @@ import '../../config/app_config.dart';
 import '../../services/auth_storage.dart';
 import '../../widgets/simple_header.dart';
 import '../../services/organization_service.dart';
+import '../../models/models.dart';
 
 class HrReportsScreen extends StatefulWidget {
   const HrReportsScreen({super.key});
@@ -20,14 +21,24 @@ class HrReportsScreen extends StatefulWidget {
 
 class _HrReportsScreenState extends State<HrReportsScreen> {
   bool _isLoadingStaff = false;
-  List<dynamic> _staffList = [];
+  List<AppUser> _staffList = [];
   List<DepartmentTodaySummary> _departments = [];
-  dynamic _selectedStaff;
+  AppUser? _selectedStaff;
   DepartmentTodaySummary? _selectedDepartment;
   DepartmentTodaySummary? _staffDepartmentFilter;
   DateTime? _startDate;
   DateTime? _endDate;
   String _reportType = 'individual';
+
+  String _getInitialsFromName(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '';
+    final first = parts.first;
+    final last = parts.length > 1 ? parts.last : '';
+    final firstInitial = first.isNotEmpty ? first[0] : '';
+    final lastInitial = last.isNotEmpty ? last[0] : '';
+    return (firstInitial + lastInitial).toUpperCase();
+  }
 
   @override
   void initState() {
@@ -103,7 +114,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
       
       String url;
       if (_reportType == 'individual') {
-        url = '${AppConfig.apiBaseUrl}/attendance/reports/attendance/pdf/${_selectedStaff['user_id']}$queryString';
+        url = '${AppConfig.apiBaseUrl}/attendance/reports/attendance/pdf/${_selectedStaff!.id}$queryString';
       } else {
         url = '${AppConfig.apiBaseUrl}/attendance/reports/department/pdf$queryString';
       }
@@ -126,7 +137,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
         final directory = await getTemporaryDirectory();
         final stamp = DateTime.now().millisecondsSinceEpoch;
         final fileName = _reportType == 'individual' 
-            ? 'attendance_${_selectedStaff['surname'] ?? 'report'}_$stamp.pdf'
+            ? 'attendance_${_selectedStaff!.name.isNotEmpty ? _selectedStaff!.name : 'report'}_$stamp.pdf'
             : 'department_report_$stamp.pdf';
         final file = File('${directory.path}/$fileName');
         await file.writeAsBytes(response.bodyBytes);
@@ -135,7 +146,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
           ShareParams(
             files: [XFile(file.path)],
             text: _reportType == 'individual'
-                ? 'Attendance Report - ${_selectedStaff['first_name']} ${_selectedStaff['surname']}'
+                ? 'Attendance Report - ${_selectedStaff!.name}'
                 : 'Department Attendance Report',
           ),
         );
@@ -272,7 +283,7 @@ class _HrReportsScreenState extends State<HrReportsScreen> {
     );
   }
 
-Widget _buildStaffSelector() {
+  Widget _buildStaffSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -318,7 +329,7 @@ Widget _buildStaffSelector() {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _selectedStaff != null ? '${_selectedStaff['first_name']} ${_selectedStaff['surname']}' : 'Select staff member',
+                    _selectedStaff != null ? _selectedStaff!.name : 'Select staff member',
                     style: TextStyle(fontSize: 16, color: _selectedStaff != null ? Colors.black87 : Colors.grey),
                   ),
                 ),
@@ -461,10 +472,10 @@ Widget _buildStaffSelector() {
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: AppTheme.skyBlue,
-                          child: Text('${staff['first_name']?[0]}${staff['surname']?[0]}', style: const TextStyle(color: Colors.white)),
+                          child: Text(_getInitialsFromName(staff.name), style: const TextStyle(color: Colors.white)),
                         ),
-                        title: Text('${staff['first_name']} ${staff['surname']}'),
-                        subtitle: Text(staff['email'] ?? ''),
+                        title: Text(staff.name),
+                        subtitle: Text(staff.email),
                         onTap: () {
                           setState(() => _selectedStaff = staff);
                           Navigator.pop(context);
