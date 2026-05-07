@@ -46,3 +46,4 @@ app.*.map.json
 android/app/google-services.json
 staff-track-dashboard/.env
 staff-track-dashboard/.env
+staff-track-dashboard/.env

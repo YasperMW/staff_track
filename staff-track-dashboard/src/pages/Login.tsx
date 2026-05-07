@@ -87,7 +87,7 @@ const Login: React.FC = () => {
             <img 
               src="/src/assets/logo.png" 
               alt="Staff Track Logo" 
-              className="w-50 h-50 object-contain"
+              className="w-30 h-30 object-contain"
             />
           </div>
           <h1 className="text-3xl font-bold text-text-dark dark:text-text-dark-light mb-2">Staff Track</h1>

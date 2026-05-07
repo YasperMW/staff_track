@@ -38,6 +38,8 @@ export interface User {
   registration_timestamp?: string;
   selfie_verified: boolean;
   last_login_at?: string;
+  failed_login_attempts?: number;
+  locked_until?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
@@ -258,6 +260,21 @@ export const usersApi = {
 
   deleteUser: async (userId: string): Promise<ApiResponse<null>> => {
     const response = await api.delete(`/users/users/${userId}`);
+    return response.data;
+  },
+
+  lockUserAccount: async (userId: string, lockDurationMinutes: number | null, passwordConfirmation: string): Promise<ApiResponse<null>> => {
+    const response = await api.put(`/users/users/${userId}/lock`, {
+      lock_duration_minutes: lockDurationMinutes,
+      password_confirmation: passwordConfirmation,
+    });
+    return response.data;
+  },
+
+  hardDeleteUserAccount: async (userId: string, passwordConfirmation: string): Promise<ApiResponse<null>> => {
+    const response = await api.delete(`/users/users/${userId}/hard-delete`, {
+      data: { password_confirmation: passwordConfirmation },
+    });
     return response.data;
   },
 };
