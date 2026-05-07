@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, MapPin, Mail, Phone, User as UserIcon, Building, TrendingUp, Minus, FileText, Download, Eye } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Mail, Phone, User as UserIcon, Building, TrendingUp, Minus, FileText, Download, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
 import type { User, UserDocument } from '../services/api';
 import { usersApi } from '../services/api';
 import EmptyState from '../components/EmptyState';
+import { useSystemAdmin } from '../hooks/useSystemAdmin';
+import { useToast } from '../contexts/ToastContext';
 
 interface AttendanceRecord {
   attendance_log_id: string;
@@ -19,11 +21,19 @@ interface AttendanceRecord {
 const UserDetails: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { isSystemAdmin } = useSystemAdmin();
+  const toast = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [documents, setDocuments] = useState<UserDocument[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'details' | 'attendance' | 'documents'>('details');
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [lockDuration, setLockDuration] = useState<string>('');
+  const [lockPassword, setLockPassword] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -181,6 +191,44 @@ const UserDetails: React.FC = () => {
     );
   }
 
+  const handleLockAccount = async () => {
+    if (!lockPassword) {
+      toast.error('Please enter your password to confirm');
+      return;
+    }
+    setProcessing(true);
+    try {
+      const duration = lockDuration ? parseInt(lockDuration) : null;
+      await usersApi.lockUserAccount(userId!, duration, lockPassword);
+      toast.success(duration ? `Account locked for ${duration} minutes` : 'Account lock removed');
+      setShowLockModal(false);
+      setLockDuration('');
+      setLockPassword('');
+      loadUserDetails();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to lock account');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      toast.error('Please enter your password to confirm');
+      return;
+    }
+    setProcessing(true);
+    try {
+      await usersApi.hardDeleteUserAccount(userId!, deletePassword);
+      toast.success('Account permanently deleted');
+      navigate('/users');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to delete account');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const stats = calculateStats();
 
   return (
@@ -227,14 +275,33 @@ const UserDetails: React.FC = () => {
                     {user.first_name} {user.surname}
                   </h2>
                   <p className="text-lg text-gray-600 dark:text-gray-400">{user.employee_number}</p>
-                  <div className="flex items-center space-x-3 mt-2">
-                    {getRoleBadge(user.role_name)}
-                    <span className={`status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                   <div className="flex items-center space-x-3 mt-2">
+                     {getRoleBadge(user.role_name)}
+                     <span className={`status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}`}>
+                       {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                     </span>
+                   </div>
+                 </div>
+               </div>
+
+               {isSystemAdmin && (
+                 <div className="flex items-center space-x-3 mb-6">
+                   <button
+                     onClick={() => setShowLockModal(true)}
+                     className="flex items-center space-x-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                   >
+                     {user.locked_until ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                     <span>{user.locked_until ? 'Unlock Account' : 'Lock Account'}</span>
+                   </button>
+                   <button
+                     onClick={() => setShowDeleteModal(true)}
+                     className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                   >
+                     <Trash2 className="w-4 h-4" />
+                     <span>Delete Account</span>
+                   </button>
+                 </div>
+               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -547,6 +614,120 @@ const UserDetails: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Lock Account Modal */}
+      {showLockModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowLockModal(false)} />
+            <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  {user.locked_until ? 'Unlock Account' : 'Lock Account'}
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {user.locked_until
+                    ? `Remove the lock on ${user.first_name} ${user.surname}'s account?`
+                    : `Set a temporary lock on ${user.first_name} ${user.surname}'s account.`}
+                </p>
+                {!user.locked_until && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Lock Duration (minutes) - leave empty to unlock manually later
+                    </label>
+                    <input
+                      type="number"
+                      value={lockDuration}
+                      onChange={(e) => setLockDuration(e.target.value)}
+                      placeholder="e.g. 30"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      min="1"
+                    />
+                  </div>
+                )}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Your Password (confirmation)
+                  </label>
+                  <input
+                    type="password"
+                    value={lockPassword}
+                    onChange={(e) => setLockPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => { setShowLockModal(false); setLockDuration(''); setLockPassword(''); }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    disabled={processing}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLockAccount}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                    disabled={processing}
+                  >
+                    {processing ? 'Processing...' : user.locked_until ? 'Unlock' : 'Lock'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setShowDeleteModal(false)} />
+            <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-red-600 mb-4">
+                  Delete Account Permanently
+                </h2>
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-800 dark:text-red-300">
+                    Warning: This action cannot be undone. This will permanently delete the account
+                    <strong> {user.first_name} {user.surname}</strong> ({user.email}) and all associated data.
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Your Password (confirmation)
+                  </label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => { setShowDeleteModal(false); setDeletePassword(''); }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    disabled={processing}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    disabled={processing}
+                  >
+                    {processing ? 'Processing...' : 'Delete Permanently'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
