@@ -46,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
     
     final isAdmin = user.role.toLowerCase().contains('admin') || 
                   user.role.toLowerCase().contains('hr') || 
-                  user.role.toLowerCase().contains('manager');
+                  user.role.toLowerCase().contains('manager') ||
+                  user.role.toLowerCase().contains('head') ||
+                  user.role.toLowerCase().contains('accountant') ||
+                  user.role.toLowerCase().contains('finance');
     
     if (isAdmin) {
       return [

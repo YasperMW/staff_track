@@ -54,6 +54,7 @@ class AdminTeamRequest {
   final int approvalLevel;
   final bool leaveGrantRequired;
   final String? contactAddress;
+  final bool userHasActed;
   // Trip fields
   final String? reasonForLeaving;
   final String? travelDate;
@@ -78,6 +79,7 @@ class AdminTeamRequest {
     this.approvalLevel = 1,
     this.leaveGrantRequired = false,
     this.contactAddress,
+    this.userHasActed = false,
     this.reasonForLeaving,
     this.travelDate,
     this.travelPlace,
@@ -116,6 +118,7 @@ class AdminTeamRequest {
       approvalLevel: (json['approval_level'] as num?)?.toInt() ?? 1,
       leaveGrantRequired: json['leave_grant_required'] == true,
       contactAddress: json['contact_address'] as String?,
+      userHasActed: json['user_has_acted'] == true,
       reasonForLeaving: json['reason_for_leaving'] as String?,
       travelDate: json['travel_date'] as String?,
       travelPlace: json['travel_place'] as String?,

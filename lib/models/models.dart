@@ -221,6 +221,7 @@ class AppUser {
   final String role;
   final String department;
   final String profileImage;
+  final bool isHeadOfDepartment;
 
   AppUser({
     required this.id,
@@ -230,6 +231,7 @@ class AppUser {
     required this.role,
     required this.department,
     required this.profileImage,
+    this.isHeadOfDepartment = false,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -246,6 +248,7 @@ class AppUser {
       role: json['role']?.toString() ?? '',
       department: json['department']?.toString() ?? '',
       profileImage: json['profile_image']?.toString() ?? json['profileImage']?.toString() ?? '',
+      isHeadOfDepartment: json['is_head_of_department'] as bool? ?? false,
     );
   }
 
@@ -257,6 +260,7 @@ class AppUser {
     String? role,
     String? department,
     String? profileImage,
+    bool? isHeadOfDepartment,
   }) {
     return AppUser(
       id: id ?? this.id,
@@ -266,6 +270,7 @@ class AppUser {
       role: role ?? this.role,
       department: department ?? this.department,
       profileImage: profileImage ?? this.profileImage,
+      isHeadOfDepartment: isHeadOfDepartment ?? this.isHeadOfDepartment,
     );
   }
 

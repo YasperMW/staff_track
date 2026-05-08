@@ -825,6 +825,7 @@ class _RequestsScreenState extends State<RequestsScreen> with WidgetsBindingObse
                     else
                       ...approvals.map((a) {
                         final action = a['action']?.toString() ?? '';
+                        final isApproved = action.toLowerCase() == 'approve' || action.toLowerCase() == 'approved';
                         final comment = a['comment']?.toString() ?? '';
                         final ts = a['timestamp']?.toString() ?? '';
                         final name = a['approver_name']?.toString() ?? 'Approver';
@@ -883,13 +884,13 @@ class _RequestsScreenState extends State<RequestsScreen> with WidgetsBindingObse
                               Row(
                                 children: [
                                   Icon(
-                                    action == 'approved' ? Icons.check_circle : Icons.cancel,
+                                    isApproved ? Icons.check_circle : Icons.cancel,
                                     size: 18,
-                                    color: action == 'approved' ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
+                                    color: isApproved ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
                                   ),
                                   const SizedBox(width: 10),
                                   Text(
-                                    '$name - ${action.toUpperCase()}',
+                                    '$name - ${isApproved ? 'APPROVED' : 'DENIED'}',
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                   const Spacer(),

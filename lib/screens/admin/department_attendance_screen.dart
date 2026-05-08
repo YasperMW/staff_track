@@ -55,54 +55,51 @@ class _DepartmentAttendanceScreenState extends State<DepartmentAttendanceScreen>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: SafeArea(
-              child: AppHeader(
-                subtitle: widget.departmentName,
-                onBack: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _loadAttendance,
-              color: AppTheme.skyBlue,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        "Today's Attendance",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      if (total > 0) ...[
-                        _buildSummaryRow(present, absent, late, total),
-                        const SizedBox(height: 24),
-                      ],
-                      _buildStaffList(),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+      body: RefreshIndicator(
+        onRefresh: _loadAttendance,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: SafeArea(
+                child: AppHeader(
+                  subtitle: widget.departmentName,
+                  onBack: () => Navigator.of(context).pop(),
                 ),
               ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      "Today's Attendance",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (total > 0) ...[
+                      _buildSummaryRow(present, absent, late, total),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildStaffList(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
