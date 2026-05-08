@@ -127,6 +127,9 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
   
   int? _getUserApprovalLevelForRequest(AdminTeamRequest req) {
     if (_userRole == null) return null;
+    if (req.isOwn) return null;
+    if (req.status.toLowerCase() != 'pending') return null;
+    if (req.userHasActed) return null;
     final r = _userRole!.toLowerCase().trim();
     final isSystemAdmin = r.contains('system admin') || r.contains('system administrator') || r.contains('sysadmin') || r.contains('it admin');
     if (isSystemAdmin) return null;
@@ -134,16 +137,24 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     final isHr = r.contains('hr') || r.contains('human resources') || r.contains('human resource');
     final isHospitalAdmin = r.contains('hospital administrator') || r.contains('principal administrator');
     final isAccountant = r.contains('accountant') || r.contains('finance');
+
+    // Determine what level this user can approve at (based on their role)
+    int? myLevel;
     if (req.type.toLowerCase() == 'leave duty station') {
-      if (isAccountant) return 1;
-      if (isHod) return 2;
-      if (isHospitalAdmin) return 3;
+      if (isAccountant) myLevel = 1;
+      if (isHod) myLevel = 2;
+      if (isHospitalAdmin) myLevel = 3;
     } else {
-      if (isHod) return 1;
-      if (isHr) return 2;
-      if (isHospitalAdmin) return 3;
+      if (isHod) myLevel = 1;
+      if (isHr) myLevel = 2;
+      if (isHospitalAdmin) myLevel = 3;
+      if (isAccountant) myLevel = 4;
     }
-    return null;
+
+    if (myLevel == null) return null;
+
+    // All approvers can see and approve pending requests - no level restriction
+    return myLevel;
   }
 
   Future<void> _loadLeaveBalances() async {
@@ -221,74 +232,63 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     }
   }
 
-  Future<void> _handleDeny(AdminTeamRequest req) async {
-    try {
-      await RequestsService.denyRequest(req.id);
-      await _loadRequests();
-    } catch (e) {
-      //handle error
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Requests',
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: AppTheme.skyBlue,
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        'Manage leave and WFH requests',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          _buildAddButton(),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _buildLeaveBalanceSummary(context),
-                      const SizedBox(height: 24),
-                      _buildRequestStatusSummary(context),
-                      const SizedBox(height: 24),
-                      _buildMyRequestsSection(context),
-                      const SizedBox(height: 32),
-                      _buildTeamRequestsSection(context),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Requests',
                 ),
               ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      'Manage leave and WFH requests',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildAddButton(),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildLeaveBalanceSummary(context),
+                    const SizedBox(height: 24),
+                    _buildRequestStatusSummary(context),
+                    const SizedBox(height: 24),
+                    _buildMyRequestsSection(context),
+                    const SizedBox(height: 32),
+                    _buildTeamRequestsSection(context),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -459,7 +459,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
     int myPendingCount = 0;
     int teamPendingCount = 0;
 
-    // Count my requests
+    // Count my requests (requests I submitted)
     for (var request in _myRequests) {
       final status = request.status.toLowerCase();
       if (status == 'approved') {
@@ -469,10 +469,13 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
       }
     }
 
-    // Count team pending requests
+    // Count team pending requests that need MY action
     for (var request in _teamRequests) {
-      if (request.status.toLowerCase() == 'pending') {
-        teamPendingCount++;
+      if (request.status.toLowerCase() == 'pending' && !request.isOwn) {
+        final level = _getUserApprovalLevelForRequest(request);
+        if (level != null) {
+          teamPendingCount++;
+        }
       }
     }
 
@@ -800,7 +803,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
-                            '',
+                            'MY REQUEST',
                             style: TextStyle(
                               color: AppTheme.skyBlue,
                               fontSize: 8,
@@ -808,6 +811,31 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             ),
                           ),
                         ),
+                        if (req.status.toLowerCase() == 'approved' || req.status.toLowerCase() == 'rejected') ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: req.status.toLowerCase() == 'approved' 
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : AppTheme.paleRed.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              req.status.toLowerCase() == 'approved' ? 'APPROVED' : 'DECLINED',
+                              style: TextStyle(
+                                color: req.status.toLowerCase() == 'approved' 
+                                    ? Colors.green 
+                                    : AppTheme.paleRed,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     Text(
@@ -998,6 +1026,31 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             ),
                           ),
                         ],
+                        if (req.status.toLowerCase() == 'approved' || req.status.toLowerCase() == 'rejected') ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: req.status.toLowerCase() == 'approved' 
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : AppTheme.paleRed.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              req.status.toLowerCase() == 'approved' ? 'APPROVED' : 'DECLINED',
+                              style: TextStyle(
+                                color: req.status.toLowerCase() == 'approved' 
+                                    ? Colors.green 
+                                    : AppTheme.paleRed,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     Text(
@@ -1068,56 +1121,73 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
           Builder(
             builder: (context) {
               final level = _getUserApprovalLevelForRequest(req);
-              if (level == null) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _showApprovalDetail(context, req),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+              final canApprove = level != null;
+return Column(
+                children: [
+                  if (canApprove)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.pending_actions, size: 16, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            'ACTION NEEDED',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (level == null)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _showApprovalDetail(context, req),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueGrey,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('View'),
                           ),
                         ),
-                        child: const Text('View'),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _handleDeny(req),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.paleRed,
-                        side: const BorderSide(color: AppTheme.paleRed),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _showApprovalDetail(context, req),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+child: Text(canApprove ? 'Review' : 'View'),
+                          ),
                         ),
-                      ),
-                      child: const Text('Decline'),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _showApprovalDetail(context, req),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Review'),
-                    ),
-                  ),
                 ],
               );
             },
@@ -1194,6 +1264,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
         if (isHod) return 1;
         if (isHr) return 2;
         if (isHospitalAdmin) return 3;
+        if (isAccountant) return 4;
       }
       return null;
     }
@@ -1222,7 +1293,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
             // Declare variables at the beginning of StatefulBuilder
             final userApprovalLevel = getUserApprovalLevel();
             final userExistingApproval = getUserExistingApproval();
-            final canApprove = userApprovalLevel != null && (userExistingApproval == null || userExistingApproval.isEmpty);
+            final userHasAlreadyActed = userExistingApproval != null && userExistingApproval.isNotEmpty;
+            final canApprove = userApprovalLevel != null && !userHasAlreadyActed && req.status.toLowerCase() == 'pending';
             
             Future<void> loadApprovals() async {
               try {
@@ -1333,6 +1405,7 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                       buildSectionHeader('Previous Approval History'),
                       ...approvals.map((a) {
                         final action = a['action']?.toString() ?? '';
+                        final isApproved = action.toLowerCase() == 'approve' || action.toLowerCase() == 'approved';
                         final c = a['comment']?.toString() ?? '';
                         final ts = a['timestamp']?.toString() ?? '';
                         final name = a['approver_name']?.toString() ?? 'Approver';
@@ -1390,10 +1463,10 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(action == 'approved' ? Icons.check_circle : Icons.cancel,
-                                      size: 16, color: action == 'approved' ? Colors.green : AppTheme.paleRed),
+                                  Icon(isApproved ? Icons.check_circle : Icons.cancel,
+                                      size: 16, color: isApproved ? Colors.green : AppTheme.paleRed),
                                   const SizedBox(width: 8),
-                                  Text('$name - ${action.toUpperCase()}', 
+                                  Text('$name - ${isApproved ? 'APPROVED' : 'DENIED'}', 
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                   const Spacer(),
                                   Text(ts.split('T')[0], style: const TextStyle(fontSize: 11, color: Colors.grey)),
@@ -1422,8 +1495,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
 
                     // Stage-specific Form - Show each user their own approval stage
                     if (req.type.toLowerCase() == 'leave duty station') ...[
-                      // Accountant Section (Level 1)
-                      if (userApprovalLevel == 1) ...[
+                      // Accountant Section (Level 1) - Only show if user can approve
+                      if (userApprovalLevel == 1 && canApprove) ...[
                         buildSectionHeader('Section C: Certificate of Availability of Funds (Accountant)'),
                         if (userExistingApproval != null && userExistingApproval.isNotEmpty) ...[
                           Container(
@@ -1482,8 +1555,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                           ),
                         ],
                       ],
-                      // HOD Section (Level 2)
-                      if (userApprovalLevel == 2) ...[
+                      // HOD Section (Level 2) - Only show if user can approve
+                      if (userApprovalLevel == 2 && canApprove) ...[
                         buildSectionHeader('Section D: Recommendation from H.O.D'),
                         if (userExistingApproval != null && userExistingApproval.isNotEmpty) ...[
                           Container(
@@ -1890,9 +1963,113 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                           ),
                         ],
                       ],
-                    ],
+                      // Accountant Section (Level 4 - Final Approval)
+                      if (userApprovalLevel == 4) ...[
+                        buildSectionHeader('Section E: Final Approval (Accountant)'),
+                        if (userExistingApproval != null && userExistingApproval.isNotEmpty) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Your Approval - Completed',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green[700],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                if (userExistingApproval['accountant_funds_available'] != null)
+                                  Text(
+                                    'Funds Available: ${userExistingApproval['accountant_funds_available'] == true ? 'Yes' : 'No'}',
+                                    style: TextStyle(fontSize: 13, color: Colors.green[600]),
+                                  ),
+                                if (userExistingApproval['accountant_signed_date'] != null)
+                                  Text(
+                                    'Approved: ${userExistingApproval['accountant_signed_date']}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                  ),
+                                if (userExistingApproval['comment'] != null && userExistingApproval['comment'].toString().isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Comment: ${userExistingApproval['comment']}',
+                                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CheckboxListTile(
+                                  title: const Text('Funds Available'),
+                                  value: accountantFundsAvailable,
+                                  onChanged: (v) => setModalState(() => accountantFundsAvailable = v!),
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+],
+                      ],
 
-                    const SizedBox(height: 16),
+                      // Show message if user has approval capability but request is at different level
+                      if (userApprovalLevel != null && userApprovalLevel != req.approvalLevel) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Approval Info',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Request is currently at approval level ${req.approvalLevel}. Your approval is needed at level $userApprovalLevel.',
+                                style: TextStyle(fontSize: 13, color: Colors.orange[800]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 16),
                     // Only show General Comment field if user can approve
                     if (canApprove) ...[
                       TextField(
@@ -1913,7 +2090,16 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                               onPressed: () async {
                                 try {
                                   await RequestsService.denyRequest(req.id);
-                                  if (ctx.mounted) Navigator.of(ctx).pop();
+                                  if (ctx.mounted) {
+                                    Navigator.of(ctx).pop();
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Request denied successfully'),
+                                        backgroundColor: AppTheme.paleRed,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
                                   await _loadRequests();
                                 } catch (_) {}
                               },
@@ -1940,6 +2126,8 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                                   extraFields.addAll({'hod_trip_recommendation': hodTripRecommendationController.text});
                                 } else if (userApprovalLevel == 3) {
                                   extraFields.addAll({'admin_trip_approval_details': adminTripDetailsController.text});
+                                } else if (userApprovalLevel == 4) {
+                                  extraFields.addAll({'accountant_funds_available': accountantFundsAvailable});
                                 }
                               } else {
                                 if (userApprovalLevel == 1) {
@@ -1965,11 +2153,24 @@ class _AdminRequestsScreenState extends State<AdminRequestsScreen> {
                                     'admin_granted_to': adminTo?.toIso8601String().split('T').first,
                                     'admin_total_days_approved': double.tryParse(adminTotalDaysController.text),
                                   });
+                                } else if (userApprovalLevel == 4) {
+                                  extraFields.addAll({
+                                    'accountant_funds_available': accountantFundsAvailable,
+                                  });
                                 }
                               }
 
                               await RequestsService.approveRequest(req.id, extraFields: extraFields);
-                                if (ctx.mounted) Navigator.of(ctx).pop();
+                                if (ctx.mounted) {
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Request approved successfully'),
+                                      backgroundColor: Colors.green,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
                                 await _loadRequests();
                               } catch (_) {}
                             },

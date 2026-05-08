@@ -225,6 +225,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final role = user?.role.toLowerCase() ?? '';
+    final isAccountant = role.contains('accountant') || role.contains('finance');
+    final isHeadOfDepartment = user?.isHeadOfDepartment ?? false;
+    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
@@ -262,11 +267,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _buildRequestsSummaryCard(context),
                       const SizedBox(height: 32),
                       _buildOrganizationCard(context),
-                      const SizedBox(height: 32),
-                      _buildTeamAttendanceHeader(context),
-                      const SizedBox(height: 16),
-                      _buildTeamAttendanceList(context),
-                      const SizedBox(height: 24),
+                      if (!isAccountant || isHeadOfDepartment) ...[
+                        const SizedBox(height: 32),
+                        _buildTeamAttendanceHeader(context),
+                        const SizedBox(height: 16),
+                        _buildTeamAttendanceList(context),
+                        const SizedBox(height: 24),
+                      ],
                 ]),
               ),
             ),
@@ -541,7 +548,124 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final role = user?.role.toLowerCase() ?? '';
     final isHr = role.contains('hr') || role.contains('human resources') || role.contains('human resource');
     final isSystemAdmin = role.contains('system admin') || role.contains('system administrator') || role.contains('sysadmin') || role.contains('it admin');
+    final isAccountant = role.contains('accountant') || role.contains('finance');
+    final isHeadOfDepartment = user?.isHeadOfDepartment ?? false;
     final canAccessReports = isHr || isSystemAdmin;
+    final isAccountantOnly = isAccountant && !isHeadOfDepartment;
+
+    if (isAccountant && isHeadOfDepartment) {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.skyBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, color: AppTheme.skyBlue, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finance Dashboard',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'View and approve financial requests',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAnalyticCard(
+                  context,
+                  Icons.group,
+                  '$_teamPresentCount/$_teamTotalStaff',
+                  'Staff Present',
+                  AppTheme.skyBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildAnalyticCard(
+                  context,
+                  Icons.warning_amber_rounded,
+                  '$_teamLateCount',
+                  'Late Arrivals',
+                  AppTheme.paleRed,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildAnalyticCard(
+                  context,
+                  Icons.person_off,
+                  '$_teamAbsentCount',
+                  'Absent',
+                  AppTheme.paleRed,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (isAccountantOnly) {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.skyBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.skyBlue.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, color: AppTheme.skyBlue, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finance Dashboard',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'View and approve financial requests',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       children: [

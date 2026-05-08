@@ -90,67 +90,64 @@ class _AdminAttendanceScreenState extends State<AdminAttendanceScreen> with Widg
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: false,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            elevation: 0,
-            flexibleSpace: const SafeArea(
-              child: AppHeader(
-                subtitle: 'Attendance',
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: AppTheme.skyBlue,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      Text(
-                        'Personal & Team status',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          _buildCheckInButton(context),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Team Status',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSummaryStats(context),
-                      const SizedBox(height: 16),
-                      _buildStaffList(context),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.skyBlue,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              floating: false,
+              pinned: true,
+              automaticallyImplyLeading: false,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              flexibleSpace: const SafeArea(
+                child: AppHeader(
+                  subtitle: 'Attendance',
                 ),
               ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Text(
+                      'Personal & Team status',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildCheckInButton(context),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Team Status',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSummaryStats(context),
+                    const SizedBox(height: 16),
+                    _buildStaffList(context),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

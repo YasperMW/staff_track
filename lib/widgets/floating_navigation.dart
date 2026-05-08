@@ -24,9 +24,13 @@ class _FloatingNavigationState extends State<FloatingNavigation> {
     final user = context.watch<AuthProvider>().user;
     if (user == null) return [];
     
-    final isAdmin = user.role.toLowerCase().contains('admin') || 
-                  user.role.toLowerCase().contains('hr') || 
-                  user.role.toLowerCase().contains('manager');
+    final role = user.role.toLowerCase();
+    final isAdmin = role.contains('admin') || 
+                  role.contains('hr') || 
+                  role.contains('manager') ||
+                  role.contains('head') ||
+                  role.contains('accountant') ||
+                  role.contains('finance');
 
     return [
       BottomNavigationBarItem(
