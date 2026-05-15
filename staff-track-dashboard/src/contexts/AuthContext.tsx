@@ -22,8 +22,8 @@ type AuthAction =
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem('auth_token'),
-  isLoading: true, // Start with loading true
+  token: sessionStorage.getItem('auth_token'),
+  isLoading: true,
   isAuthenticated: false,
   error: null,
 };
@@ -109,34 +109,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      const userData = localStorage.getItem('user_data');
+      const token = sessionStorage.getItem('auth_token');
+      const userData = sessionStorage.getItem('user_data');
 
       if (token && userData) {
         try {
           const user = JSON.parse(userData);
           
-          // First, set the user from localStorage to avoid flash of login screen
+          // First, set the user from sessionStorage to avoid flash of login screen
           dispatch({ type: 'SET_USER', payload: user });
           
           // Then verify token in the background
           try {
             const response = await authApi.verifyToken();
-            if (response.success) {
-              console.log('Token verification successful');
-            } else {
-              console.warn('Token verification returned failure:', response.message);
+            if (!response.success) {
+              // Token verification returned failure
             }
           } catch (error: any) {
-            // Token verification failed, but don't immediately log out
+            // Token verification failed, but don't immediately log out.
             // This could be due to network issues, temporary server issues, etc.
-            console.warn('Token verification failed, but keeping user logged in:', error);
             
-            // Only log out if it's a clear authentication error (401)
             if (error.response?.status === 401) {
-              console.log('Token is invalid, logging out');
-              localStorage.removeItem('auth_token');
-              localStorage.removeItem('user_data');
+              sessionStorage.removeItem('auth_token');
+              sessionStorage.removeItem('user_data');
               dispatch({ type: 'LOGOUT' });
             }
             // For other errors (network, server), keep the user logged in
@@ -144,8 +139,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           // User data is corrupted, clear storage
           console.error('User data parsing failed:', error);
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
+          sessionStorage.removeItem('auth_token');
+          sessionStorage.removeItem('user_data');
           dispatch({ type: 'LOGOUT' });
         }
       } else {
@@ -168,8 +163,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (response.success && response.token && response.user) {
         // Store token and user data
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('user_data', JSON.stringify(response.user));
+        sessionStorage.setItem('auth_token', response.token);
+        sessionStorage.setItem('user_data', JSON.stringify(response.user));
         
         dispatch({
           type: 'LOGIN_SUCCESS',
@@ -192,8 +187,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);
     } finally {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('user_data');
       dispatch({ type: 'LOGOUT' });
     }
   };

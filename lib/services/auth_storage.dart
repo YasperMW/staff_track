@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 
@@ -8,14 +8,14 @@ abstract class AuthStorage {
   static const _keyToken = 'auth_token';
   static const _keyUser = 'auth_user';
 
+  static const _storage = FlutterSecureStorage();
+
   static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyToken, token);
+    await _storage.write(key: _keyToken, value: token);
   }
 
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_keyToken);
+    final token = await _storage.read(key: _keyToken);
     if (!kReleaseMode) {
       debugPrint('AuthStorage: Token ${token == null ? 'not found' : 'found (${token.length} chars)'}');
     }
@@ -23,13 +23,11 @@ abstract class AuthStorage {
   }
 
   static Future<void> saveUser(Map<String, dynamic> user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUser, jsonEncode(user));
+    await _storage.write(key: _keyUser, value: jsonEncode(user));
   }
 
   static Future<Map<String, dynamic>?> getUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyUser);
+    final raw = await _storage.read(key: _keyUser);
     if (raw == null) return null;
     try {
       return jsonDecode(raw) as Map<String, dynamic>;
@@ -46,15 +44,14 @@ abstract class AuthStorage {
       }
       return null;
     }
-    
+
     if (!kReleaseMode) {
       debugPrint('AuthStorage: User data keys: ${user.keys.toList()}');
       debugPrint('AuthStorage: Full user data: $user');
     }
-    
-    // Try different possible ID field names
+
     final id = user['user_id'] ?? user['id'] ?? user['userId'];
-    
+
     if (id != null) {
       final idString = id.toString();
       if (!kReleaseMode) {
@@ -62,8 +59,7 @@ abstract class AuthStorage {
       }
       return idString;
     }
-    
-    // Fallback to email if no ID field is found
+
     final email = user['email'];
     if (email != null) {
       if (!kReleaseMode) {
@@ -71,7 +67,7 @@ abstract class AuthStorage {
       }
       return email.toString();
     }
-    
+
     if (!kReleaseMode) {
       debugPrint('AuthStorage: No user ID or email found in user data');
     }
@@ -86,10 +82,9 @@ abstract class AuthStorage {
       }
       return null;
     }
-    
-    // Try different possible role field names
+
     final role = user['role'] ?? user['role_name'] ?? user['userRole'];
-    
+
     if (role != null) {
       final roleString = role.toString();
       if (!kReleaseMode) {
@@ -97,7 +92,7 @@ abstract class AuthStorage {
       }
       return roleString;
     }
-    
+
     if (!kReleaseMode) {
       debugPrint('AuthStorage: No role found in user data');
     }
@@ -123,7 +118,7 @@ abstract class AuthStorage {
         }
         return false;
       }
-      
+
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/users/profile'),
         headers: {
@@ -154,8 +149,7 @@ abstract class AuthStorage {
   }
 
   static Future<void> clear() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_keyToken);
-    await prefs.remove(_keyUser);
+    await _storage.delete(key: _keyToken);
+    await _storage.delete(key: _keyUser);
   }
 }
