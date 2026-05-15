@@ -142,8 +142,7 @@ const createApiInstance = (): AxiosInstance => {
   // Request interceptor to add auth token
   instance.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('auth_token');
-      console.log('Token being sent:', token ? 'Bearer ' + token.substring(0, 20) + '...' : 'No token');
+      const token = sessionStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -160,16 +159,12 @@ const createApiInstance = (): AxiosInstance => {
       return response;
     },
     (error) => {
-      console.error('API Error:', error.response?.status, error.response?.data);
-      
-      // Only redirect to login on 401 errors for protected endpoints
-      // Don't redirect for token verification endpoint itself or login endpoint
       if (error.response?.status === 401 && 
           !error.config?.url?.includes('/verify-token') && 
           !error.config?.url?.includes('/auth/login')) {
         // Token expired or invalid
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('user_data');
         window.location.href = '/login';
       }
       return Promise.reject(error);
@@ -206,7 +201,6 @@ export const authApi = {
       // If verify token endpoint fails with network error or server error
       // don't treat it as authentication failure
       if (error.code === 'NETWORK_ERROR' || error.response?.status >= 500) {
-        console.warn('Token verification endpoint unavailable, assuming token is valid');
         return { success: true, message: 'Token verification skipped due to server unavailability' };
       }
       throw error;
@@ -216,11 +210,6 @@ export const authApi = {
 
 // Users API
 export const usersApi = {
-  debugToken: async (): Promise<any> => {
-    const response = await api.get('/users/debug-token');
-    return response.data;
-  },
-
   getCurrentUserProfile: async (): Promise<any> => {
     const response = await api.get('/users/profile');
     return response.data;
