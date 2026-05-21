@@ -281,11 +281,28 @@ class RequestsService {
       }),
     );
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(
-        'Failed to create request: ${response.statusCode}',
-      );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return;
     }
+
+    String errorMessage = 'Failed to create request: ${response.statusCode}';
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        final detail = body['detail'] ?? body['message'] ?? body['error'];
+        if (detail is String && detail.trim().isNotEmpty) {
+          errorMessage = detail;
+        } else if (detail != null) {
+          errorMessage = detail.toString();
+        }
+      }
+    } catch (_) {
+      if (response.body.trim().isNotEmpty) {
+        errorMessage = '$errorMessage: ${response.body}';
+      }
+    }
+
+    throw Exception(errorMessage);
   }
 
   static Future<List<AdminTeamRequest>> getAdminPendingRequests({

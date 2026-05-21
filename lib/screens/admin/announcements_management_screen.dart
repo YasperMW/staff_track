@@ -4,6 +4,7 @@ import '../../models/models.dart';
 import '../../services/announcements_service.dart';
 import '../../services/holidays_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/app_toast.dart';
 import '../../widgets/simple_header.dart';
 import '../../widgets/single_date_picker.dart';
 import 'holidays_management_screen.dart';
@@ -750,9 +751,7 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
             createdAt: DateTime.now(),
           );
           widget.onAnnouncementCreated(pseudoAnnouncement);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Holiday created and listed in announcements')),
-          );
+          AppToast.success(context, 'Holiday created and listed in announcements');
         }
       } else {
         final announcement = await AnnouncementsService.createAnnouncement(
@@ -768,16 +767,12 @@ class _CreateAnnouncementSheetState extends State<CreateAnnouncementSheet> {
         if (mounted) {
           Navigator.of(context).pop();
           widget.onAnnouncementCreated(announcement);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Announcement created successfully')),
-          );
+          AppToast.success(context, 'Announcement created successfully');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create announcement: $e')),
-        );
+        AppToast.error(context, 'Failed to create announcement: $e');
       }
     } finally {
       if (mounted) {

@@ -1,9 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/simple_header.dart';
 import '../../services/login_service.dart';
 import '../../controllers/auth_provider.dart';
+import '../../config/app_config.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class SecurityPrivacyScreen extends StatefulWidget {
   const SecurityPrivacyScreen({super.key});
@@ -200,15 +206,7 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to full privacy policy
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Opening full privacy policy...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => _showPrivacyPolicyDialog(),
             icon: const Icon(Icons.description),
             label: const Text('View Full Privacy Policy'),
             style: ElevatedButton.styleFrom(
@@ -225,15 +223,7 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {
-              // TODO: Navigate to data download/export
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Preparing your data download...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => _downloadUserData(),
             icon: const Icon(Icons.download),
             label: const Text('Download My Data'),
             style: OutlinedButton.styleFrom(
@@ -248,6 +238,164 @@ class _SecurityPrivacyScreenState extends State<SecurityPrivacyScreen> {
         ),
       ],
     );
+  }
+
+  void _showPrivacyPolicyDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Privacy Policy'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildPolicySection('1. Information We Collect',
+                      'We collect personal information you provide directly, such as your name, email address, employee ID, department, and profile photo. We also automatically collect attendance records, location data during check-in/check-out, and device information for security purposes.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('2. How We Use Your Information',
+                      'Your data is used exclusively for: attendance tracking and reporting, profile management, leave request processing, shift scheduling, internal communications, and improving our services. We analyze usage patterns anonymously to enhance user experience.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('3. Data Sharing and Disclosure',
+                      'We do not sell or share your personal information with third parties. Your data may only be accessed by authorized personnel within your organization (HR, department heads, administrators) for legitimate business purposes. We may disclose data if required by law.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('4. Data Security',
+                      'We implement industry-standard security measures to protect your personal information. All data is encrypted both in transit (using TLS/SSL) and at rest (using AES-256 encryption). Access to data is controlled through role-based permissions and authentication tokens.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('5. Data Retention',
+                      'We retain your personal data for as long as your account is active or as needed to provide services. Upon account termination, data may be retained for legal compliance, dispute resolution, and agreement enforcement purposes.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('6. Your Rights',
+                      'You have the right to: access your personal data, request correction of inaccurate data, request deletion of your data, export your data in a portable format, object to processing of your data, and withdraw consent at any time. Contact our support team for any data-related requests.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('7. Location Data',
+                      'Location data is collected only during attendance check-in and check-out to verify your presence at authorized locations. This data is used solely for attendance verification and is not tracked continuously.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('8. Changes to This Policy',
+                      'We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Last updated" date. You are advised to review this policy periodically.'),
+                  const SizedBox(height: 16),
+                  _buildPolicySection('9. Contact Us',
+                      'If you have any questions about this privacy policy or our data practices, please contact our security team at security@stafftrack.com or reach out to your HR department.'),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPolicySection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          content,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[700],
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _downloadUserData() async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.token;
+
+    if (token == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to download your data'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preparing your data export...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/export-data'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        final directory = await getApplicationDocumentsDirectory();
+        final file = File('${directory.path}/staff_track_data_export.json');
+        await file.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(data),
+        );
+
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Staff Track Data Export',
+            text: 'Your personal data export from Staff Track',
+          ),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data exported successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to export data: ${response.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showChangePasswordDialog() {

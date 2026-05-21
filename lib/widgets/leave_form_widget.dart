@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../utils/app_toast.dart';
 import '../widgets/tile_date_picker.dart';
 import '../widgets/single_date_picker.dart';
 import '../services/requests_service.dart';
@@ -146,23 +147,13 @@ class _LeaveFormWidgetState extends State<LeaveFormWidget> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Request submitted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppToast.success(context, 'Request submitted successfully');
         widget.onSubmitted?.call();
         _resetForm();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit request: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.error(context, 'Failed to submit request: $e');
       }
     } finally {
       if (mounted) {

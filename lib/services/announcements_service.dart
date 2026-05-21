@@ -90,11 +90,28 @@ class AnnouncementsService {
         }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return Announcement.fromJson(json.decode(response.body));
-      } else {
-        throw Exception('Failed to create announcement: ${response.statusCode}');
       }
+
+      String errorMessage = 'Failed to create announcement: ${response.statusCode}';
+      try {
+        final body = json.decode(response.body);
+        if (body is Map<String, dynamic>) {
+          final detail = body['detail'];
+          if (detail is String && detail.trim().isNotEmpty) {
+            errorMessage = detail;
+          } else if (detail != null) {
+            errorMessage = detail.toString();
+          }
+        }
+      } catch (_) {
+        if (response.body.trim().isNotEmpty) {
+          errorMessage = '$errorMessage: ${response.body}';
+        }
+      }
+
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Error creating announcement: $e');
     }
