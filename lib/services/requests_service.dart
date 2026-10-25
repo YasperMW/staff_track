@@ -97,7 +97,7 @@ class AdminTeamRequest {
     final apiUserName = json['user_name'] as String? ?? '';
     
     // Simple logic: use email to identify own requests
-    // Extract name from email (user@example.com -> yankhochisale4)
+    // Extract name from email (user@example.com -> user)
     final emailName = currentUserId.contains('@') 
         ? currentUserId.split('@')[0].toLowerCase()
         : currentUserId.toLowerCase();
