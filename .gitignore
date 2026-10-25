@@ -44,4 +44,18 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 android/app/google-services.json
+android/app/client_secret_*.json
 staff-track-dashboard/.env
+staff_track_api/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+serviceAccountKey.json
+*.jks
+*.keystore
+
+# Local tooling
+.claude/

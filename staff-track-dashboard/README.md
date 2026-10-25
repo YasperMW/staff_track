@@ -53,13 +53,18 @@ yarn install
 
 ### 3. Environment Configuration
 
-Create a `.env` file in the root directory (if it doesn't exist):
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
 
 ```env
 VITE_API_URL=http://localhost:8888
+VITE_FASTAPI_URL=http://localhost:8888
 ```
 
-**Note**: Update `VITE_API_URL` to point to your backend API server. The dashboard communicates with a FastAPI backend for data operations.
+**Note**: Update `VITE_API_URL` to point to your backend API server. The dashboard communicates with a FastAPI backend for data operations. The `.env` file is git-ignored; never commit real credentials.
 
 ## Running the Application
 
@@ -127,7 +132,7 @@ staff-track-dashboard/
 │   ├── App.tsx            # Main application component
 │   ├── main.tsx           # Application entry point
 │   └── index.css          # Global styles
-├── .env                   # Environment variables
+├── .env.example           # Environment variable template
 ├── package.json           # Dependencies and scripts
 ├── tailwind.config.js     # TailwindCSS configuration
 ├── vite.config.ts         # Vite build configuration

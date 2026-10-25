@@ -337,13 +337,6 @@ class LocalNotificationService {
     
     debugPrint('Handling notification action: type=$type, action=$action');
     
-    // Here you can navigate to specific screens based on the notification type
-    // For example:
-    // if (type == 'check_in_reminder') {
-    //   NavigationService.navigateToAttendance();
-    // } else if (type == 'holiday_reminder') {
-    //   NavigationService.navigateToHolidays();
-    // }
   }
 
   /// Start monitoring connectivity to backup FCM notifications
